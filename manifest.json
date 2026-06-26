@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name": "RealModel Filter",
+  "version": "1.0.0",
+  "description": "Detects AI-generated product images on Myntra, Flipkart, Meesho, and Nykaa and overlays a confidence badge.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.myntra.com/*",
+    "https://www.flipkart.com/*",
+    "https://www.meesho.com/*",
+    "https://www.nykaa.com/*",
+    "https://api.aiornot.com/*",
+    "https://api-inference.huggingface.co/*",
+    "https://assets.myntassets.com/*",
+    "https://*.flixcart.com/*",
+    "https://images.meesho.com/*",
+    "https://*.nykaa.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.myntra.com/*",
+        "https://www.flipkart.com/*",
+        "https://www.meesho.com/*",
+        "https://www.nykaa.com/*"
+      ],
+      "js": [
+        "libs/exifr.min.js",
+        "utils/logger.js",
+        "utils/throttle.js",
+        "utils/cache.js",
+        "detection/exif-check.js",
+        "detection/tfjs-detector.js",
+        "detection/remote.js",
+        "detection/pipeline.js",
+        "content/sites/myntra.js",
+        "content/sites/flipkart.js",
+        "content/sites/meesho.js",
+        "content/sites/nykaa.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

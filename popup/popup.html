@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RealModel Filter</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+          <circle cx="10" cy="10" r="6.2" stroke="currentColor" stroke-width="2"/>
+          <line x1="5" y1="10" x2="15" y2="10" stroke="#e24b4a" stroke-width="2" stroke-linecap="round"/>
+          <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <div class="brand-name"><span class="brand-accent">Real</span>Model</div>
+        <div class="brand-sub">AI image filter</div>
+      </div>
+    </div>
+    <label class="switch" title="Enable / disable detection">
+      <input type="checkbox" id="toggle-enabled" checked />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section class="status-card" id="status-card">
+    <span class="status-dot" id="status-dot"></span>
+    <div class="status-text">
+      <div class="status-title" id="status-title">Detection engine</div>
+      <div class="status-sub" id="status-sub">—</div>
+    </div>
+    <span class="status-chip" id="status-chip">—</span>
+  </section>
+
+  <section class="stat-row">
+    <div class="stat"><span id="ai-count">–</span><small>AI on page</small></div>
+    <div class="stat"><span id="total-count">–</span><small>Scanned</small></div>
+    <div class="stat"><span id="cache-count">–</span><small>Cached</small></div>
+  </section>
+
+  <section class="block">
+    <div class="block-label">Detection engine</div>
+    <div class="segmented" id="provider-seg">
+      <button class="seg" data-provider="huggingface">Hugging&nbsp;Face</button>
+      <button class="seg" data-provider="aiornot">AI&nbsp;or&nbsp;Not</button>
+      <button class="seg" data-provider="heuristic">Preview</button>
+    </div>
+
+    <div class="engine-panel" id="panel-huggingface" hidden>
+      <p class="hint">Free, accurate cloud model. Recommended.</p>
+      <div class="field">
+        <input type="password" id="hf-token" placeholder="hf_… access token" autocomplete="off" spellcheck="false" />
+        <button class="ghost icon-btn" id="hf-token-toggle" title="Show / hide" type="button">show</button>
+      </div>
+      <button class="primary" id="hf-save">Connect Hugging Face</button>
+
+      <details class="onboard" id="hf-onboard">
+        <summary>How to get a free key</summary>
+        <ol class="steps">
+          <li>Open <a href="https://huggingface.co/join" target="_blank" rel="noopener">huggingface.co/join</a> and create a free account.</li>
+          <li>Go to <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">Settings → Access Tokens</a>.</li>
+          <li>Click <b>New token</b>, role <b>Read</b>, name it <i>RealModel</i>, create it.</li>
+          <li>Copy the token (starts with <code>hf_</code>) and paste it above.</li>
+          <li>Press <b>Connect</b>. The first scan can take ~20s while the model warms up.</li>
+        </ol>
+        <div class="advanced">
+          <label for="hf-model">Model (advanced)</label>
+          <input type="text" id="hf-model" placeholder="Organika/sdxl-detector" spellcheck="false" />
+        </div>
+      </details>
+    </div>
+
+    <div class="engine-panel" id="panel-aiornot" hidden>
+      <p class="hint">Paid API with a small free tier.</p>
+      <div class="field">
+        <input type="password" id="aiornot-key" placeholder="AI or Not API key" autocomplete="off" spellcheck="false" />
+      </div>
+      <button class="primary" id="aiornot-save">Connect AI or Not</button>
+      <p class="hint"><a href="https://aiornot.com" target="_blank" rel="noopener">Get an API key →</a></p>
+    </div>
+
+    <div class="engine-panel" id="panel-heuristic" hidden>
+      <p class="hint warn">⚠️ Preview uses a lightweight on-device heuristic — fast and private, but <b>not accurate</b>. Expect false positives and misses. Connect Hugging Face for real detection.</p>
+      <button class="primary" id="goto-hf">Connect a real model →</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-label">Display</div>
+    <div class="segmented" id="mode-seg">
+      <button class="seg" data-mode="all">Show all</button>
+      <button class="seg" data-mode="badge">Badge only</button>
+      <button class="seg" data-mode="hide">Hide AI</button>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span class="ver">v1.0.0</span>
+    <button id="clear-cache" class="link-btn">Clear cache</button>
+  </footer>
+
+  <div id="toast-host"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

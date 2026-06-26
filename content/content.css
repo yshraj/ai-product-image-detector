@@ -1,0 +1,60 @@
+/* RealModel Filter — styles injected into supported pages */
+
+.rmf-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 9999;
+  pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.rmf-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.rmf-badge[data-conf="high"] .rmf-label {
+  background: rgba(226, 75, 74, 0.92);
+  color: #fff;
+}
+
+.rmf-badge[data-conf="med"] .rmf-label {
+  background: rgba(239, 159, 39, 0.92);
+  color: #2a1800;
+}
+
+.rmf-score {
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 3px 7px;
+  border-radius: 5px;
+  line-height: 1.4;
+}
+
+.rmf-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.4s ease;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Heuristic preview badges read as tentative (dashed, slightly muted). */
+.rmf-badge[data-preview="true"] .rmf-label {
+  border: 1px dashed rgba(255, 255, 255, 0.6);
+}
