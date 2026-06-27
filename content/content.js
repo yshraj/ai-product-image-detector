@@ -6,12 +6,19 @@
   const Log = window.RMF_Log;
   const limit = window.RMF_Throttle.createLimiter(3); // max 3 detections at once
 
-  const PREF_DEFAULTS = { mode: 'badge', enabled: true, minConfidence: 50, disabledSites: [] };
+  const PREF_DEFAULTS = { mode: 'badge', enabled: true, minConfidence: 70, disabledSites: [] };
+
+  // Badge tiers (confidence = P(AI), 0-100):
+  //   confidence >= AI_THRESHOLD          → "AI Generated" (strong, red)
+  //   minConfidence <= conf < AI_THRESHOLD → "Likely AI"    (amber)
+  //   confidence < minConfidence           → not flagged (no badge)
+  // minConfidence (default 70) is the user-tunable floor in Settings.
+  const AI_THRESHOLD = 95;
 
   // Coercers — never trust stored values (settings can be imported from a file
   // or synced from another device). A bad value must degrade safely, never throw.
   const cleanMode = (v) => (['all', 'badge', 'hide'].includes(v) ? v : 'badge');
-  const cleanConf = (v) => (Number.isFinite(Number(v)) ? Math.min(100, Math.max(0, Number(v))) : 50);
+  const cleanConf = (v) => (Number.isFinite(Number(v)) ? Math.min(100, Math.max(0, Number(v))) : 70);
   const siteDisabled = (v) => Array.isArray(v) && v.includes(SITE.name);
 
   let prefs;
@@ -58,7 +65,7 @@
     target.querySelector('.rmf-badge')?.remove();
     target.querySelector('.rmf-bar')?.remove();
 
-    const high = confidence > 85;
+    const high = confidence >= AI_THRESHOLD;
     const badge = document.createElement('div');
     badge.className = 'rmf-badge';
     badge.setAttribute('data-conf', high ? 'high' : 'med');

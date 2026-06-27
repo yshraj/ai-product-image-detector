@@ -51,6 +51,11 @@ test('uses the Hugging Face model verdict when a token is set', async () => {
   console.log(`\n[e2e] HF badge scores: ${[...new Set(scoreTexts)].join(', ')}`);
   expect(scoreTexts).toContain('97%');
 
+  // 97% is at/above the 90% bar → strong "AI Generated" tier.
+  const badge = page.locator('.rmf-badge').first();
+  await expect(badge).toHaveAttribute('data-conf', 'high');
+  await expect(badge.locator('.rmf-label')).toContainText('AI Generated');
+
   // HF results are authoritative, not preview.
   expect(await page.locator('.rmf-badge[data-preview="true"]').count(),
     'HF badges must not be tagged preview').toBe(0);
