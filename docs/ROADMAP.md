@@ -8,30 +8,27 @@ This doc answers three questions: **what's broken**, **who we compete with**, an
 
 ## TL;DR — the most important thing
 
-> **Our Hugging Face detection is broken because we call a dead endpoint.**
+> ✅ **FIXED (v1.1.0): the dead Hugging Face endpoint is now the live router endpoint.**
 
-The code in [background/service-worker.js](../background/service-worker.js) calls:
+The headline bug — calling the retired `https://api-inference.huggingface.co/models/<model>`
+host (HTTP 410) — is resolved. [background/service-worker.js](../background/service-worker.js)
+now calls:
 
 ```
-https://api-inference.huggingface.co/models/<model>
+https://router.huggingface.co/hf-inference/models/<model>
 ```
 
-Hugging Face **retired this endpoint**. It now returns:
+Shipped alongside it:
 
-> `https://api-inference.huggingface.co is no longer supported. Please use https://router.huggingface.co/hf-inference instead.`
-
-So no matter what token a user pastes, **the HF path silently fails and we fall back to the preview heuristic** (which we openly admit is inaccurate). This explains "some features are not working" and "it doesn't detect properly."
-
-**Fix (small, high priority):**
-
-1. Change the endpoint to:
-   ```
-   https://router.huggingface.co/hf-inference/models/<model>
-   ```
-2. Add `https://router.huggingface.co/*` to `host_permissions` in [manifest.json](../manifest.json) (we currently only allow the dead `api-inference` host).
-3. Re-test the 503 cold-start retry loop — the warm-up behaviour still applies on the new router.
-
-Everything below assumes we land this fix **first** — there is no point launching while the headline feature is dead.
+1. ✅ `host_permissions` updated — added `router.huggingface.co` + `huggingface.co`
+   (for `whoami` validation), removed the dead `api-inference` host.
+2. ✅ The 503 cold-start retry loop still applies on the new router.
+3. ✅ **Live token validation on Connect** — `whoami` test call shows ✅/❌ + the
+   verified username instead of failing silently later.
+4. ✅ **Errors are surfaced** — invalid token / 410 model-deprecated / 429 rate-limit /
+   503 warming-up all map to plain-language messages in the popup (status hero shows
+   an `Error` state with the message; the popup no longer silently degrades to preview
+   while claiming to be connected).
 
 ---
 
@@ -43,9 +40,9 @@ Everything below assumes we land this fix **first** — there is no point launch
 | Site selectors (Myntra/Flipkart/Meesho/Nykaa) | ⚠️ Fragile | Hashed CSS classes drift; need re-checking before launch |
 | EXIF "real" signal | ✅ Works | Decisive but rarely present on CDN images (metadata stripped) |
 | On-device heuristic | ⚠️ Preview only | Honestly labelled, but not a real detector |
-| **Hugging Face engine** | ❌ **Broken** | Dead endpoint (see TL;DR) |
-| AI or Not engine | ⚠️ Unverified | Needs a live key test; verify response shape still matches |
-| Popup UI | ⚠️ Functional, not "SaaS" | See §4 |
+| **Hugging Face engine** | ✅ Works (v1.1.0) | Endpoint fixed + live token validation |
+| AI or Not engine | 🗑️ **Removed (v1.2.0)** | Dropped — HF is the sole accurate engine; Preview is the only fallback |
+| Popup UI | ✅ Reworked (v1.1.0) | SaaS status hero, stepper, a11y pass |
 
 **Bottom line:** the architecture is good, but the one accurate detection path is offline. That's the launch blocker.
 
@@ -96,7 +93,7 @@ The user-facing promise should be: **"Get a free key in 60 seconds, then see AI 
 |---|---|---|---|
 | **Default / recommended** | **Hugging Face Inference** (`Organika/sdxl-detector`) | **Free** token, hundreds of req/hour | No paywall, no card. Best friction-to-accuracy ratio. **Once the endpoint is fixed, this is the launch engine.** |
 | Upgrade | HF **PRO** ($9/mo) | Cheap | Higher rate limits for power users |
-| Alternative | **AI or Not** API | Small free tier, then paid | Already wired; good accuracy. Verify it still works. |
+| ~~Alternative~~ | ~~**AI or Not** API~~ | — | **Removed in v1.2.0** — unreliable in practice; HF is the single accurate engine. |
 | Premium (future) | **Hive Moderation** API | Paid | Best accuracy + names the generator. Add as "Pro engine" later. |
 | Fallback | On-device heuristic | Free | Keep, but always labelled **Preview** |
 
@@ -153,23 +150,25 @@ This is a styling + small-markup pass on `popup/popup.html` + `popup/popup.css` 
 
 ## 5. Launch plan — milestones
 
-### 🔴 Milestone 0 — "Make it work" (launch blocker, days)
-- [ ] Fix HF endpoint → `router.huggingface.co/hf-inference/models/<model>`
-- [ ] Update `host_permissions` (+ remove dead `api-inference` host)
-- [ ] Verify AI or Not path with a live key (confirm response shape)
-- [ ] Re-validate the 4 site selectors against current live pages
-- [ ] Surface API errors in the popup (no more silent fallback)
+### 🔴 Milestone 0 — "Make it work" (launch blocker) — ✅ DONE (v1.1.0)
+- [x] Fix HF endpoint → `router.huggingface.co/hf-inference/models/<model>`
+- [x] Update `host_permissions` (+ remove dead `api-inference` host)
+- [x] ~~Verify AI or Not path~~ — **removed in v1.2.0** (HF-only; Preview is the sole fallback)
+- [ ] Re-validate the 4 site selectors against current live pages — _needs live pages_
+- [x] Surface API errors in the popup (no more silent fallback)
 
-### 🟠 Milestone 1 — "Trustworthy onboarding" (1–2 weeks)
-- [ ] Token validation on Connect (test call + ✅/❌)
-- [ ] HF onboarding stepper UI
-- [ ] Rate-limit handling + user-friendly messages
+### 🟠 Milestone 1 — "Trustworthy onboarding" — ✅ MOSTLY DONE (v1.1.0)
+- [x] Token validation on Connect (live `whoami` test call + ✅/❌ + username)
+- [x] HF onboarding stepper UI (1→2→3, replaces the `<details>` accordion)
+- [x] Rate-limit handling + user-friendly messages (401/410/429/503 mapped)
 - [ ] A/B the default model (`Organika` vs `Smogy`)
 
-### 🟡 Milestone 2 — "Looks like SaaS" (1–2 weeks, parallel)
-- [ ] Design-token refactor of popup CSS
-- [ ] Status hero + stat tiles dashboard
-- [ ] Empty/loading/error states
+### 🟡 Milestone 2 — "Looks like SaaS" — ✅ DONE (v1.1.0)
+- [x] Design-token refactor of popup CSS (already token-based; extended + a11y pass)
+- [x] Status hero + stat tiles dashboard (now with verified/error/off states)
+- [x] Empty/loading/error states (empty-state hint, Connect spinner, inline feedback)
+- [x] Accessibility: tablist/radiogroup roles, roving-tabindex keyboard nav,
+      focus-visible rings, skip link, `aria-live` status + toasts, labelled inputs
 
 ### 🟢 Milestone 3 — "Differentiators" (post-launch)
 - [ ] **Confidence heatmap** on flagged images (à la Illuminarty) — strong, visible "why"
@@ -182,7 +181,7 @@ This is a styling + small-markup pass on `popup/popup.html` + `popup/popup.css` 
 
 ## 6. Open decisions for the team
 
-1. **Default engine at launch:** HF free (recommended) vs. AI or Not. → _Recommend HF free, once fixed._
+1. ~~**Default engine at launch:** HF free vs. AI or Not.~~ → **Decided (v1.2.0): Hugging Face only**, with Preview as the no-key fallback. AI or Not removed.
 2. **Zero-key experience:** ship bring-your-own-key only, or invest in a hosted proxy later? → _BYO key for launch; proxy is a Milestone-3 infra bet._
 3. **Default HF model:** `Organika/sdxl-detector` vs `Smogy/...` → _A/B test before deciding._
 4. **Store launch scope:** soft launch (unpacked / friends) vs. full Chrome Web Store submission with privacy review.
