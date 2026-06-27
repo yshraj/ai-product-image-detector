@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RealModel Filter — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to settings</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+          <circle cx="10" cy="10" r="6.2" stroke="currentColor" stroke-width="2"/>
+          <line x1="5" y1="10" x2="15" y2="10" stroke="#e24b4a" stroke-width="2" stroke-linecap="round"/>
+          <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <div class="brand-name"><span class="brand-accent">Real</span>Model Filter</div>
+        <div class="brand-sub">Settings</div>
+      </div>
+    </div>
+    <span class="ver" id="version">v1.3.0</span>
+  </header>
+
+  <main id="main">
+    <!-- Engine status (managed from the toolbar popup) -->
+    <section class="card" aria-labelledby="engine-h">
+      <div class="card-head">
+        <h2 id="engine-h">Detection engine</h2>
+        <span class="chip" id="engine-chip">—</span>
+      </div>
+      <p class="muted" id="engine-sub">—</p>
+      <p class="hint">Connect or switch your engine (Hugging Face / Preview) from the
+        toolbar popup — click the RealModel Filter icon next to the address bar.</p>
+    </section>
+
+    <!-- Preferences (autosave) -->
+    <section class="card" aria-labelledby="prefs-h">
+      <div class="card-head">
+        <h2 id="prefs-h">Detection preferences</h2>
+        <span class="saved" id="saved-flag" hidden>Saved</span>
+      </div>
+
+      <div class="row">
+        <div class="row-text">
+          <label for="opt-enabled" class="row-title">Detection enabled</label>
+          <p class="muted">Master switch. Also toggleable with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>.</p>
+        </div>
+        <label class="switch">
+          <span class="visually-hidden">Detection enabled</span>
+          <input type="checkbox" id="opt-enabled" />
+          <span class="slider" aria-hidden="true"></span>
+        </label>
+      </div>
+
+      <div class="row col">
+        <div class="row-text">
+          <span class="row-title" id="mode-h">Display mode</span>
+          <p class="muted">What to do with images flagged as AI.</p>
+        </div>
+        <div class="segmented" id="mode-seg" role="radiogroup" aria-labelledby="mode-h">
+          <button class="seg" role="radio" data-mode="all">Show all</button>
+          <button class="seg" role="radio" data-mode="badge">Badge only</button>
+          <button class="seg" role="radio" data-mode="hide">Hide AI</button>
+        </div>
+      </div>
+
+      <div class="row col">
+        <div class="row-text">
+          <label class="row-title" for="opt-confidence">Minimum confidence to flag</label>
+          <p class="muted">Only badge images at or above this AI-likelihood. Higher = fewer, stricter flags.</p>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="opt-confidence" min="50" max="95" step="5" />
+          <output id="confidence-val" for="opt-confidence">50%</output>
+        </div>
+      </div>
+
+      <div class="row col">
+        <div class="row-text">
+          <span class="row-title">Active marketplaces</span>
+          <p class="muted">Turn detection on or off per site.</p>
+        </div>
+        <div class="checks" id="site-checks">
+          <label class="check"><input type="checkbox" data-site="myntra" /> <span>Myntra</span></label>
+          <label class="check"><input type="checkbox" data-site="flipkart" /> <span>Flipkart</span></label>
+          <label class="check"><input type="checkbox" data-site="meesho" /> <span>Meesho</span></label>
+          <label class="check"><input type="checkbox" data-site="nykaa" /> <span>Nykaa</span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data & privacy -->
+    <section class="card" aria-labelledby="data-h">
+      <div class="card-head"><h2 id="data-h">Data &amp; privacy</h2></div>
+
+      <div class="stat-row">
+        <div class="stat"><span id="cache-total">–</span><small>Cached results</small></div>
+        <div class="stat"><span id="cache-ai">–</span><small>AI cached</small></div>
+      </div>
+
+      <p class="muted">Everything is stored locally on this device. No accounts, no servers,
+        no tracking. Your detection results live in the browser cache; your settings sync
+        only across your own Chrome profile.</p>
+
+      <div class="btn-row">
+        <button class="ghost" id="export-settings" type="button">Export settings</button>
+        <button class="ghost" id="import-settings" type="button">Import settings</button>
+        <input type="file" id="import-file" accept="application/json" hidden />
+        <button class="ghost" id="clear-cache" type="button">Clear cache</button>
+        <button class="ghost danger" id="reset-all" type="button">Reset all settings</button>
+      </div>
+      <p class="muted small">Exported settings never include your access token.</p>
+    </section>
+
+    <!-- About & legal -->
+    <section class="card" aria-labelledby="about-h">
+      <div class="card-head"><h2 id="about-h">About &amp; help</h2></div>
+      <p class="muted">RealModel Filter <span id="about-ver">v1.3.0</span> — flags AI-generated
+        product photos on Myntra, Flipkart, Meesho and Nykaa.</p>
+
+      <div class="link-row">
+        <a class="linkout" id="help-link" href="https://github.com/yshraj/ai-product-image-detector#troubleshooting" target="_blank" rel="noopener">Help &amp; FAQ</a>
+        <a class="linkout" id="changelog-link" href="https://github.com/yshraj/ai-product-image-detector/releases" target="_blank" rel="noopener">Changelog</a>
+        <a class="linkout" id="feedback-link" href="https://github.com/yshraj/ai-product-image-detector/issues/new" target="_blank" rel="noopener">Send feedback</a>
+        <a class="linkout" id="source-link" href="https://github.com/yshraj/ai-product-image-detector" target="_blank" rel="noopener">Source code</a>
+      </div>
+
+      <details class="legal">
+        <summary>Privacy Policy</summary>
+        <div class="legal-body">
+          <p><strong>RealModel Filter does not collect, store, or transmit any personal
+            data to us.</strong> There is no account, no server, and no analytics or tracking.</p>
+          <h3>What stays on your device</h3>
+          <p>Your preferences (display mode, thresholds, active sites) sync only across your
+            own browser profile via Chrome Sync. Detection results are cached in your browser's
+            local storage. Your Hugging Face access token is stored locally and is never shared
+            with us.</p>
+          <h3>What leaves your device</h3>
+          <p>When you connect Hugging Face, product image bytes and your token are sent only to
+            Hugging Face's API to classify the image, governed by Hugging Face's own privacy
+            policy. With the on-device Preview engine, nothing leaves your browser.</p>
+          <h3>Permissions</h3>
+          <p>Host access is limited to the supported marketplaces, their image CDNs, and the
+            Hugging Face API. The extension only fetches public image URLs.</p>
+        </div>
+      </details>
+      <details class="legal">
+        <summary>Terms of Use</summary>
+        <div class="legal-body">
+          <p>RealModel Filter is provided "as is", without warranty of any kind. It is a
+            decision-support tool, not a guarantee.</p>
+          <h3>Accuracy</h3>
+          <p>No AI-image detector is perfect. The Preview heuristic is explicitly low-accuracy;
+            even connected models can mislabel images. Do not rely on it as the sole basis for
+            any purchasing or legal decision.</p>
+          <h3>Third-party services</h3>
+          <p>Using the Hugging Face engine is subject to Hugging Face's terms and rate limits.
+            You are responsible for your own access token and its usage.</p>
+          <h3>Liability</h3>
+          <p>The authors are not liable for any damages arising from use of the extension.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <div id="toast-host" aria-live="assertive"></div>
+  <script src="options.js"></script>
+</body>
+</html>
