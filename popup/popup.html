@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to controls</a>
+
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
@@ -22,88 +24,103 @@
       </div>
     </div>
     <label class="switch" title="Enable / disable detection">
+      <span class="visually-hidden">Enable detection</span>
       <input type="checkbox" id="toggle-enabled" checked />
-      <span class="slider"></span>
+      <span class="slider" aria-hidden="true"></span>
     </label>
   </header>
 
-  <section class="status-card" id="status-card">
-    <span class="status-dot" id="status-dot"></span>
-    <div class="status-text">
-      <div class="status-title" id="status-title">Detection engine</div>
-      <div class="status-sub" id="status-sub">—</div>
-    </div>
-    <span class="status-chip" id="status-chip">—</span>
-  </section>
-
-  <section class="stat-row">
-    <div class="stat"><span id="ai-count">–</span><small>AI on page</small></div>
-    <div class="stat"><span id="total-count">–</span><small>Scanned</small></div>
-    <div class="stat"><span id="cache-count">–</span><small>Cached</small></div>
-  </section>
-
-  <section class="block">
-    <div class="block-label">Detection engine</div>
-    <div class="segmented" id="provider-seg">
-      <button class="seg" data-provider="huggingface">Hugging&nbsp;Face</button>
-      <button class="seg" data-provider="aiornot">AI&nbsp;or&nbsp;Not</button>
-      <button class="seg" data-provider="heuristic">Preview</button>
-    </div>
-
-    <div class="engine-panel" id="panel-huggingface" hidden>
-      <p class="hint">Free, accurate cloud model. Recommended.</p>
-      <div class="field">
-        <input type="password" id="hf-token" placeholder="hf_… access token" autocomplete="off" spellcheck="false" />
-        <button class="ghost icon-btn" id="hf-token-toggle" title="Show / hide" type="button">show</button>
+  <main id="main">
+    <section class="status-card" id="status-card" role="status" aria-live="polite">
+      <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+      <div class="status-text">
+        <div class="status-title" id="status-title">Detection engine</div>
+        <div class="status-sub" id="status-sub">—</div>
       </div>
-      <button class="primary" id="hf-save">Connect Hugging Face</button>
+      <span class="status-chip" id="status-chip">—</span>
+    </section>
 
-      <details class="onboard" id="hf-onboard">
-        <summary>How to get a free key</summary>
-        <ol class="steps">
-          <li>Open <a href="https://huggingface.co/join" target="_blank" rel="noopener">huggingface.co/join</a> and create a free account.</li>
-          <li>Go to <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">Settings → Access Tokens</a>.</li>
-          <li>Click <b>New token</b>, role <b>Read</b>, name it <i>RealModel</i>, create it.</li>
-          <li>Copy the token (starts with <code>hf_</code>) and paste it above.</li>
-          <li>Press <b>Connect</b>. The first scan can take ~20s while the model warms up.</li>
-        </ol>
-        <div class="advanced">
-          <label for="hf-model">Model (advanced)</label>
-          <input type="text" id="hf-model" placeholder="Organika/sdxl-detector" spellcheck="false" />
+    <section class="stat-row" aria-label="Session activity">
+      <div class="stat"><span id="ai-count">–</span><small>AI on page</small></div>
+      <div class="stat"><span id="total-count">–</span><small>Scanned</small></div>
+      <div class="stat"><span id="cache-count">–</span><small>Cached</small></div>
+    </section>
+    <p class="empty-hint" id="empty-hint" hidden>
+      No images scanned yet — open a category page on Myntra, Flipkart, Meesho or Nykaa.
+    </p>
+
+    <section class="block">
+      <h2 class="block-label" id="engine-label">Detection engine</h2>
+      <div class="segmented" id="provider-seg" role="tablist" aria-labelledby="engine-label">
+        <button class="seg" role="tab" id="tab-huggingface" aria-controls="panel-huggingface" data-provider="huggingface">Hugging&nbsp;Face</button>
+        <button class="seg" role="tab" id="tab-heuristic" aria-controls="panel-heuristic" data-provider="heuristic">Preview</button>
+      </div>
+
+      <div class="engine-panel" id="panel-huggingface" role="tabpanel" aria-labelledby="tab-huggingface" hidden>
+        <p class="hint">Free, accurate cloud model. <b>Recommended.</b></p>
+
+        <div class="field">
+          <label class="visually-hidden" for="hf-token">Hugging Face access token</label>
+          <input type="password" id="hf-token" placeholder="hf_… access token" autocomplete="off" spellcheck="false" aria-describedby="hf-feedback" />
+          <button class="ghost icon-btn" id="hf-token-toggle" aria-pressed="false" type="button">show</button>
         </div>
-      </details>
-    </div>
+        <button class="primary" id="hf-save" type="button">
+          <span class="btn-label">Connect Hugging Face</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <p class="feedback" id="hf-feedback" role="alert" hidden></p>
 
-    <div class="engine-panel" id="panel-aiornot" hidden>
-      <p class="hint">Paid API with a small free tier.</p>
-      <div class="field">
-        <input type="password" id="aiornot-key" placeholder="AI or Not API key" autocomplete="off" spellcheck="false" />
+        <ol class="stepper" aria-label="How to get a free key">
+          <li>
+            <span class="step-no" aria-hidden="true">1</span>
+            <span class="step-body">Create a free account at
+              <a href="https://huggingface.co/join" target="_blank" rel="noopener">huggingface.co</a>.</span>
+          </li>
+          <li>
+            <span class="step-no" aria-hidden="true">2</span>
+            <span class="step-body">Make a <b>Read</b> token in
+              <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">Access&nbsp;Tokens</a>.</span>
+          </li>
+          <li>
+            <span class="step-no" aria-hidden="true">3</span>
+            <span class="step-body">Paste the <code>hf_…</code> token above and press <b>Connect</b>.</span>
+          </li>
+        </ol>
+
+        <details class="advanced-wrap">
+          <summary>Advanced</summary>
+          <div class="advanced">
+            <label for="hf-model">Model</label>
+            <input type="text" id="hf-model" placeholder="Organika/sdxl-detector" spellcheck="false" />
+          </div>
+        </details>
       </div>
-      <button class="primary" id="aiornot-save">Connect AI or Not</button>
-      <p class="hint"><a href="https://aiornot.com" target="_blank" rel="noopener">Get an API key →</a></p>
-    </div>
 
-    <div class="engine-panel" id="panel-heuristic" hidden>
-      <p class="hint warn">⚠️ Preview uses a lightweight on-device heuristic — fast and private, but <b>not accurate</b>. Expect false positives and misses. Connect Hugging Face for real detection.</p>
-      <button class="primary" id="goto-hf">Connect a real model →</button>
-    </div>
-  </section>
+      <div class="engine-panel" id="panel-heuristic" role="tabpanel" aria-labelledby="tab-heuristic" hidden>
+        <p class="hint warn">Preview uses a lightweight on-device heuristic — fast and private, but <b>not accurate</b>. Expect false positives and misses. Connect Hugging Face for real detection.</p>
+        <button class="primary" id="goto-hf" type="button">Connect a real model →</button>
+      </div>
+    </section>
 
-  <section class="block">
-    <div class="block-label">Display</div>
-    <div class="segmented" id="mode-seg">
-      <button class="seg" data-mode="all">Show all</button>
-      <button class="seg" data-mode="badge">Badge only</button>
-      <button class="seg" data-mode="hide">Hide AI</button>
-    </div>
-  </section>
+    <section class="block">
+      <h2 class="block-label" id="display-label">Display</h2>
+      <div class="segmented" id="mode-seg" role="radiogroup" aria-labelledby="display-label">
+        <button class="seg" role="radio" data-mode="all">Show all</button>
+        <button class="seg" role="radio" data-mode="badge">Badge only</button>
+        <button class="seg" role="radio" data-mode="hide">Hide AI</button>
+      </div>
+    </section>
+  </main>
 
   <footer class="footer">
-    <span class="ver">v1.0.0</span>
-    <button id="clear-cache" class="link-btn">Clear cache</button>
+    <span class="ver" id="version">v1.3.0</span>
+    <div class="footer-actions">
+      <button id="open-settings" class="link-btn" type="button">Settings</button>
+      <button id="clear-cache" class="link-btn" type="button">Clear cache</button>
+    </div>
   </footer>
 
-  <div id="toast-host"></div>
+  <div id="toast-host" aria-live="assertive"></div>
   <script src="popup.js"></script>
 </body>
 </html>
