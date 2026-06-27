@@ -119,14 +119,25 @@ async function connectHuggingFace() {
     return toast((r && r.error) || 'Connection failed', true);
   }
 
+  const modelChanged = model !== (state.hfModel || '');
   state = { ...state, provider: 'huggingface', hfToken: token, hfModel: model, hfVerified: true, hfUser: r.user || '' };
   await chrome.storage.sync.set({
     provider: 'huggingface', hfToken: token, hfModel: model, hfVerified: true, hfUser: r.user || '',
   });
   health = null; // a fresh, verified token clears any stale error
+
+  // A different model produces different verdicts — drop cached results so the
+  // switch takes effect immediately instead of replaying the old model's badges.
+  if (modelChanged) {
+    const all = await chrome.storage.local.get(null);
+    const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+    if (keys.length) await chrome.storage.local.remove(keys);
+    updateStats();
+  }
+
   feedback('hf', 'ok', r.user ? `Connected as ${r.user}` : 'Token verified — you’re connected');
   renderStatus();
-  toast('Hugging Face connected');
+  toast(modelChanged ? 'Connected · cache cleared — reload the page' : 'Hugging Face connected');
 }
 
 // ---- panels / tabs --------------------------------------------------------

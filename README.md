@@ -74,6 +74,34 @@ Model* in the popup; stored as `hfModel`). Free-tier limits are credits-based an
 not a fixed req/hour; the techniques above keep a normal browsing session well
 within them. HF **PRO** ($9/mo) raises the ceiling for power users.
 
+### Choosing a model & accuracy reality
+
+**Free detectors are imperfect on studio e-commerce photos.** Catalog images (clean
+seamless backgrounds, even lighting, heavy retouching) share visual statistics with
+AI renders, so detectors trained on "photos vs diffusion art" over-flag them.
+Independent benchmarks put the old default `Organika/sdxl-detector` at **~60% accuracy
+with a ~17% false-positive rate** — on professional studio shots it can flag almost
+everything.
+
+> **Important:** a model only works here if it's **served by the free hf-inference
+> tier** (`inference: warm` on its HF page). Many strong detectors (SigLIP/DINOv2,
+> FSD, OmniAID) are custom checkpoints that are *not* served and will just error.
+
+The model picker (*Advanced → Model*) lists **served** classifiers you can A/B:
+
+| Model | Notes |
+|---|---|
+| `haywoodsloan/ai-image-detector-deploy` | **New default.** Swinv2, most-used served detector, built for deployment. |
+| `Nahrawy/AIorNot` | Swin classifier, served. |
+| `Organika/sdxl-detector` | Old default; over-flags studio photography. |
+| `umm-maybe/AI-image-detector` | Older baseline. |
+
+Switching a model **auto-clears the detection cache** (cached verdicts are keyed by
+image URL and would otherwise replay the old model's results) — just press **Connect**
+and reload. Even the best *free* model has a few-percent false-positive rate on
+professional studio photography; for trustworthy accuracy the roadmap's premium engine
+(Hive-class, ~94%) is the real answer.
+
 ### API keys / `.env`
 
 Still **no `.env` file** — keys are entered in the popup and stored in

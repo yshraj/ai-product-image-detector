@@ -4,8 +4,8 @@ const CACHE_PREFIX = 'rmf_cache_';
 const ALL_SITES = ['myntra', 'flipkart', 'meesho', 'nykaa'];
 const DEFAULTS = {
   enabled: true, mode: 'badge', provider: 'heuristic',
-  hfToken: '', hfModel: 'Organika/sdxl-detector', hfVerified: false, hfUser: '',
-  minConfidence: 50, disabledSites: [],
+  hfToken: '', hfModel: 'haywoodsloan/ai-image-detector-deploy', hfVerified: false, hfUser: '',
+  minConfidence: 70, disabledSites: [],
 };
 // Keys that are safe to export/import (never the token).
 const PORTABLE_KEYS = ['enabled', 'mode', 'minConfidence', 'disabledSites', 'hfModel'];

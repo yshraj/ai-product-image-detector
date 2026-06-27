@@ -65,7 +65,7 @@ test('reset all settings restores defaults', async () => {
   await page.goto(optUrl, { waitUntil: 'domcontentloaded' });
 
   await page.locator('#reset-all').click();
-  await expect(page.locator('#opt-confidence')).toHaveValue('50');
+  await expect(page.locator('#opt-confidence')).toHaveValue('70');
   await expect(page.locator('#mode-seg .seg[data-mode="badge"]')).toHaveClass(/active/);
   await page.close();
 });

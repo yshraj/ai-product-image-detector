@@ -91,7 +91,14 @@
           <summary>Advanced</summary>
           <div class="advanced">
             <label for="hf-model">Model</label>
-            <input type="text" id="hf-model" placeholder="Organika/sdxl-detector" spellcheck="false" />
+            <input type="text" id="hf-model" list="hf-model-list" placeholder="haywoodsloan/ai-image-detector-deploy" spellcheck="false" />
+            <datalist id="hf-model-list">
+              <option value="haywoodsloan/ai-image-detector-deploy"></option>
+              <option value="Nahrawy/AIorNot"></option>
+              <option value="Organika/sdxl-detector"></option>
+              <option value="umm-maybe/AI-image-detector"></option>
+            </datalist>
+            <p class="hint">These are all served on the free tier. <code>Organika/sdxl-detector</code> over-flags studio photos; the default now uses a more robust model. Switching a model auto-clears the cache — just <b>Connect</b> and reload.</p>
           </div>
         </details>
       </div>

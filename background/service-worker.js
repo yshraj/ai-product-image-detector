@@ -14,10 +14,10 @@ const DEFAULTS = {
   mode: 'badge',
   provider: 'heuristic',                 // 'heuristic' | 'huggingface'
   hfToken: '',
-  hfModel: 'Organika/sdxl-detector',     // image AI-vs-human classifier
+  hfModel: 'haywoodsloan/ai-image-detector-deploy', // served (warm) AI-vs-real classifier
   hfVerified: false,                     // token passed a live whoami check
   hfUser: '',                            // HF username from whoami (display only)
-  minConfidence: 50,                     // only flag AI at/above this confidence
+  minConfidence: 70,                     // only flag AI at/above this confidence (floor)
   disabledSites: [],                     // site names to skip, e.g. ['nykaa']
 };
 
@@ -35,12 +35,31 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
       // Backfill any newly-added keys without clobbering user settings.
       const cur = await chrome.storage.sync.get(DEFAULTS);
       await chrome.storage.sync.set({ ...DEFAULTS, ...cur });
+      // The old default model (Organika/sdxl-detector) over-flags real studio
+      // photos. If the user never picked their own model, migrate them to the
+      // new served default and drop stale cached verdicts.
+      if (cur.hfModel === 'Organika/sdxl-detector') {
+        await chrome.storage.sync.set({ hfModel: DEFAULTS.hfModel });
+        await clearDetectionCache();
+        console.log('[RMF] Migrated default model → ', DEFAULTS.hfModel);
+      }
       console.log('[RMF] Updated to', chrome.runtime.getManifest().version);
     }
   });
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Drop all cached detection verdicts (used when the model changes so old
+// verdicts from a different model don't linger).
+async function clearDetectionCache() {
+  try {
+    const all = await chrome.storage.local.get(null);
+    const keys = Object.keys(all).filter((k) => k.startsWith('rmf_cache_'));
+    if (keys.length) await chrome.storage.local.remove(keys);
+    return keys.length;
+  } catch { return 0; }
+}
 
 // Defence-in-depth: the worker has broad fetch ability (host_permissions bypass
 // page CORS), so only ever fetch public http(s) URLs. This blocks a compromised

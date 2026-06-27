@@ -59,6 +59,18 @@ test('parseHfResult handles nested arrays and real-only labels', () => {
   assert.equal(realOnly.isAI, false);
 });
 
+test('parseHfResult maps a confident real photo to a LOW AI score (Organika labels)', () => {
+  // Organika/sdxl-detector emits id2label {0:"artificial", 1:"human"}. A real
+  // photo should come back human-dominant → low P(AI), NOT flagged. This guards
+  // against any future label-direction regression.
+  const realPhoto = parseHfResult([
+    { label: 'human', score: 0.985 },
+    { label: 'artificial', score: 0.015 },
+  ]);
+  assert.equal(realPhoto.confidence, 2); // round(0.015*100)
+  assert.equal(realPhoto.isAI, false);
+});
+
 test('parseHfResult throws on unusable responses', () => {
   assert.throws(() => parseHfResult({ not: 'an array' }));
   assert.throws(() => parseHfResult([{ label: 'cat', score: 0.9 }]));
