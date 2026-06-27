@@ -11,9 +11,10 @@ let hfCalls = 0;
 test.beforeAll(async () => {
   context = await launch();
 
-  // Mock the HF Inference API. Returns a fixed verdict (97% artificial) so we
-  // can prove the score came from HF, not the heuristic (which yields 92%).
-  await context.route('https://api-inference.huggingface.co/**', (route) => {
+  // Mock the HF Inference API (current router endpoint). Returns a fixed verdict
+  // (97% artificial) so we can prove the score came from HF, not the heuristic
+  // (which yields 92%).
+  await context.route('https://router.huggingface.co/**', (route) => {
     hfCalls++;
     route.fulfill({
       status: 200,

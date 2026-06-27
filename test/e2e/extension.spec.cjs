@@ -38,15 +38,47 @@ test('preview engine: discriminates AI vs real and handles infinite scroll', asy
   // Preview badges must be tagged as preview.
   expect(await page.locator('.rmf-badge[data-preview="true"]').count()).toBeGreaterThan(0);
 
-  // Infinite scroll.
+  // Badges are accessible to assistive tech (role + descriptive label).
+  const firstBadge = page.locator('.rmf-badge').first();
+  await expect(firstBadge).toHaveAttribute('role', 'img');
+  await expect(firstBadge).toHaveAttribute('aria-label', /RealModel Filter:.*confidence/);
+
+  // Infinite scroll: scrolling to the bottom appends a new batch below the fold…
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect.poll(() => page.locator('.product-base').count(),
     { message: 'second batch inserted', timeout: 10_000 }).toBeGreaterThan(initialCards);
 
+  // …then scrolling them into view gets them scanned (viewport-gated).
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   const grown = await page.locator('.product-base').count();
   await expect.poll(() => page.locator('.product-base[data-rmf-scanned="true"]').count(),
-    { message: 'all cards scanned after scroll', timeout: 20_000 }).toBe(grown);
+    { message: 'revealed cards scanned after scroll', timeout: 20_000 }).toBe(grown);
 
   console.log(`[e2e] after scroll: ${grown} cards, ${await page.locator('.rmf-badge').count()} badges`);
+  await page.close();
+});
+
+test('viewport gating: off-screen cards are not scanned until revealed', async () => {
+  const page = await context.newPage();
+  // A small viewport so most of the initial grid sits below the fold.
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
+
+  // Some card gets scanned…
+  await expect.poll(() => page.locator('.product-base[data-rmf-scanned="true"]').count(),
+    { message: 'a visible card is scanned', timeout: 20_000 }).toBeGreaterThan(0);
+
+  // …but NOT all of them — the off-screen ones are deferred (the whole point:
+  // we don't call the model for images the user never looks at).
+  const total = await page.locator('.product-base').count();
+  const scannedEarly = await page.locator('.product-base[data-rmf-scanned="true"]').count();
+  console.log(`\n[e2e] gating: ${scannedEarly}/${total} scanned before scrolling`);
+  expect(scannedEarly, 'gating should defer off-screen cards').toBeLessThan(total);
+
+  // Scrolling down reveals more cards, which then get scanned on demand.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => page.locator('.product-base[data-rmf-scanned="true"]').count(),
+    { message: 'more cards scanned after scrolling', timeout: 20_000 }).toBeGreaterThan(scannedEarly);
+
   await page.close();
 });

@@ -43,8 +43,9 @@ function fixtureHtml() {
         if(loaded) return;
         if(window.scrollY+window.innerHeight > document.body.scrollHeight-400){
           loaded=true;
-          var grid=document.querySelector('.results-base');
-          BATCH2.forEach(function(n,i){ grid.appendChild(mkCard(n,i)); });
+          // Realistic infinite scroll: new cards append BELOW the fold (at the
+          // end of the document), so they're off-screen until scrolled to.
+          BATCH2.forEach(function(n,i){ document.body.appendChild(mkCard(n,i)); });
         }
       }, {passive:true});
     </script>
@@ -67,6 +68,22 @@ async function launch() {
   // Myntra page → fixture
   await context.route('https://www.myntra.com/**', (route) => {
     route.fulfill({ status: 200, contentType: 'text/html', body: fixtureHtml() });
+  });
+
+  // HF token validation (whoami). Token-aware so tests can exercise both paths:
+  // any token containing "bad" is rejected (401); everything else is valid.
+  // NOTE: validation runs in the service worker, so this must be a *context*
+  // route (page.route cannot intercept service-worker requests).
+  await context.route('https://huggingface.co/api/whoami-v2', (route) => {
+    const auth = route.request().headers()['authorization'] || '';
+    if (/bad/i.test(auth)) {
+      return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Invalid"}' });
+    }
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ name: 'testuser', fullname: 'Test User' }),
+    });
   });
 
   // CDN images, CROSS-ORIGIN, NO CORS header (production-like).
