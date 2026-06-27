@@ -1,7 +1,8 @@
 // utils/throttle.js
-// Concurrency limiter + simple rate limiter for API calls.
+// Concurrency limiter for detection calls.
 (function () {
-  // Runs at most `max` async tasks concurrently.
+  // Runs at most `max` async tasks concurrently; the rest queue and run as
+  // slots free up. Used to cap how many image detections are in flight at once.
   function createLimiter(max) {
     let active = 0;
     const queue = [];
@@ -22,17 +23,5 @@
     };
   }
 
-  // Token-bucket style rate limiter: at most `count` calls per `windowMs`.
-  function createRateLimiter(count, windowMs) {
-    const timestamps = [];
-    return function allow() {
-      const now = Date.now();
-      while (timestamps.length && now - timestamps[0] > windowMs) timestamps.shift();
-      if (timestamps.length >= count) return false;
-      timestamps.push(now);
-      return true;
-    };
-  }
-
-  window.RMF_Throttle = { createLimiter, createRateLimiter };
+  window.RMF_Throttle = { createLimiter };
 })();
