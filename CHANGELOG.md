@@ -4,6 +4,22 @@ All notable changes to RealModel Filter are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Detection accuracy on real photos.** The previous default model
+  `Organika/sdxl-detector` over-flags studio/e-commerce photography (benchmarked
+  ~60% accuracy / ~17% FPR), so connected users saw almost everything flagged.
+  - Default model switched to `haywoodsloan/ai-image-detector-deploy` (verified
+    served on the free hf-inference tier); existing installs are migrated off the
+    old default and their stale cache is dropped.
+  - Popup model picker now lists **only served (warm) models**; switching a model
+    **auto-clears the per-URL cache** so the change takes effect on reload.
+
+### Changed
+- Badge tiers are stricter: **≥ 95% → "AI Generated"**, **70–94% → "Likely AI"**,
+  **< 70% → no badge**. Default minimum-confidence floor raised 50% → **70%**.
+
 ## [1.3.0] — 2026-06-27
 
 ### Added

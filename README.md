@@ -31,6 +31,21 @@ With no token, detection falls back to the on-device heuristic, which is clearly
 labelled **preview** in the badge and popup — fast and private but **not accurate**
 (false positives + misses).
 
+### Badge tiers
+
+A card is badged based on its AI confidence (P(AI), 0–100), with the flag floor
+tunable in Settings:
+
+| Confidence | Badge | Colour |
+|---|---|---|
+| **≥ 95%** | 🤖 AI Generated | red |
+| **70–94%** | ⚠️ Likely AI | amber |
+| **< 70%** (default floor) | _no badge_ | — |
+
+Raise the **minimum confidence** in Settings for stricter, fewer flags. Preview
+(heuristic) badges are additionally marked `·preview` so they're never mistaken for
+a real model verdict.
+
 ### Why the heuristic alone is not enough
 
 Real catalog photos and AI renders both tend to have flat studio backgrounds, so a
@@ -46,9 +61,9 @@ The popup walks you through it ("How to get a free key"):
 3. Copy the `hf_…` token, paste it in the popup, press **Connect**. The token is
    **validated live** against Hugging Face (`whoami`) — you'll see ✅ *Connected as
    <user>* or a clear error (invalid token, rate-limited, etc.) immediately.
-4. Default model is `Organika/sdxl-detector` (changeable under *Advanced → Model*).
-   The first scan can take ~20s while the model warms up (HF returns 503 + ETA; the
-   worker retries automatically).
+4. Default model is `haywoodsloan/ai-image-detector-deploy` (changeable under
+   *Advanced → Model*). The first scan can take ~20s while the model warms up (HF
+   returns 503 + ETA; the worker retries automatically).
 
 > **Endpoint note:** detection calls go to the current Hugging Face inference
 > router — `https://router.huggingface.co/hf-inference/models/<model>`. The legacy
@@ -69,10 +84,10 @@ make*, not batching. We minimise calls without touching detection accuracy:
 | **Error backoff (60s)** | On a 429/503/5xx we cache "inconclusive" for only 60s — we don't hammer a rate-limited model but recover quickly. |
 | **Cold-start retry** | A warming model (HTTP 503) is retried up to 3× with the ETA HF returns. |
 
-**Config:** model is `Organika/sdxl-detector` by default (change under *Advanced →
-Model* in the popup; stored as `hfModel`). Free-tier limits are credits-based and
-not a fixed req/hour; the techniques above keep a normal browsing session well
-within them. HF **PRO** ($9/mo) raises the ceiling for power users.
+**Config:** model is `haywoodsloan/ai-image-detector-deploy` by default (change under
+*Advanced → Model* in the popup; stored as `hfModel`). Free-tier limits are
+credits-based and not a fixed req/hour; the techniques above keep a normal browsing
+session well within them. HF **PRO** ($9/mo) raises the ceiling for power users.
 
 ### Choosing a model & accuracy reality
 
@@ -121,8 +136,8 @@ opening the popup (re-bindable at `chrome://extensions/shortcuts`).
 A full settings surface (popup → **Settings**, or the extension's *Options*) adds:
 
 - **Detection preferences** (autosave, applied live): master enable, display mode,
-  **minimum confidence to flag** (50–95% — raise it for stricter, fewer badges), and
-  **per-marketplace toggles** (run only on the sites you want).
+  **minimum confidence to flag** (50–95%, default **70%** — raise it for stricter,
+  fewer badges), and **per-marketplace toggles** (run only on the sites you want).
 - **Data & privacy:** local cache stats, **export/import settings** (JSON, token never
   included), **clear cache**, and **reset all settings**.
 - **About & help:** version, keyboard shortcut, links to Help/Changelog/Feedback/Source,
@@ -136,17 +151,24 @@ instantly via `chrome.storage.onChanged` (no page reload needed).
 
 ```
 manifest.json
-background/service-worker.js   defaults on install
+background/service-worker.js   defaults, remote detection, validation, health, migration
 content/
-  content.js                  scan, overlay, MutationObserver, popup messaging
+  content.js                  scan, viewport-gate, overlay, MutationObserver, prefs sync
   content.css                 badge + bar styles
   sites/*.js                  per-site selectors (each guards on hostname)
 detection/
   exif-check.js  tfjs-detector.js  remote.js  pipeline.js
+popup/
+  popup.html  popup.css  popup.js   toolbar UI: engine connect, modes, stats
+options/
+  options.html  options.css  options.js   full settings page (prefs, data, legal)
 utils/
   logger.js  throttle.js  cache.js
+scripts/validate.js           build/lint check (manifest refs + JS syntax)
+test/  e2e/*.spec.cjs  unit/*.test.cjs
 libs/exifr.min.js             vendored EXIF parser
 icons/                        16 / 48 / 128
+docs/  PRIVACY.md  TERMS.md  ROADMAP.md  realmodel-filter-dev-guide.md
 ```
 
 ## Tests
@@ -161,15 +183,21 @@ npm test            # all e2e specs (headless)
 npm run test:headed # watch in a real browser
 ```
 
-- `extension.spec` — preview engine discriminates AI vs real; infinite scroll scans new cards;
-  badges expose accessible `role`/`aria-label`
+- `extension.spec` — preview engine discriminates AI vs real; viewport gating defers
+  off-screen cards; infinite scroll scans revealed cards; badges expose `role`/`aria-label`
 - `huggingface.spec` — with a token set, the **HF model verdict** is used (mocked at the
-  `router.huggingface.co` endpoint, asserts 97% from HF, not the heuristic's 92%)
-- `popup.spec` — SaaS UI: engine-status pill, provider tab switching, HF onboarding stepper,
-  **live token validation** (success + rejection paths), and ARIA roles; saves `popup-*.png`
-  screenshots to `test-results/`
-- `a11y.spec` — axe-core audit (WCAG 2 A/AA) of the popup, fails on serious/critical violations
-- `test/unit/service-worker.test.cjs` — URL SSRF allowlist, HF response parsing, error mapping
+  `router.huggingface.co` endpoint, asserts 97% → "AI Generated", not the heuristic's 92%)
+- `huggingface-error.spec` — a failing engine shows **no** preview badge and records the error
+- `labels.spec` — badge tiers: 97% → AI Generated, 92% → Likely AI, 60% → no badge
+- `preferences.spec` — confidence threshold, per-site disable, live updates, and that
+  corrupt/malformed stored settings never break detection
+- `popup.spec` — SaaS UI: engine-status pill, provider tabs, onboarding stepper,
+  **live token validation** (success + rejection), AI-or-Not removed, ARIA roles; saves
+  `popup-*.png` to `test-results/`
+- `options.spec` — settings page: preferences autosave/persist, data controls, reset, legal
+- `a11y.spec` — axe-core audit (WCAG 2 A/AA) of the **popup and options page**
+- `test/unit/service-worker.test.cjs` — URL SSRF allowlist, HF response parsing (incl.
+  real-photo → low-score direction), error mapping
 
 CI runs `validate` + unit + e2e on every push/PR (`.github/workflows/ci.yml`).
 
