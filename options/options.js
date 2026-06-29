@@ -5,7 +5,7 @@ const ALL_SITES = ['myntra', 'flipkart', 'meesho', 'nykaa'];
 const DEFAULTS = {
   enabled: true, mode: 'badge', provider: 'heuristic',
   hfToken: '', hfModel: 'haywoodsloan/ai-image-detector-deploy', hfVerified: false, hfUser: '',
-  minConfidence: 70, disabledSites: [],
+  minConfidence: 70, disabledSites: [], notifyOnAI: false,
 };
 // Keys that are safe to export/import (never the token).
 const PORTABLE_KEYS = ['enabled', 'mode', 'minConfidence', 'disabledSites', 'hfModel'];
@@ -42,6 +42,7 @@ function renderEngine() {
 // ---- preferences ----------------------------------------------------------
 function renderPrefs() {
   $('opt-enabled').checked = state.enabled;
+  $('opt-notify').checked = state.notifyOnAI === true;
   setMode(state.mode);
   $('opt-confidence').value = state.minConfidence;
   $('confidence-val').textContent = `${state.minConfidence}%`;
@@ -75,6 +76,7 @@ function flashSaved() {
 
 function wireEvents() {
   $('opt-enabled').addEventListener('change', (e) => save({ enabled: e.target.checked }));
+  $('opt-notify').addEventListener('change', (e) => save({ notifyOnAI: e.target.checked }));
 
   document.querySelectorAll('#mode-seg .seg').forEach((btn) => {
     btn.addEventListener('click', () => { setMode(btn.dataset.mode); save({ mode: btn.dataset.mode }); });

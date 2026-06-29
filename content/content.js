@@ -6,7 +6,7 @@
   const Log = window.RMF_Log;
   const limit = window.RMF_Throttle.createLimiter(3); // max 3 detections at once
 
-  const PREF_DEFAULTS = { mode: 'badge', enabled: true, minConfidence: 70, disabledSites: [] };
+  const PREF_DEFAULTS = { mode: 'badge', enabled: true, minConfidence: 70, disabledSites: [], notifyOnAI: false };
 
   // Badge tiers (confidence = P(AI), 0-100):
   //   confidence >= AI_THRESHOLD          → "AI Generated" (strong, red)
@@ -32,6 +32,8 @@
   let enabled = prefs.enabled !== false;       // global on/off (default on)
   let minConfidence = cleanConf(prefs.minConfidence);
   let siteEnabled = !siteDisabled(prefs.disabledSites);
+  let notifyOnAI = prefs.notifyOnAI === true;  // opt-in
+  let notified = false;                        // one notification per page load
 
   // Detection runs only when globally enabled AND this site isn't disabled.
   const isActive = () => enabled && siteEnabled;
@@ -51,7 +53,15 @@
           type: 'RMF_BADGE', ai: session.ai, scanned: session.scanned, active: isActive(),
         });
       } catch { /* worker unavailable */ }
+      maybeNotify();
     }, 300);
+  }
+
+  // Fire one opt-in notification per page once AI is found (worker throttles).
+  function maybeNotify() {
+    if (!notifyOnAI || notified || session.ai <= 0 || !isActive()) return;
+    notified = true;
+    try { chrome.runtime.sendMessage({ type: 'RMF_NOTIFY', ai: session.ai }); } catch { /* noop */ }
   }
 
   // --- overlay -------------------------------------------------------------
@@ -292,6 +302,7 @@
       minConfidence = cleanConf(changes.minConfidence.newValue);
       rerender(); // recompute badges from cache against the new threshold
     }
+    if (changes.notifyOnAI) notifyOnAI = changes.notifyOnAI.newValue === true;
   });
 
   // --- init ----------------------------------------------------------------

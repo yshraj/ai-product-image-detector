@@ -11,7 +11,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   "host_permissions": [
     "https://www.myntra.com/*",

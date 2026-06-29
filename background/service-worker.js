@@ -25,6 +25,7 @@ const DEFAULTS = {
   hfUser: '',                            // HF username from whoami (display only)
   minConfidence: 70,                     // only flag AI at/above this confidence (floor)
   disabledSites: [],                     // site names to skip, e.g. ['nykaa']
+  notifyOnAI: false,                     // opt-in OS notification when a page has AI
 };
 
 // Hugging Face moved off the legacy api-inference host (now returns HTTP 410).
@@ -134,6 +135,29 @@ function addHistory(entry) {
     } catch { /* best-effort */ }
   });
   return historyChain;
+}
+
+// ---- opt-in notifications --------------------------------------------------
+// Non-intrusive, off by default. Honey's notifications are disliked for blocking
+// the page; Rakuten's quiet nudge is loved — we do a single OS-level summary.
+let lastNotifyAt = 0;
+function notifyAI(ai) {
+  const count = Number(ai) || 0;
+  if (count <= 0 || !STRINGS || typeof chrome === 'undefined' || !chrome.notifications) return;
+  const now = Date.now();
+  if (now - lastNotifyAt < 30_000) return; // global throttle: at most 1 / 30s
+  lastNotifyAt = now;
+  try {
+    chrome.notifications.create('', {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+      title: STRINGS.notify.title,
+      message: STRINGS.notify.body(count),
+      priority: 0,
+    });
+  } catch { /* notifications unavailable */ }
+  // Observable record (also handy for the popup / tests).
+  try { chrome.storage.session.set({ rmf_lastNotify: { ai: count, at: now } }); } catch { /* noop */ }
 }
 
 // ---- toolbar badge (per-tab AI count) -------------------------------------
@@ -334,6 +358,10 @@ function registerMessageRouter() {
   }
   if (msg?.type === 'RMF_HISTORY_ADD') {
     addHistory(msg.entry);
+    return false; // fire-and-forget
+  }
+  if (msg?.type === 'RMF_NOTIFY') {
+    notifyAI(msg.ai);
     return false; // fire-and-forget
   }
   if (msg?.type === 'RMF_ENGINE_HEALTH') {
