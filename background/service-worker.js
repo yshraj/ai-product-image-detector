@@ -106,6 +106,36 @@ async function fetchImage(url) {
   return res;
 }
 
+// ---- activity history (local, capped, deduped) ----------------------------
+// A transparent local log of what was flagged — something no competitor offers.
+// The worker is the single writer so concurrent cards can't race the storage.
+const HISTORY_KEY = 'rmf_history';
+const HISTORY_MAX = 200;
+let historyChain = Promise.resolve();
+
+function addHistory(entry) {
+  if (!entry || typeof entry.imageUrl !== 'string') return historyChain;
+  historyChain = historyChain.then(async () => {
+    try {
+      const { [HISTORY_KEY]: list = [] } = await chrome.storage.local.get(HISTORY_KEY);
+      if (list.some((e) => e.imageUrl === entry.imageUrl)) return; // dedupe by image
+      list.unshift({
+        ts: Date.now(),
+        site: String(entry.site || ''),
+        score: Math.max(0, Math.min(100, Number(entry.score) || 0)),
+        high: !!entry.high,
+        source: String(entry.source || ''),
+        preview: !!entry.preview,
+        imageUrl: entry.imageUrl,
+        pageUrl: String(entry.pageUrl || ''),
+      });
+      if (list.length > HISTORY_MAX) list.length = HISTORY_MAX;
+      await chrome.storage.local.set({ [HISTORY_KEY]: list });
+    } catch { /* best-effort */ }
+  });
+  return historyChain;
+}
+
 // ---- toolbar badge (per-tab AI count) -------------------------------------
 // Gives a glanceable, persistent indicator of what was found on the current
 // tab — the thing Capital One Shopping users say is missing.
@@ -300,6 +330,10 @@ function registerMessageRouter() {
   }
   if (msg?.type === 'RMF_BADGE') {
     updateBadge(_sender?.tab?.id, msg);
+    return false; // fire-and-forget
+  }
+  if (msg?.type === 'RMF_HISTORY_ADD') {
+    addHistory(msg.entry);
     return false; // fire-and-forget
   }
   if (msg?.type === 'RMF_ENGINE_HEALTH') {

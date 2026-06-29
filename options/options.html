@@ -117,6 +117,17 @@
       <p class="muted small">Exported settings never include your access token.</p>
     </section>
 
+    <!-- Activity history -->
+    <section class="card" aria-labelledby="history-h">
+      <div class="card-head">
+        <h2 id="history-h">Recent detections</h2>
+        <button class="ghost" id="clear-history" type="button">Clear history</button>
+      </div>
+      <p class="muted">A local log of images flagged as AI — stored only on this device.</p>
+      <ul class="history" id="history-list" aria-live="polite"></ul>
+      <p class="muted" id="history-empty" hidden></p>
+    </section>
+
     <!-- About & legal -->
     <section class="card" aria-labelledby="about-h">
       <div class="card-head"><h2 id="about-h">About &amp; help</h2></div>

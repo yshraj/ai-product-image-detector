@@ -164,12 +164,33 @@
       const result = await limit(() => window.RMF_Detect(imgEl.currentSrc || imgEl.src));
       injectOverlay(card, result);
       session.scanned++;
-      if (result.isAI && result.confidence >= minConfidence) session.ai++;
+      if (result.isAI && result.confidence >= minConfidence) {
+        session.ai++;
+        logFlag(imgEl.currentSrc || imgEl.src, result);
+      }
       reportBadge();
     } catch (err) {
       Log?.debug('processCard error', err);
       card.removeAttribute('data-rmf-scanned'); // allow a retry later
     }
+  }
+
+  // Record a flagged item in the local activity history (worker dedupes/caps).
+  function logFlag(imageUrl, result) {
+    try {
+      chrome.runtime.sendMessage({
+        type: 'RMF_HISTORY_ADD',
+        entry: {
+          site: SITE.name,
+          score: Math.round(result.confidence),
+          high: result.confidence >= AI_THRESHOLD,
+          source: result.source || '',
+          preview: !!result.preview,
+          imageUrl,
+          pageUrl: location.href,
+        },
+      });
+    } catch { /* worker unavailable */ }
   }
 
   // --- scanning + observing ------------------------------------------------

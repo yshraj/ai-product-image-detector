@@ -18,8 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderEngine();
   renderPrefs();
   updateStats();
+  renderHistory();
   wireEvents();
 });
+
+const HISTORY_KEY = 'rmf_history';
 
 // ---- engine status (read-only) -------------------------------------------
 function renderEngine() {
@@ -103,6 +106,95 @@ function wireEvents() {
   $('import-file').addEventListener('change', importSettings);
   $('clear-cache').addEventListener('click', clearCache);
   $('reset-all').addEventListener('click', resetAll);
+  $('clear-history').addEventListener('click', clearHistory);
+}
+
+// ---- activity history -----------------------------------------------------
+function relativeTime(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+async function renderHistory() {
+  const S = window.RMF_STRINGS;
+  const list = $('history-list');
+  const empty = $('history-empty');
+  list.textContent = '';
+  let items = [];
+  try { items = (await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY] || []; } catch { items = []; }
+
+  if (!items.length) {
+    empty.hidden = false;
+    empty.textContent = (S && S.history.empty) || 'Nothing flagged yet.';
+    return;
+  }
+  empty.hidden = true;
+
+  for (const it of items) {
+    const li = document.createElement('li');
+    li.className = 'hist-item';
+
+    const img = document.createElement('img');
+    img.className = 'hist-thumb';
+    img.alt = '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = it.imageUrl;
+    img.addEventListener('error', () => { img.replaceWith(brokenThumb()); }, { once: true });
+
+    const body = document.createElement('div');
+    body.className = 'hist-body';
+
+    const line = document.createElement('div');
+    line.className = 'hist-line';
+    const verdict = document.createElement('span');
+    verdict.className = 'hist-verdict ' + (it.high ? 'high' : 'med');
+    verdict.textContent = (it.high ? 'AI Generated' : 'Likely AI') + ` · ${it.score}%`;
+    line.appendChild(verdict);
+    if (it.preview) {
+      const tag = document.createElement('span');
+      tag.className = 'hist-tag';
+      tag.textContent = 'preview';
+      line.appendChild(tag);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'hist-meta';
+    const when = relativeTime(it.ts);
+    const site = it.site ? it.site[0].toUpperCase() + it.site.slice(1) : 'page';
+    if (it.pageUrl) {
+      const a = document.createElement('a');
+      a.href = it.pageUrl; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = `${site} · ${when}`;
+      meta.appendChild(a);
+    } else {
+      meta.textContent = `${site} · ${when}`;
+    }
+
+    body.append(line, meta);
+    li.append(img, body);
+    list.appendChild(li);
+  }
+}
+
+function brokenThumb() {
+  const d = document.createElement('div');
+  d.className = 'hist-thumb broken';
+  d.textContent = '🖼';
+  d.setAttribute('aria-hidden', 'true');
+  return d;
+}
+
+async function clearHistory() {
+  const S = window.RMF_STRINGS;
+  await chrome.storage.local.remove(HISTORY_KEY);
+  renderHistory();
+  toast((S && S.history.cleared) || 'History cleared');
 }
 
 // ---- data & privacy -------------------------------------------------------
