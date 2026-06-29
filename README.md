@@ -5,6 +5,19 @@ Meesho, Nykaa) and overlays a confidence badge on each detected image.
 
 Manifest V3 · vanilla JS · no build step · runs fully client-side.
 
+## Features at a glance
+
+- **Inline badges** on product grids with tiers (≥95% AI · 70–94% Likely AI · `·preview`).
+- **Toolbar badge counter** — glanceable count of AI-flagged items on the current tab.
+- **Page scan summary + rescan** in the popup ("N of M look AI (P%)").
+- **"Why flagged?" details** — click any badge for engine, model, confidence and a plain
+  explanation (radical transparency, keyboard/screen-reader accessible).
+- **Activity history** — a local, on-device log of flagged items (Settings page).
+- **Opt-in notifications** — one quiet OS nudge per page when AI is found (off by default).
+- **Two engines** — Hugging Face (accurate, free token) + on-device Preview; per-site toggles,
+  confidence threshold, `Alt+Shift+R` shortcut.
+- **Private by design** — no backend, no accounts, no tracking; minimal permissions.
+
 ## Load it (developer mode)
 
 1. Open Chrome → `chrome://extensions`
@@ -138,6 +151,9 @@ A full settings surface (popup → **Settings**, or the extension's *Options*) a
 - **Detection preferences** (autosave, applied live): master enable, display mode,
   **minimum confidence to flag** (50–95%, default **70%** — raise it for stricter,
   fewer badges), and **per-marketplace toggles** (run only on the sites you want).
+- **Opt-in notifications:** one quiet OS notification per page when AI is found (off by default).
+- **Activity history:** a local, on-device log of recently flagged items (thumbnail, verdict,
+  score, site, time, page link) with a clear action.
 - **Data & privacy:** local cache stats, **export/import settings** (JSON, token never
   included), **clear cache**, and **reset all settings**.
 - **About & help:** version, keyboard shortcut, links to Help/Changelog/Feedback/Source,
@@ -163,12 +179,13 @@ popup/
 options/
   options.html  options.css  options.js   full settings page (prefs, data, legal)
 utils/
-  logger.js  throttle.js  cache.js
+  strings.js  logger.js  throttle.js  cache.js   (strings = shared UI copy)
 scripts/validate.js           build/lint check (manifest refs + JS syntax)
 test/  e2e/*.spec.cjs  unit/*.test.cjs
 libs/exifr.min.js             vendored EXIF parser
 icons/                        16 / 48 / 128
 docs/  PRIVACY.md  TERMS.md  ROADMAP.md  realmodel-filter-dev-guide.md
+research/  competitor-analysis.md  feature-plan.md
 ```
 
 ## Tests
@@ -195,9 +212,16 @@ npm run test:headed # watch in a real browser
   **live token validation** (success + rejection), AI-or-Not removed, ARIA roles; saves
   `popup-*.png` to `test-results/`
 - `options.spec` — settings page: preferences autosave/persist, data controls, reset, legal
+- `badge.spec` — toolbar badge equals the on-page AI count; rescan keeps it consistent;
+  pausing clears it
+- `history.spec` — flagged items are logged to the activity history and can be cleared
+- `notifications.spec` — opt-in notification fires when enabled, stays silent when off
+- `details.spec` — badge-click "why flagged?" popover opens/closes; one at a time; Escape closes
+- `labels.spec` — badge tiers: 97% → AI Generated, 92% → Likely AI, 60% → no badge
 - `a11y.spec` — axe-core audit (WCAG 2 A/AA) of the **popup and options page**
 - `test/unit/service-worker.test.cjs` — URL SSRF allowlist, HF response parsing (incl.
   real-photo → low-score direction), error mapping
+- `test/unit/strings.test.cjs` — shared user-facing strings (formatting/pluralisation)
 
 CI runs `validate` + unit + e2e on every push/PR (`.github/workflows/ci.yml`).
 
@@ -240,7 +264,9 @@ and [docs/ROADMAP.md](docs/ROADMAP.md) for status & competitor research.
 
 - **No backend, no telemetry.** Everything runs client-side. The only outbound calls are to the
   detection provider you connect (Hugging Face) and the images on the page you're
-  browsing.
+  browsing. Permissions are minimal (`activeTab`, `storage`, `scripting`, `notifications`) with
+  host access limited to the four marketplaces, their image CDNs, and the Hugging Face API —
+  no `cookies`, no `webRequest`, no all-sites access (unlike most shopping extensions).
 - **Your token stays on your machine** in `chrome.storage.sync` (it syncs across your own Chrome
   profile only). It is never hard-coded, bundled, or sent anywhere except the provider's API as a
   bearer token. We deliberately do **not** ship a shared key (it would be scraped and banned).

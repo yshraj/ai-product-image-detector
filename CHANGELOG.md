@@ -6,6 +6,16 @@ All notable changes to RealModel Filter are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Toolbar badge counter** — per-tab count of AI-flagged images on the extension icon.
+- **Page scan summary + rescan** in the popup ("N of M look AI (P%)").
+- **"Why flagged?" popover** — click a badge for engine, model, confidence and a plain
+  explanation (accessible; never navigates the product link).
+- **Activity history** — a local, on-device log of flagged items on the Settings page.
+- **Opt-in notifications** — one quiet OS notification per page when AI is found (off by default).
+- Shared user-facing **strings module** (`utils/strings.js`) and competitor research under
+  `research/`.
+
 ### Fixed
 - **Detection accuracy on real photos.** The previous default model
   `Organika/sdxl-detector` over-flags studio/e-commerce photography (benchmarked
