@@ -106,6 +106,25 @@ async function fetchImage(url) {
   return res;
 }
 
+// ---- toolbar badge (per-tab AI count) -------------------------------------
+// Gives a glanceable, persistent indicator of what was found on the current
+// tab — the thing Capital One Shopping users say is missing.
+function updateBadge(tabId, info) {
+  if (tabId == null) return;
+  const ai = Number(info?.ai) || 0;
+  const scanned = Number(info?.scanned) || 0;
+  const active = info?.active !== false;
+  const text = active && ai > 0 ? String(ai) : '';
+  const title = STRINGS
+    ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff)
+    : 'RealModel Filter';
+  const color = (STRINGS && STRINGS.badge.color) || '#e24b4a';
+  // Each call is best-effort: the tab may have closed.
+  try { chrome.action.setBadgeText({ tabId, text }); } catch { /* tab gone */ }
+  try { chrome.action.setBadgeBackgroundColor({ tabId, color }); } catch { /* noop */ }
+  try { chrome.action.setTitle({ tabId, title }); } catch { /* noop */ }
+}
+
 // ---- engine health (surfaced to the popup) --------------------------------
 // Persisted in storage.session so it survives a service-worker restart within
 // the same browser session but never leaks to disk.
@@ -278,6 +297,10 @@ function registerMessageRouter() {
     toggleEnabled().then((enabled) => sendResponse({ ok: true, enabled }))
       .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
     return true;
+  }
+  if (msg?.type === 'RMF_BADGE') {
+    updateBadge(_sender?.tab?.id, msg);
+    return false; // fire-and-forget
   }
   if (msg?.type === 'RMF_ENGINE_HEALTH') {
     chrome.storage.session.get('engineHealth')

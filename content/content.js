@@ -39,6 +39,21 @@
   // Live session counters surfaced to the popup.
   const session = { scanned: 0, ai: 0 };
 
+  // Report counts to the service worker so it can paint the toolbar badge.
+  // Debounced so a burst of detections produces at most one update per tick.
+  let badgeTimer = null;
+  function reportBadge() {
+    if (badgeTimer) return;
+    badgeTimer = setTimeout(() => {
+      badgeTimer = null;
+      try {
+        chrome.runtime.sendMessage({
+          type: 'RMF_BADGE', ai: session.ai, scanned: session.scanned, active: isActive(),
+        });
+      } catch { /* worker unavailable */ }
+    }, 300);
+  }
+
   // --- overlay -------------------------------------------------------------
   function resolveOverlayTarget(card) {
     let target = card.querySelector(SITE.overlayTargetSelector) || card;
@@ -150,6 +165,7 @@
       injectOverlay(card, result);
       session.scanned++;
       if (result.isAI && result.confidence >= minConfidence) session.ai++;
+      reportBadge();
     } catch (err) {
       Log?.debug('processCard error', err);
       card.removeAttribute('data-rmf-scanned'); // allow a retry later
@@ -199,6 +215,7 @@
   function reconcile() {
     if (isActive()) { scanAll(); startObserver(); }
     else { stopObserver(); teardownBadges(); }
+    reportBadge(); // keep the toolbar badge in sync with enabled/site state
   }
 
   // Re-evaluate already-scanned cards without new network calls (cache hits).
