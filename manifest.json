@@ -35,6 +35,7 @@
       ],
       "js": [
         "libs/exifr.min.js",
+        "utils/strings.js",
         "utils/logger.js",
         "utils/throttle.js",
         "utils/cache.js",

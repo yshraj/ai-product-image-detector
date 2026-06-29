@@ -8,6 +8,12 @@
 //   4. validate provider credentials on demand (real test call, not a regex)
 //   5. track engine health so the popup can surface real errors instead of
 //      silently falling back to the on-device heuristic.
+//   6. maintain the toolbar badge, opt-in notifications, activity history, and
+//      handle the universal context-menu image checks.
+
+// Shared user-facing strings (importScripts is a no-op under Node test require).
+try { if (typeof importScripts === 'function') importScripts('/utils/strings.js'); } catch { /* ignore */ }
+const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 
 const DEFAULTS = {
   enabled: true,
