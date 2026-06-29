@@ -120,7 +120,12 @@
     bar.style.background = high ? '#E24B4A' : '#EF9F27';
 
     target.append(badge, bar);
-    attachDetails(badge, target, { confidence, source: result.source, preview: !!result.preview, model: result.model });
+    const img = card.querySelector(SITE.imageSelector);
+    attachDetails(badge, target, {
+      confidence, source: result.source, preview: !!result.preview, model: result.model,
+      imageUrl: (img && (img.currentSrc || img.src)) || '',
+      query: extractName(card) || '',
+    });
     applyMode(card);
   }
 
@@ -200,12 +205,62 @@
       pop.appendChild(n);
     }
 
+    const actions = buildActions(info);
+    if (actions) pop.appendChild(actions);
+
     const closeBtn = document.createElement('button');
     closeBtn.className = 'rmf-pop-close'; closeBtn.type = 'button';
     closeBtn.textContent = t((s) => s.details.close, 'Close');
     closeBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClose(); });
     pop.appendChild(closeBtn);
     return pop;
+  }
+
+  // Reverse image search + marketplace search handoffs (no backend — these just
+  // open search/visual-search URLs in a new tab).
+  function buildActions(info) {
+    const S = window.RMF_STRINGS;
+    const enc = encodeURIComponent;
+    const wrap = document.createElement('div');
+    wrap.className = 'rmf-pop-actions';
+    let any = false;
+
+    if (info.imageUrl) {
+      wrap.appendChild(actionRow(S ? S.actions.findIdentical : 'Find identical', [
+        popLink(S ? S.actions.lens : 'Google Lens', 'https://lens.google.com/uploadbyurl?url=' + enc(info.imageUrl)),
+        popLink(S ? S.actions.bing : 'Bing', 'https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:' + enc(info.imageUrl)),
+      ]));
+      any = true;
+    }
+    if (info.query) {
+      const q = enc(info.query);
+      const sites = [
+        { name: S ? S.actions.amazon : 'Amazon', site: 'amazon', url: 'https://www.amazon.in/s?k=' + q },
+        { name: S ? S.actions.flipkart : 'Flipkart', site: 'flipkart', url: 'https://www.flipkart.com/search?q=' + q },
+        { name: S ? S.actions.google : 'Google', site: 'google', url: 'https://www.google.com/search?q=' + q },
+      ].filter((s) => s.site !== SITE.name); // don't search the site you're already on
+      wrap.appendChild(actionRow(S ? S.actions.searchElsewhere : 'Search elsewhere', sites.map((s) => popLink(s.name, s.url))));
+      any = true;
+    }
+    return any ? wrap : null;
+  }
+
+  function actionRow(label, links) {
+    const row = document.createElement('div'); row.className = 'rmf-pop-arow';
+    const l = document.createElement('div'); l.className = 'rmf-pop-alabel'; l.textContent = label;
+    const box = document.createElement('div'); box.className = 'rmf-pop-alinks';
+    links.forEach((a) => box.appendChild(a));
+    row.append(l, box);
+    return row;
+  }
+
+  function popLink(text, href) {
+    const a = document.createElement('a');
+    a.className = 'rmf-pop-link';
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = text;
+    a.addEventListener('click', (e) => e.stopPropagation()); // keep the product link / popover intact
+    return a;
   }
 
   // --- display mode --------------------------------------------------------

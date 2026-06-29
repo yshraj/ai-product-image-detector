@@ -32,6 +32,17 @@
       body: (ai) => `${ai} AI-looking image${ai === 1 ? '' : 's'} on this page.`,
     },
 
+    // badge popover actions (reverse image search + marketplace search handoff)
+    actions: {
+      findIdentical: 'Find identical',
+      lens: 'Google Lens',
+      bing: 'Bing',
+      searchElsewhere: 'Search elsewhere',
+      amazon: 'Amazon',
+      flipkart: 'Flipkart',
+      google: 'Google',
+    },
+
     // "why flagged?" badge details
     details: {
       heading: 'Why flagged?',

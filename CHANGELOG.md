@@ -7,6 +7,8 @@ All notable changes to RealModel Filter are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Reverse image search + marketplace search** in the badge popover — one-tap Google Lens /
+  Bing visual search and Amazon / Flipkart / Google product search (search handoffs, no backend).
 - **Export page report** — download all scanned products (name, price, verdict, confidence,
   engine, model, image URL) as JSON or CSV from the popup; built fully on-device.
 - **Toolbar badge counter** — per-tab count of AI-flagged images on the extension icon.

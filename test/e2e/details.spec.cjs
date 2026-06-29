@@ -27,6 +27,15 @@ test('badge click reveals a transparent details popover (preview engine)', async
   await expect(pop).toContainText('preview'); // heuristic verdict is preview-grade
   await expect(page.locator('.rmf-badge[aria-expanded="true"]')).toHaveCount(1);
 
+  // Reverse-image-search + marketplace-search handoffs (no backend).
+  const lens = pop.locator('a[href^="https://lens.google.com/uploadbyurl"]');
+  await expect(lens).toBeVisible();
+  await expect(lens).toHaveAttribute('href', /assets\.myntassets\.com/); // image URL encoded in
+  await expect(pop.locator('a[href*="bing.com/images/search"]')).toBeVisible();
+  await expect(pop.locator('a[href*="amazon.in/s?k="]')).toBeVisible();
+  // We're on Myntra, so a "Myntra" search link is not offered.
+  await expect(pop.locator('a[href*="myntra.com/search"]')).toHaveCount(0);
+
   // Close button removes it.
   await page.locator('.rmf-pop-close').click();
   await expect(page.locator('.rmf-pop')).toHaveCount(0);
