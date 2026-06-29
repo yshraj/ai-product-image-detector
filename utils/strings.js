@@ -43,6 +43,15 @@
       close: 'Close',
     },
 
+    // page export
+    exportUI: {
+      label: 'Export page',
+      json: 'JSON',
+      csv: 'CSV',
+      empty: 'Nothing to export yet — scroll to scan products.',
+      done: (n) => `Exported ${n} product${n === 1 ? '' : 's'}`,
+    },
+
     // activity history (options page)
     history: {
       empty: 'Nothing flagged yet. Flagged items will appear here.',

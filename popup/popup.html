@@ -49,6 +49,13 @@
       <span id="scan-summary-text">—</span>
       <button class="link-btn" id="rescan" type="button">Rescan page</button>
     </div>
+    <div class="export-row" id="export-row" hidden>
+      <span class="export-label">Export page</span>
+      <span class="export-btns">
+        <button class="link-btn" id="export-json" type="button">JSON</button>
+        <button class="link-btn" id="export-csv" type="button">CSV</button>
+      </span>
+    </div>
     <p class="empty-hint" id="empty-hint" hidden>
       No images scanned yet — open a category page on Myntra, Flipkart, Meesho or Nykaa.
     </p>
@@ -133,6 +140,7 @@
 
   <div id="toast-host" aria-live="assertive"></div>
   <script src="../utils/strings.js"></script>
+  <script src="../utils/report.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

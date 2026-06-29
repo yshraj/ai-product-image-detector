@@ -10,6 +10,8 @@ Manifest V3 · vanilla JS · no build step · runs fully client-side.
 - **Inline badges** on product grids with tiers (≥95% AI · 70–94% Likely AI · `·preview`).
 - **Toolbar badge counter** — glanceable count of AI-flagged items on the current tab.
 - **Page scan summary + rescan** in the popup ("N of M look AI (P%)").
+- **Export page report** — download all scanned products (name, price, verdict, confidence,
+  engine, model, image) as **JSON or CSV**, fully on-device.
 - **"Why flagged?" details** — click any badge for engine, model, confidence and a plain
   explanation (radical transparency, keyboard/screen-reader accessible).
 - **Activity history** — a local, on-device log of flagged items (Settings page).

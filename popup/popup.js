@@ -83,6 +83,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(updateStats, 800);
   });
 
+  // export the current page's scan results
+  $('export-json').addEventListener('click', () => exportPage('json'));
+  $('export-csv').addEventListener('click', () => exportPage('csv'));
+
   // open full settings (options page)
   $('open-settings').addEventListener('click', () => {
     if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
@@ -287,8 +291,10 @@ async function updateStats() {
       ? S.summary.paused
       : (live.scanned > 0 ? S.summary.result(live.ai || 0, live.scanned) : S.summary.none);
     $('rescan').hidden = !state.enabled;
+    $('export-row').hidden = !(state.enabled && live.scanned > 0);
   } else {
     summary.hidden = true;
+    $('export-row').hidden = true;
     // Empty-state hint when nothing has been scanned anywhere yet.
     $('empty-hint').hidden = cacheCount > 0;
   }
@@ -312,6 +318,34 @@ function clearFeedback(ns) {
   const el = $(`${ns}-feedback`);
   el.hidden = true;
   el.textContent = '';
+}
+
+async function exportPage(format) {
+  const S = window.RMF_STRINGS;
+  const tab = await getActiveTab();
+  let report = null;
+  try { report = tab?.id ? await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_REPORT' }) : null; }
+  catch { /* unsupported page */ }
+
+  if (!report || !report.products || !report.products.length) {
+    return toast((S && S.exportUI.empty) || 'Nothing to export yet', true);
+  }
+
+  const R = window.RMF_Report;
+  const isCsv = format === 'csv';
+  const data = isCsv ? R.buildCsv(report) : R.buildJson(report);
+  const blob = new Blob([data], { type: isCsv ? 'text/csv' : 'application/json' });
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadBlob(blob, `realmodel-${report.site}-${stamp}.${isCsv ? 'csv' : 'json'}`);
+  toast((S && S.exportUI.done(report.products.length)) || `Exported ${report.products.length}`);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function toast(msg, isErr) {

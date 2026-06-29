@@ -257,6 +257,7 @@
 
     try {
       const result = await limit(() => window.RMF_Detect(imgEl.currentSrc || imgEl.src));
+      card.__rmfResult = result; // kept for the page-export report
       injectOverlay(card, result);
       session.scanned++;
       if (result.isAI && result.confidence >= minConfidence) {
@@ -286,6 +287,64 @@
         },
       });
     } catch { /* worker unavailable */ }
+  }
+
+  // --- page export report --------------------------------------------------
+  // Best-effort product name (brand + title), price (₹), and the AI verdict for
+  // every scanned card. Name/price use generic text heuristics so they work
+  // across sites without fragile per-site title selectors.
+  const PRICE_RE = /₹\s?[\d,]+(?:\.\d+)?/;
+  const NOISE_RE = /^(₹|\(?\d+%|.*%\s*off|rating|ratings|assured|hot deal|only \d+ left|sponsored|new|add to (bag|cart)|wishlist)/i;
+
+  function extractPrice(card) {
+    const m = (card.textContent || '').match(PRICE_RE);
+    return m ? m[0].replace(/\s/g, '') : null;
+  }
+
+  function extractName(card) {
+    const lines = (card.innerText || card.textContent || '')
+      .split('\n').map((s) => s.trim())
+      .filter((s) => s && !PRICE_RE.test(s) && !NOISE_RE.test(s));
+    if (!lines.length) return null;
+    // Brand + title are usually the first one or two meaningful lines.
+    return lines.slice(0, 2).join(' ').slice(0, 160);
+  }
+
+  function engineOf(r) {
+    if (r.source === 'huggingface') return 'huggingface';
+    if (r.preview || r.source === 'heuristic') return 'preview';
+    return r.source || '';
+  }
+
+  function buildReport() {
+    const cards = document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="true"]`);
+    const products = [];
+    let aiFlagged = 0;
+    cards.forEach((card) => {
+      const r = card.__rmfResult;
+      if (!r) return;
+      const flagged = r.isAI && r.confidence >= minConfidence;
+      if (flagged) aiFlagged++;
+      const img = card.querySelector(SITE.imageSelector);
+      products.push({
+        name: extractName(card),
+        price: extractPrice(card),
+        verdict: flagged ? 'ai' : 'real',
+        confidence: Math.round(r.confidence),
+        engine: engineOf(r),
+        model: r.model || '',
+        imageUrl: (img && (img.currentSrc || img.src)) || null,
+      });
+    });
+    return {
+      app: 'RealModel Filter',
+      site: SITE.name,
+      pageUrl: location.href,
+      scannedAt: new Date().toISOString(),
+      count: products.length,
+      aiFlagged,
+      products,
+    };
   }
 
   // --- scanning + observing ------------------------------------------------
@@ -369,6 +428,9 @@
       case 'GET_STATS':
         sendResponse({ ...session, active: isActive() });
         return true; // async-safe
+      case 'GET_PAGE_REPORT':
+        sendResponse(buildReport());
+        return true;
       default:
         break;
     }

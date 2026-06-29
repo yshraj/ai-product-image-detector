@@ -7,6 +7,8 @@ All notable changes to RealModel Filter are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Export page report** — download all scanned products (name, price, verdict, confidence,
+  engine, model, image URL) as JSON or CSV from the popup; built fully on-device.
 - **Toolbar badge counter** — per-tab count of AI-flagged images on the extension icon.
 - **Page scan summary + rescan** in the popup ("N of M look AI (P%)").
 - **"Why flagged?" popover** — click a badge for engine, model, confidence and a plain

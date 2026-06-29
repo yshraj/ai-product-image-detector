@@ -112,6 +112,15 @@ body {
 .scan-summary #scan-summary-text { font-weight: 600; }
 .scan-summary .link-btn { color: var(--accent-2); white-space: nowrap; }
 .scan-summary .link-btn:hover { color: var(--accent); }
+.export-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -6px 0 12px; padding: 7px 11px; font-size: 11.5px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px;
+}
+.export-row .export-label { color: var(--muted); }
+.export-btns { display: flex; gap: 12px; }
+.export-btns .link-btn { color: var(--accent-2); font-weight: 600; }
+.export-btns .link-btn:hover { color: var(--accent); }
 
 /* ---- blocks ---- */
 .block { margin-bottom: 14px; }
