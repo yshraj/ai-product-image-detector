@@ -75,6 +75,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('hf-token').focus();
   });
 
+  // rescan the current page
+  $('rescan').addEventListener('click', async () => {
+    const S = window.RMF_STRINGS;
+    await sendToActiveTab({ type: 'RESCAN' });
+    if (S) toast(S.summary.rescanDone);
+    setTimeout(updateStats, 800);
+  });
+
   // open full settings (options page)
   $('open-settings').addEventListener('click', () => {
     if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
@@ -269,8 +277,21 @@ async function updateStats() {
   $('ai-count').textContent = live.ai ?? 0;
   $('total-count').textContent = live.scanned ?? 0;
 
-  // Empty-state hint when nothing has been scanned anywhere yet.
-  $('empty-hint').hidden = onSupportedPage ? (live.scanned > 0) : (cacheCount > 0);
+  // Page scan summary (only meaningful on a supported page).
+  const S = window.RMF_STRINGS;
+  const summary = $('scan-summary');
+  if (onSupportedPage && S) {
+    summary.hidden = false;
+    $('empty-hint').hidden = true;
+    $('scan-summary-text').textContent = !state.enabled
+      ? S.summary.paused
+      : (live.scanned > 0 ? S.summary.result(live.ai || 0, live.scanned) : S.summary.none);
+    $('rescan').hidden = !state.enabled;
+  } else {
+    summary.hidden = true;
+    // Empty-state hint when nothing has been scanned anywhere yet.
+    $('empty-hint').hidden = cacheCount > 0;
+  }
 }
 
 // ---- ui helpers -----------------------------------------------------------

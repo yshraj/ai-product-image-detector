@@ -246,6 +246,10 @@
         enabled = msg.enabled;
         reconcile();
         break;
+      case 'RESCAN':
+        rerender(); // clears badges + counts, then re-scans (cache hits)
+        sendResponse?.({ ok: true });
+        return true;
       case 'GET_STATS':
         sendResponse({ ...session, active: isActive() });
         return true; // async-safe

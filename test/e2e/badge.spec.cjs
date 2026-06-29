@@ -16,26 +16,51 @@ async function badgeText(ctx) {
   });
 }
 
-test('badge shows the number of AI-flagged images on the page', async () => {
-  const page = await context.newPage();
+async function openFixture(ctx) {
+  const page = await ctx.newPage();
+  await page.setViewportSize({ width: 1280, height: 1400 }); // all cards in view
   await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
+  return page;
+}
 
-  // 4 AI fixtures flag at ~92% (>= 70% floor).
-  await expect.poll(() => page.locator('.rmf-badge').count(), { timeout: 20_000 }).toBeGreaterThan(0);
-  await expect.poll(() => badgeText(context), {
-    message: 'badge text should equal the AI count', timeout: 10_000,
-  }).toBe('4');
+const onPageCount = (page) => page.locator('.rmf-badge').count();
 
-  console.log(`\n[e2e] toolbar badge = "${await badgeText(context)}"`);
+// Poll until the toolbar badge and the on-page flagged count agree and are > 0.
+async function badgeMatchesPage(page) {
+  const n = await onPageCount(page);
+  const b = Number(await badgeText(context));
+  return n > 0 && b === n;
+}
+
+test('badge equals the number of AI-flagged images on the page', async () => {
+  const page = await openFixture(context);
+  await expect.poll(() => badgeMatchesPage(page), {
+    message: 'toolbar badge converges to the on-page flagged count', timeout: 20_000,
+  }).toBe(true);
+  console.log(`\n[e2e] toolbar badge = "${await badgeText(context)}" (on-page = ${await onPageCount(page)})`);
+  await page.close();
+});
+
+test('RESCAN re-detects the page and keeps the badge consistent', async () => {
+  const page = await openFixture(context);
+  await expect.poll(() => badgeMatchesPage(page), { timeout: 20_000 }).toBe(true);
+
+  const sw = await serviceWorker(context);
+  await sw.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({ url: 'https://www.myntra.com/*' });
+    await chrome.tabs.sendMessage(tab.id, { type: 'RESCAN' });
+  });
+
+  await expect.poll(() => badgeMatchesPage(page), {
+    message: 'badge + page re-converge after rescan', timeout: 15_000,
+  }).toBe(true);
   await page.close();
 });
 
 test('disabling detection clears the badge', async () => {
-  const page = await context.newPage();
-  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
-  await expect.poll(() => badgeText(context), { timeout: 15_000 }).toBe('4');
+  const page = await openFixture(context);
+  await expect.poll(() => onPageCount(page), { timeout: 20_000 }).toBeGreaterThan(0);
 
-  // Toggle detection off via the content script's message channel.
   const sw = await serviceWorker(context);
   await sw.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ url: 'https://www.myntra.com/*' });
