@@ -51,10 +51,16 @@ test('uses the Hugging Face model verdict when a token is set', async () => {
   console.log(`\n[e2e] HF badge scores: ${[...new Set(scoreTexts)].join(', ')}`);
   expect(scoreTexts).toContain('97%');
 
-  // 97% is at/above the 90% bar → strong "AI Generated" tier.
+  // 97% is at/above the 95% bar → strong "AI Generated" tier.
   const badge = page.locator('.rmf-badge').first();
   await expect(badge).toHaveAttribute('data-conf', 'high');
   await expect(badge.locator('.rmf-label')).toContainText('AI Generated');
+
+  // "Why flagged?" popover names the Hugging Face engine + model.
+  await badge.click();
+  const pop = page.locator('.rmf-pop');
+  await expect(pop).toContainText('Hugging Face');
+  await expect(pop).toContainText('Organika/sdxl-detector');
 
   // HF results are authoritative, not preview.
   expect(await page.locator('.rmf-badge[data-preview="true"]').count(),

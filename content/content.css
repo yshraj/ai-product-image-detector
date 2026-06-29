@@ -72,7 +72,37 @@
   border: 1px dashed rgba(255, 255, 255, 0.6);
 }
 
+/* "Why flagged?" details popover */
+.rmf-pop {
+  position: absolute;
+  top: 32px;
+  left: 8px;
+  z-index: 10000;
+  width: 210px;
+  background: #14171d;
+  color: #eef1f5;
+  border: 1px solid #2a2f3a;
+  border-radius: 10px;
+  padding: 11px 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+  pointer-events: auto;
+  animation: rmf-badge-in 0.16s ease;
+}
+.rmf-pop-h { font-weight: 700; font-size: 12.5px; margin-bottom: 6px; }
+.rmf-pop-row { color: #eef1f5; }
+.rmf-pop-sub { color: #9aa3b2; font-size: 11px; margin-top: 4px; word-break: break-all; }
+.rmf-pop-note { color: #d9c08a; font-size: 11px; margin-top: 6px; }
+.rmf-pop-close {
+  margin-top: 9px; width: 100%; padding: 6px; border: 1px solid #2a2f3a;
+  background: #1b1f29; color: #9aa3b2; border-radius: 7px; cursor: pointer; font-size: 11px;
+}
+.rmf-pop-close:hover { color: #fff; border-color: #6fb22a; }
+
 @media (prefers-reduced-motion: reduce) {
-  .rmf-badge { animation: none; }
+  .rmf-badge, .rmf-pop { animation: none; }
   .rmf-bar { transition: none; }
 }

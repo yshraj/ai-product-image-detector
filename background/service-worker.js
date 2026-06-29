@@ -270,7 +270,9 @@ async function remoteDetect(url) {
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   try {
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
-      const r = await detectHuggingFace(url, cfg.hfToken, cfg.hfModel || DEFAULTS.hfModel);
+      const model = cfg.hfModel || DEFAULTS.hfModel;
+      const r = await detectHuggingFace(url, cfg.hfToken, model);
+      r.model = model; // surfaced in the "why flagged?" popover
       await recordOk('huggingface');
       return { result: r };
     }

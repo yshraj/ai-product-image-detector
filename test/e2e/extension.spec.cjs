@@ -38,9 +38,9 @@ test('preview engine: discriminates AI vs real and handles infinite scroll', asy
   // Preview badges must be tagged as preview.
   expect(await page.locator('.rmf-badge[data-preview="true"]').count()).toBeGreaterThan(0);
 
-  // Badges are accessible to assistive tech (role + descriptive label).
+  // Badges are accessible to assistive tech (interactive button + label).
   const firstBadge = page.locator('.rmf-badge').first();
-  await expect(firstBadge).toHaveAttribute('role', 'img');
+  await expect(firstBadge).toHaveAttribute('role', 'button');
   await expect(firstBadge).toHaveAttribute('aria-label', /RealModel Filter:.*confidence/);
 
   // Infinite scroll: scrolling to the bottom appends a new batch below the fold…

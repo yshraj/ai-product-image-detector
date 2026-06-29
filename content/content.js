@@ -120,7 +120,92 @@
     bar.style.background = high ? '#E24B4A' : '#EF9F27';
 
     target.append(badge, bar);
+    attachDetails(badge, target, { confidence, source: result.source, preview: !!result.preview, model: result.model });
     applyMode(card);
+  }
+
+  // --- "why flagged?" details popover --------------------------------------
+  // Radical transparency: clicking a badge explains the verdict. Keyboard +
+  // screen-reader accessible; never navigates the underlying product link.
+  function attachDetails(badge, target, info) {
+    badge.setAttribute('role', 'button');
+    badge.setAttribute('tabindex', '0');
+    badge.setAttribute('aria-expanded', 'false');
+    badge.style.pointerEvents = 'auto';
+    badge.style.cursor = 'pointer';
+    const toggle = (e) => { e.preventDefault(); e.stopPropagation(); togglePopover(badge, target, info); };
+    badge.addEventListener('click', toggle);
+    badge.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') toggle(e);
+    });
+  }
+
+  function togglePopover(badge, target, info) {
+    const existing = target.querySelector('.rmf-pop');
+    // Only one popover open at a time, anywhere on the page.
+    document.querySelectorAll('.rmf-pop').forEach((p) => { if (p !== existing) p.remove(); });
+    document.querySelectorAll('.rmf-badge[aria-expanded="true"]').forEach((b) => {
+      if (b !== badge) b.setAttribute('aria-expanded', 'false');
+    });
+    if (existing) { existing.remove(); badge.setAttribute('aria-expanded', 'false'); return; }
+
+    let cleanup = () => {};
+    const close = () => { target.querySelector('.rmf-pop')?.remove(); badge.setAttribute('aria-expanded', 'false'); cleanup(); };
+    const pop = buildPopover(info, close);
+    target.appendChild(pop);
+    badge.setAttribute('aria-expanded', 'true');
+
+    const onKey = (e) => { if (e.key === 'Escape') { close(); badge.focus(); } };
+    const onDoc = (e) => { if (!pop.contains(e.target) && e.target !== badge) close(); };
+    cleanup = () => {
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('click', onDoc, true);
+    };
+    // Registered synchronously: the opening click's capture phase has already
+    // passed for this event, so these won't immediately self-close the popover.
+    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('click', onDoc, true);
+  }
+
+  function buildPopover(info, onClose) {
+    const S = window.RMF_STRINGS;
+    const t = (path, fallback) => (S ? path(S) : fallback);
+    const pop = document.createElement('div');
+    pop.className = 'rmf-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', t((s) => s.details.heading, 'Why flagged?'));
+
+    const h = document.createElement('div'); h.className = 'rmf-pop-h';
+    h.textContent = t((s) => s.details.heading, 'Why flagged?');
+
+    const conf = document.createElement('div'); conf.className = 'rmf-pop-row';
+    conf.textContent = t((s) => s.details.confidence(Math.round(info.confidence)), `${Math.round(info.confidence)}% AI`);
+
+    const isPreview = info.preview || info.source === 'heuristic';
+    const eng = document.createElement('div'); eng.className = 'rmf-pop-row';
+    eng.textContent = isPreview
+      ? t((s) => s.details.enginePreview, 'On-device preview')
+      : t((s) => s.details.engineHuggingFace, 'Hugging Face');
+
+    pop.append(h, conf, eng);
+
+    if (info.model && !isPreview) {
+      const m = document.createElement('div'); m.className = 'rmf-pop-sub';
+      m.textContent = t((s) => s.details.modelNote(info.model), info.model);
+      pop.appendChild(m);
+    }
+    if (isPreview) {
+      const n = document.createElement('div'); n.className = 'rmf-pop-note';
+      n.textContent = t((s) => s.details.previewNote, 'Preview heuristic — low accuracy.');
+      pop.appendChild(n);
+    }
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'rmf-pop-close'; closeBtn.type = 'button';
+    closeBtn.textContent = t((s) => s.details.close, 'Close');
+    closeBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClose(); });
+    pop.appendChild(closeBtn);
+    return pop;
   }
 
   // --- display mode --------------------------------------------------------
@@ -258,7 +343,7 @@
   }
 
   function teardownBadges() {
-    document.querySelectorAll('.rmf-badge, .rmf-bar').forEach((el) => el.remove());
+    document.querySelectorAll('.rmf-badge, .rmf-bar, .rmf-pop').forEach((el) => el.remove());
     document.querySelectorAll('[data-rmf-scanned]').forEach((c) => {
       c.removeAttribute('data-rmf-scanned');
       c.removeAttribute('data-rmf-ai');
