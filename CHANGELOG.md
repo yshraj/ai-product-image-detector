@@ -1,10 +1,16 @@
 # Changelog
 
-All notable changes to RealModel Filter are documented here. The format follows
+All notable changes to ShopShield (formerly RealModel Filter) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Changed
+- **Rebranded to ShopShield** (formerly RealModel Filter) — "Shop smarter. Spot AI. Compare
+  better." — repositioned from an AI-image detector to a shopping trust assistant.
+- **New light, friendly UI** for the popup and settings page (indigo accent, trust-green),
+  with a shield logo; in-page badges unchanged.
 
 ### Added
 - **Reverse image search + marketplace search** in the badge popover — one-tap Google Lens /

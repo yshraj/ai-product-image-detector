@@ -171,7 +171,7 @@ function updateBadge(tabId, info) {
   const text = active && ai > 0 ? String(ai) : '';
   const title = STRINGS
     ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff)
-    : 'RealModel Filter';
+    : 'ShopShield';
   const color = (STRINGS && STRINGS.badge.color) || '#e24b4a';
   // Each call is best-effort: the tab may have closed.
   try { chrome.action.setBadgeText({ tabId, text }); } catch { /* tab gone */ }

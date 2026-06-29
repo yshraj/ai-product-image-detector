@@ -1,8 +1,8 @@
-# Terms of Use — RealModel Filter
+# Terms of Use — ShopShield
 
 _Last updated: 2026-06-27_
 
-By installing or using RealModel Filter ("the extension") you agree to these terms.
+By installing or using ShopShield ("the extension") you agree to these terms.
 
 ## 1. The service
 
@@ -12,7 +12,7 @@ of any kind, express or implied.
 
 ## 2. Not a guarantee
 
-RealModel Filter is a **decision-support tool, not a verification authority**. No
+ShopShield is a **decision-support tool, not a verification authority**. No
 AI-image detector is perfect:
 
 - The on-device **Preview** heuristic is explicitly low-accuracy and will produce false

@@ -21,7 +21,7 @@ test('GET_PAGE_REPORT returns scanned products with verdicts', async () => {
     return chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_REPORT' });
   });
 
-  expect(report.app).toBe('RealModel Filter');
+  expect(report.app).toBe('ShopShield');
   expect(report.site).toBe('myntra');
   expect(report.products.length, 'report has scanned products').toBeGreaterThan(0);
   expect(report.aiFlagged, 'some flagged as AI').toBeGreaterThan(0);

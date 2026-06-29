@@ -336,7 +336,7 @@ async function exportPage(format) {
   const data = isCsv ? R.buildCsv(report) : R.buildJson(report);
   const blob = new Blob([data], { type: isCsv ? 'text/csv' : 'application/json' });
   const stamp = new Date().toISOString().slice(0, 10);
-  downloadBlob(blob, `realmodel-${report.site}-${stamp}.${isCsv ? 'csv' : 'json'}`);
+  downloadBlob(blob, `shopshield-${report.site}-${stamp}.${isCsv ? 'csv' : 'json'}`);
   toast((S && S.exportUI.done(report.products.length)) || `Exported ${report.products.length}`);
 }
 

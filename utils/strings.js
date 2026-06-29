@@ -10,9 +10,9 @@
       // tooltips shown on the extension icon
       title: (ai, scanned) =>
         scanned > 0
-          ? `RealModel Filter — ${ai} of ${scanned} image${scanned === 1 ? '' : 's'} look AI`
-          : 'RealModel Filter',
-      titleOff: 'RealModel Filter — detection paused',
+          ? `ShopShield — ${ai} of ${scanned} image${scanned === 1 ? '' : 's'} look AI`
+          : 'ShopShield',
+      titleOff: 'ShopShield — detection paused',
     },
 
     // popup page-scan summary
@@ -28,7 +28,7 @@
 
     // opt-in notifications
     notify: {
-      title: 'RealModel Filter',
+      title: 'ShopShield',
       body: (ai) => `${ai} AI-looking image${ai === 1 ? '' : 's'} on this page.`,
     },
 

@@ -1,9 +1,12 @@
-# RealModel Filter — Chrome Extension
+# ShopShield — Chrome Extension
 
-Detects AI-generated product images on Indian e-commerce sites (Myntra, Flipkart,
-Meesho, Nykaa) and overlays a confidence badge on each detected image.
+> **Shop smarter. Spot AI. Compare better. ⭐**
 
-Manifest V3 · vanilla JS · no build step · runs fully client-side.
+Your shopping trust assistant for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa):
+ShopShield flags **AI-generated product photos** with an in-page confidence badge, lets you
+**reverse-image-search** and **compare** a product elsewhere, and **export** your scan results.
+
+Manifest V3 · vanilla JS · no build step · runs fully client-side · _formerly RealModel Filter_.
 
 ## Features at a glance
 

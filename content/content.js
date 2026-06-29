@@ -98,7 +98,7 @@
     badge.setAttribute('role', 'img');
     const verdict = high ? 'AI generated' : 'Likely AI generated';
     badge.setAttribute('aria-label',
-      `RealModel Filter: ${verdict}, ${Math.round(confidence)}% confidence` +
+      `ShopShield: ${verdict}, ${Math.round(confidence)}% confidence` +
       (result.preview ? ' (preview heuristic)' : ''));
     if (result.preview) {
       badge.setAttribute('data-preview', 'true');
@@ -392,7 +392,7 @@
       });
     });
     return {
-      app: 'RealModel Filter',
+      app: 'ShopShield',
       site: SITE.name,
       pageUrl: location.href,
       scannedAt: new Date().toISOString(),
@@ -512,5 +512,5 @@
     await scanAll();
     startObserver();
   }
-  Log?.info(`RealModel Filter on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
+  Log?.info(`ShopShield on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();

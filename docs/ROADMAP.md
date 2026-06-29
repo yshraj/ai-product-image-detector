@@ -1,4 +1,4 @@
-# RealModel Filter — Roadmap, Launch Plan & Competitor Research
+# ShopShield (formerly RealModel Filter) — Roadmap, Launch Plan & Competitor Research
 
 _Last updated: 2026-06-26_
 
