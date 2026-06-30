@@ -27,7 +27,7 @@ compare, utilities, and trust signals are the long-term wedge.
 
 - [ ] **Trust score** — composite signal (seller, reviews, return policy, AI image, discount)
   so the product feels like a shopping assistant, not only a detector.
-- [ ] **Live price comparison** — parse/compare prices across marketplaces (today: search handoff only).
+- [x] **Live price comparison** — auto-search other marketplaces, score title/brand/price similarity, show best matches (v1.4).
 - [ ] **Amazon.in** content-script support (Compare already links to Amazon search).
 - [ ] Re-validate site selectors on live Myntra / Flipkart / Meesho / Nykaa pages.
 - [ ] Chrome Web Store listing (screenshots, demo GIF, privacy review).
