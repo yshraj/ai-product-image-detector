@@ -47,10 +47,18 @@
           <button class="link-btn" id="rescan" type="button">Rescan</button>
         </div>
         <p class="scan-count" id="scan-count">—</p>
+        <p class="scan-progress" id="scan-progress" hidden></p>
         <div class="breakdown" id="breakdown">
-          <div class="bd bd-high"><span id="bd-high">0</span><small>AI generated</small></div>
-          <div class="bd bd-med"><span id="bd-med">0</span><small>Likely AI</small></div>
-          <div class="bd bd-ok"><span id="bd-ok">0</span><small>Normal</small></div>
+          <button type="button" class="bd bd-high" data-filter="high" title="Highlight AI generated"><span id="bd-high">0</span><small>AI generated</small></button>
+          <button type="button" class="bd bd-med" data-filter="med" title="Highlight likely AI"><span id="bd-med">0</span><small>Likely AI</small></button>
+          <button type="button" class="bd bd-ok" data-filter="ok" title="Highlight normal"><span id="bd-ok">0</span><small>Normal</small></button>
+        </div>
+        <div class="conf-row scan-conf-row">
+          <label for="scan-confidence">Flag threshold</label>
+          <div class="slider-wrap">
+            <input type="range" id="scan-confidence" min="50" max="95" step="5" />
+            <output id="scan-confidence-val" for="scan-confidence">70%</output>
+          </div>
         </div>
         <p class="conf-hint" id="conf-hint" hidden></p>
         <p class="tip-card" id="scan-tip" hidden></p>
@@ -67,6 +75,11 @@
       <div class="card cache-card">
         <div class="mini-stat"><span id="cache-count">0</span><small>Cached results</small></div>
       </div>
+      <div class="card" id="scan-history-card" hidden>
+        <h2 class="card-h">Recent scans</h2>
+        <ul class="scan-history" id="scan-history"></ul>
+        <p class="empty-hint" id="scan-history-empty" hidden></p>
+      </div>
     </section>
 
     <!-- ============ COMPARE ============ -->
@@ -78,18 +91,42 @@
           <span class="btn-label" id="compare-search-label">Find similar products</span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
+        <div class="compare-filters" id="compare-filters" hidden></div>
         <p class="compare-status" id="compare-status" hidden role="status" aria-live="polite"></p>
+        <p class="compare-site-status" id="compare-site-status" hidden aria-live="polite"></p>
+        <div class="compare-toolbar" id="compare-toolbar" hidden>
+          <label class="sort-label" for="compare-sort">Sort</label>
+          <select id="compare-sort" class="sort-select">
+            <option value="score">Best match</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+          </select>
+        </div>
+        <div class="compare-display-filters" id="compare-display-filters" hidden></div>
+        <div class="compare-skeleton" id="compare-skeleton" hidden></div>
         <div class="compare-results" id="compare-results" hidden></div>
+        <p class="empty-hint" id="compare-empty" hidden></p>
         <details class="compare-manual" id="compare-manual" hidden>
-          <summary>Search manually on each site</summary>
+          <summary id="compare-manual-summary">Search manually on each site</summary>
           <div class="action-list" id="compare-list"></div>
         </details>
         <p class="note" id="compare-note"></p>
+      </div>
+      <div class="card cache-card">
+        <div class="mini-stat"><span id="compare-cache-count">0</span><small>Cached comparisons</small></div>
       </div>
     </section>
 
     <!-- ============ TOOLS ============ -->
     <section class="panel" id="panel-tools" role="tabpanel" aria-labelledby="nav-tools" hidden>
+      <div class="card">
+        <h2 class="card-h">Check any image</h2>
+        <div class="drop-zone" id="image-drop" tabindex="0" role="button">
+          <input type="file" id="image-file" accept="image/*" hidden />
+          <p id="image-drop-hint">Drop an image here or click to choose</p>
+          <p class="image-check-result" id="image-check-result" hidden></p>
+        </div>
+      </div>
       <div class="card">
         <h2 class="card-h">Reverse image search</h2>
         <div class="action-list" id="reverse-list"></div>
@@ -98,6 +135,11 @@
         <h2 class="card-h">Copy &amp; share</h2>
         <div class="action-grid" id="tools-list"></div>
         <p class="note" id="tools-note"></p>
+      </div>
+      <div class="card">
+        <h2 class="card-h">Seller trust</h2>
+        <ul class="seller-list" id="seller-list"></ul>
+        <p class="empty-hint" id="seller-empty" hidden></p>
       </div>
     </section>
 
@@ -178,6 +220,16 @@
       </div>
 
       <div class="card">
+        <h2 class="card-h">Compare search API</h2>
+        <p class="hint" id="serp-hint">Optional SerpApi key for reliable cross-site product search (Google Shopping).</p>
+        <div class="field">
+          <label class="visually-hidden" for="serp-api-key">SerpApi key</label>
+          <input type="password" id="serp-api-key" placeholder="SerpApi key (optional)" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="ghost" id="serp-save" type="button">Save API key</button>
+      </div>
+
+      <div class="card">
         <h2 class="card-h">More</h2>
         <div class="link-list">
           <button class="row-link" id="open-settings" type="button">All settings &amp; history →</button>
@@ -186,7 +238,7 @@
           <a class="row-link" id="coffee-link" href="https://www.buymeacoffee.com/" target="_blank" rel="noopener">☕ Buy me a coffee →</a>
           <button class="row-link danger" id="clear-cache" type="button">Clear cache</button>
         </div>
-        <p class="ver-line"><span class="ver" id="version">v1.4.0</span> · ShopShield</p>
+        <p class="ver-line"><span class="ver" id="version">v1.6.0</span> · ShopShield</p>
       </div>
     </section>
   </main>
@@ -214,6 +266,7 @@
   <script src="../utils/strings.js"></script>
   <script src="../compare/config.js"></script>
   <script src="../utils/report.js"></script>
+  <script src="compare-panel.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

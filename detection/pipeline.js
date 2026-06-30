@@ -34,8 +34,10 @@
     // 1) Accurate remote model, if configured.
     const remote = await window.RMF_RemoteDetect(imageUrl);
     if (remote.result) {
-      await window.RMF_Cache.set(imageUrl, remote.result);
-      return remote.result;
+      const layers = { hf: Math.round(remote.result.confidence) };
+      const result = { ...remote.result, layers };
+      await window.RMF_Cache.set(imageUrl, result);
+      return result;
     }
     if (remote.error) {
       // A provider IS configured but the call failed (cold start, rate limit,
@@ -53,17 +55,23 @@
     const dataUrl = await fetchDataUrl(imageUrl);
 
     const exif = await window.RMF_ExifCheck(imageUrl, dataUrl);
+    const layers = {};
     if (exif.hasSignal) {
-      await window.RMF_Cache.set(imageUrl, exif);
-      return exif;
+      layers.exif = Math.round(100 - exif.confidence);
+      const result = { ...exif, layers };
+      await window.RMF_Cache.set(imageUrl, result);
+      return result;
     }
+    layers.exif = null;
 
     const tfjs = await window.RMF_TfjsDetector(imageUrl, dataUrl);
     if (tfjs.source === 'heuristic-failed') {
-      const inconclusive = { isAI: false, confidence: 0, source: 'inconclusive' };
+      const inconclusive = { isAI: false, confidence: 0, source: 'inconclusive', layers };
       await window.RMF_Cache.set(imageUrl, inconclusive);
       return inconclusive;
     }
+
+    layers.tfjs = Math.round(tfjs.confidence);
 
     // Preview-grade: flag only when clearly above threshold, and tag it so the
     // UI can show this is a low-confidence heuristic, not a real model.
@@ -72,6 +80,7 @@
       confidence: tfjs.confidence,
       source: 'heuristic',
       preview: true,
+      layers,
     };
     await window.RMF_Cache.set(imageUrl, result);
     return result;

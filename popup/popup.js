@@ -6,6 +6,7 @@ const DEFAULTS = {
   hfToken: '', hfModel: 'haywoodsloan/ai-image-detector-deploy', hfVerified: false, hfUser: '',
   minConfidence: 70,
   compareSites: [...ALL_COMPARE_SITES],
+  serpApiKey: '',
 };
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
@@ -13,31 +14,44 @@ const TABS = ['scan', 'compare', 'tools', 'settings'];
 const MARKETPLACES = (window.RMF_CompareConfig && window.RMF_CompareConfig.MARKETPLACES) || {
   amazon: { name: 'Amazon', manualUrl: (q) => 'https://www.amazon.in/s?k=' + q },
   flipkart: { name: 'Flipkart', manualUrl: (q) => 'https://www.flipkart.com/search?q=' + q },
-  myntra: { name: 'Myntra', manualUrl: (q) => 'https://www.myntra.com/' + q.replace(/\s+/g, '-') },
+  myntra: { name: 'Myntra', manualUrl: (q) => 'https://www.myntra.com/search?q=' + q },
   meesho: { name: 'Meesho', manualUrl: (q) => 'https://www.meesho.com/search?q=' + q },
   nykaa: { name: 'Nykaa', manualUrl: (q) => 'https://www.nykaa.com/search/result/?q=' + q },
 };
 
 const $ = (id) => document.getElementById(id);
 const S = () => window.RMF_STRINGS;
-const send = (msg) => chrome.runtime.sendMessage(msg).catch(() => null);
+const send = (msg) => new Promise((resolve) => {
+  try {
+    chrome.runtime.sendMessage(msg, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) resolve({ ok: false, error: err.message });
+      else resolve(response ?? { ok: false, error: 'No response from extension' });
+    });
+  } catch (e) {
+    resolve({ ok: false, error: String(e?.message || e) });
+  }
+});
 
 let state = { ...DEFAULTS };
 let health = null;
-let compareProduct = null;
-let compareSearching = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   state = await chrome.storage.sync.get(DEFAULTS);
   if (!Array.isArray(state.compareSites) || !state.compareSites.length) {
     state.compareSites = [...ALL_COMPARE_SITES];
   }
+  window.__compareSettingsSites = state.compareSites;
 
   $('toggle-enabled').checked = state.enabled;
   $('hf-token').value = state.hfToken || '';
   $('hf-model').value = state.hfModel && state.hfModel !== DEFAULTS.hfModel ? state.hfModel : '';
   $('popup-confidence').value = state.minConfidence;
   $('popup-confidence-val').textContent = `${state.minConfidence}%`;
+  if ($('scan-confidence')) {
+    $('scan-confidence').value = state.minConfidence;
+    $('scan-confidence-val').textContent = `${state.minConfidence}%`;
+  }
 
   const ver = chrome.runtime.getManifest().version;
   $('version').textContent = `v${ver}`;
@@ -49,8 +63,88 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNav();
   setupSettings();
   setupCompareSites();
+  setupImageDrop();
+  window.RMF_ComparePanel?.setupSort?.();
+  setupScanPanel();
+  maybeShowOnboarding();
   updateScan();
 });
+
+function setupScanPanel() {
+  const scanSlider = $('scan-confidence');
+  if (scanSlider) {
+    let debounce;
+    scanSlider.addEventListener('input', () => {
+      $('scan-confidence-val').textContent = `${scanSlider.value}%`;
+    });
+    scanSlider.addEventListener('change', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(async () => {
+        const val = Number(scanSlider.value);
+        state.minConfidence = val;
+        $('popup-confidence').value = val;
+        $('popup-confidence-val').textContent = `${val}%`;
+        await chrome.storage.sync.set({ minConfidence: val });
+        sendToActiveTab({ type: 'SET_MIN_CONFIDENCE', minConfidence: val });
+        updateScan();
+      }, 200);
+    });
+  }
+
+  document.querySelectorAll('.bd[data-filter]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const filter = btn.dataset.filter;
+      const active = btn.classList.contains('active');
+      document.querySelectorAll('.bd[data-filter]').forEach((b) => b.classList.remove('active'));
+      if (!active) {
+        btn.classList.add('active');
+        await sendToActiveTab({ type: 'HIGHLIGHT_FILTER', filter });
+      } else {
+        await sendToActiveTab({ type: 'HIGHLIGHT_FILTER', filter: 'all' });
+      }
+    });
+  });
+}
+
+async function maybeShowOnboarding() {
+  const { rmf_onboarding_done: done } = await chrome.storage.local.get('rmf_onboarding_done');
+  if (done) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'onboarding';
+  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-label="Welcome">
+    <p><b>Welcome to ShopShield!</b> Toggle scanning on/off in the header. Open <b>Scan</b> to see AI flags on product images. Red badges = AI generated, amber = likely AI.</p>
+    <button class="primary" type="button">Got it</button>
+  </div>`;
+  overlay.querySelector('button').addEventListener('click', async () => {
+    await chrome.storage.local.set({ rmf_onboarding_done: true });
+    overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
+async function renderScanHistory() {
+  const card = $('scan-history-card');
+  const list = $('scan-history');
+  const empty = $('scan-history-empty');
+  if (!card || !list) return;
+  const data = await chrome.storage.local.get({ rmf_scan_history: [] });
+  const hist = data.rmf_scan_history || [];
+  list.textContent = '';
+  if (!hist.length) {
+    card.hidden = false;
+    empty.hidden = false;
+    empty.textContent = S()?.scan?.historyEmpty || '';
+    return;
+  }
+  card.hidden = false;
+  empty.hidden = true;
+  hist.slice(0, 8).forEach((h) => {
+    const li = document.createElement('li');
+    const d = new Date(h.at);
+    li.innerHTML = `<div class="sh-site">${h.site}</div><div class="sh-meta">${h.scanned} scanned · ${h.ai} AI · ${d.toLocaleDateString()}</div>`;
+    list.appendChild(li);
+  });
+}
 
 // ---- bottom-nav tabs ------------------------------------------------------
 function setupNav() {
@@ -76,7 +170,7 @@ function selectTab(tab) {
     b.setAttribute('aria-selected', String(on));
   });
   if (tab === 'scan') updateScan();
-  if (tab === 'compare') renderCompare();
+  if (tab === 'compare') window.RMF_ComparePanel?.render?.(getActiveProduct);
   if (tab === 'tools') renderTools();
 }
 
@@ -88,6 +182,19 @@ const MARKETPLACE_TABS = [
   'https://www.nykaa.com/*',
 ];
 
+function isMarketplaceProductUrl(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'flipkart.com') return /\/p\//.test(u.pathname);
+    if (host === 'myntra.com') return /\/buy$/.test(u.pathname) || /\d{6,}/.test(u.pathname);
+    if (host === 'meesho.com') return /\/product\//.test(u.pathname);
+    if (host.includes('nykaa.com')) return /\/p\//.test(u.pathname);
+  } catch { /* ignore */ }
+  return false;
+}
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   // When popup.html is opened as a tab (common in dev/E2E), fall back to the best
@@ -95,8 +202,8 @@ async function getActiveTab() {
   if (tab?.url?.startsWith('chrome-extension:')) {
     const candidates = await chrome.tabs.query({ currentWindow: true, url: MARKETPLACE_TABS });
     if (!candidates.length) return tab;
-    const productish = candidates.filter((t) => /\/buy$|\/\d{5,}/.test(t.url));
-    const pool = productish.length ? productish : candidates;
+    const productPages = candidates.filter((t) => isMarketplaceProductUrl(t.url));
+    const pool = productPages.length ? productPages : candidates;
     pool.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
     return pool[0];
   }
@@ -108,11 +215,15 @@ async function sendToActiveTab(message) {
     try { return await chrome.tabs.sendMessage(tab.id, message); } catch { return null; }
   };
 
-  const primary = await tryTab(await getActiveTab());
+  const active = await getActiveTab();
+  const primary = await tryTab(active);
   if (primary && (message.type !== 'GET_PRODUCT' || primary.title)) return primary;
 
+  // For product lookup, stick to the tab the user is viewing — never another tab.
+  if (message.type === 'GET_PRODUCT' && isMarketplaceProductUrl(active?.url)) return primary;
+
   const candidates = await chrome.tabs.query({ currentWindow: true, url: MARKETPLACE_TABS });
-  const productish = candidates.filter((t) => /\/buy$|\/\d{5,}/.test(t.url));
+  const productish = candidates.filter((t) => isMarketplaceProductUrl(t.url));
   const pool = [...(productish.length ? productish : candidates)].reverse();
   for (const tab of pool) {
     const r = await tryTab(tab);
@@ -121,10 +232,18 @@ async function sendToActiveTab(message) {
   return primary;
 }
 async function getActiveProduct() {
-  for (let i = 0; i < 6; i++) {
-    const p = await sendToActiveTab({ type: 'GET_PRODUCT' });
+  const active = await getActiveTab();
+  if (!active?.id) return null;
+
+  const tryTab = async () => {
+    try { return await chrome.tabs.sendMessage(active.id, { type: 'GET_PRODUCT' }); } catch { return null; }
+  };
+
+  // Retry on the visible tab only — avoids picking a stale Flipkart tab in the background.
+  for (let i = 0; i < 10; i++) {
+    const p = await tryTab();
     if (p?.title) return p;
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 250));
   }
   return null;
 }
@@ -144,6 +263,15 @@ async function updateScan() {
   $('bd-high').textContent = live.aiHigh || 0;
   $('bd-med').textContent = live.aiLikely || 0;
   $('bd-ok').textContent = normal;
+
+  const progress = $('scan-progress');
+  const total = live.total || live.scanned || 0;
+  const done = live.scanned || 0;
+  const pending = live.pending || 0;
+  if (progress && onSupported && state.enabled && (pending > 0 || (total > done))) {
+    progress.hidden = false;
+    progress.textContent = s ? s.scan.scanning(done, total || done + pending) : `Scanning ${done} / ${total || '…'}`;
+  } else if (progress) progress.hidden = true;
 
   const hint = $('scan-hint');
   const tip = $('scan-tip');
@@ -184,158 +312,10 @@ async function updateScan() {
   tip.hidden = !(live.ai > 0);
   if (live.ai > 0) tip.textContent = s ? s.scan.whyFlagged : 'Tap any flagged badge for Why flagged?';
   $('export-row').hidden = !(live.scanned > 0);
+  await renderScanHistory();
 }
 
-// ---- COMPARE --------------------------------------------------------------
-async function renderCompare() {
-  const s = S();
-  const p = await getActiveProduct();
-  compareProduct = p;
-  const titleEl = $('compare-title');
-  const list = $('compare-list');
-  const note = $('compare-note');
-  const searchBtn = $('compare-search');
-  const statusEl = $('compare-status');
-  const resultsEl = $('compare-results');
-  const manualEl = $('compare-manual');
-  list.textContent = '';
-  resultsEl.hidden = true;
-  resultsEl.textContent = '';
-  statusEl.hidden = true;
-  manualEl.hidden = true;
-  searchBtn.hidden = true;
-
-  if (!p || !p.title) {
-    titleEl.textContent = s ? s.compare.noProduct : 'Open a product page.';
-    titleEl.classList.add('muted');
-    note.textContent = '';
-    return;
-  }
-  titleEl.textContent = p.title;
-  titleEl.classList.remove('muted');
-  searchBtn.hidden = false;
-  $('compare-search-label').textContent = s ? s.compare.findSimilar : 'Find similar products';
-  note.textContent = s ? s.compare.note : '';
-
-  renderManualLinks(p, list, s);
-  manualEl.hidden = false;
-
-  if (!compareSearching) {
-    searchBtn.disabled = false;
-    searchBtn.setAttribute('aria-busy', 'false');
-  }
-
-  searchBtn.onclick = () => runCompareSearch(p);
-}
-
-function renderManualLinks(p, list, s) {
-  const q = encodeURIComponent(p.title);
-  const enabled = new Set(state.compareSites || ALL_COMPARE_SITES);
-  ALL_COMPARE_SITES
-    .filter((site) => enabled.has(site) && site !== p.site)
-    .forEach((site) => {
-      const mp = MARKETPLACES[site];
-      const urlFn = mp.manualUrl || mp.url;
-      list.appendChild(actionLink(s ? s.compare.on(mp.name) : mp.name, urlFn(q)));
-    });
-}
-
-async function runCompareSearch(product) {
-  if (compareSearching) return;
-  const s = S();
-  const searchBtn = $('compare-search');
-  const statusEl = $('compare-status');
-  const resultsEl = $('compare-results');
-
-  compareSearching = true;
-  searchBtn.setAttribute('aria-busy', 'true');
-  searchBtn.disabled = true;
-  statusEl.hidden = false;
-  statusEl.textContent = s ? s.compare.searching : 'Searching marketplaces…';
-  resultsEl.hidden = true;
-  resultsEl.textContent = '';
-
-  const sites = (state.compareSites || ALL_COMPARE_SITES).filter((site) => site !== product.site);
-  const r = await send({ type: 'RMF_COMPARE_SEARCH', product, sites });
-
-  compareSearching = false;
-  searchBtn.setAttribute('aria-busy', 'false');
-  searchBtn.disabled = false;
-
-  if (!r || !r.ok) {
-    statusEl.textContent = s ? s.compare.searchFailed : 'Search failed';
-    return;
-  }
-
-  statusEl.textContent = r.cached && s ? s.compare.cached : '';
-  if (!r.matches || !r.matches.length) {
-    statusEl.textContent = (statusEl.textContent ? statusEl.textContent + ' · ' : '')
-      + (s ? s.compare.noMatches : 'No close matches found');
-    resultsEl.hidden = true;
-    return;
-  }
-
-  renderCompareResults(r, s);
-  statusEl.hidden = !r.cached;
-  resultsEl.hidden = false;
-}
-
-function renderCompareResults(data, s) {
-  const resultsEl = $('compare-results');
-  resultsEl.textContent = '';
-
-  for (const entry of data.matches) {
-    const mp = MARKETPLACES[entry.site];
-    const best = entry.best;
-    if (!best) continue;
-
-    const card = document.createElement('a');
-    card.className = 'match-card';
-    card.href = best.url;
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
-
-    const score = best.match.score;
-    const label = best.match.label;
-    let badgeText = s ? s.compare.possibleMatch : 'Possible match';
-    let badgeClass = 'match-badge possible';
-    if (label === 'same') {
-      badgeText = s ? s.compare.sameProduct : 'Same product';
-      badgeClass = 'match-badge same';
-    } else if (label === 'similar') {
-      badgeText = s ? s.compare.similarProduct : 'Similar product';
-      badgeClass = 'match-badge similar';
-    }
-
-    const head = document.createElement('div');
-    head.className = 'match-head';
-    const site = document.createElement('span');
-    site.className = 'match-site';
-    site.textContent = mp?.name || entry.site;
-    const badge = document.createElement('span');
-    badge.className = badgeClass;
-    badge.textContent = s ? s.compare.matchScore(score) : `${score}% match`;
-    badge.title = badgeText;
-    head.append(site, badge);
-
-    const title = document.createElement('div');
-    title.className = 'match-title';
-    title.textContent = best.title;
-
-    const meta = document.createElement('div');
-    meta.className = 'match-meta';
-    const price = document.createElement('span');
-    price.className = 'match-price';
-    price.textContent = s ? s.compare.price(best.price) : (best.price || 'Price unavailable');
-    const hint = document.createElement('span');
-    hint.className = 'match-hint';
-    hint.textContent = badgeText;
-    meta.append(price, hint);
-
-    card.append(head, title, meta);
-    resultsEl.appendChild(card);
-  }
-}
+// ---- COMPARE (delegated to compare-panel.js) ------------------------------
 
 // ---- TOOLS ----------------------------------------------------------------
 async function renderTools() {
@@ -369,6 +349,127 @@ async function renderTools() {
   if (p.image) list.appendChild(actionButton(s ? s.tools.copyImageUrl : 'Copy image URL', () => copyText(p.image)));
   if (p.image) list.appendChild(actionButton(s ? s.tools.downloadImage : 'Download image', () => downloadImage(p)));
   list.appendChild(actionButton(s ? s.tools.share : 'Share product', () => shareProduct(p)));
+  list.appendChild(actionButton(s ? s.tools.shareStats : 'Share my stats', () => shareStatsCard()));
+  list.appendChild(actionButton(s ? s.tools.exportCorrections : 'Export corrections', () => exportCorrections()));
+
+  await renderSellerTrust();
+}
+
+async function renderSellerTrust() {
+  const s = S();
+  const list = $('seller-list');
+  const empty = $('seller-empty');
+  if (!list) return;
+  list.textContent = '';
+  const r = await send({ type: 'RMF_GET_SELLERS' });
+  const sellers = (r.ok && r.sellers) ? r.sellers : [];
+  if (!sellers.length) {
+    empty.hidden = false;
+    empty.textContent = s ? s.tools.sellerEmpty : '';
+    return;
+  }
+  empty.hidden = true;
+  sellers.slice(0, 15).forEach((sel) => {
+    const li = document.createElement('li');
+    li.className = 'seller-row';
+    li.innerHTML = `<span class="seller-name">${sel.name}</span><span class="seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}">${sel.aiPct}% AI</span><small>${sel.total} scans</small>`;
+    list.appendChild(li);
+  });
+}
+
+function setupImageDrop() {
+  const zone = $('image-drop');
+  const file = $('image-file');
+  const hint = $('image-drop-hint');
+  const result = $('image-check-result');
+  const s = S();
+  if (!zone || !file) return;
+  if (s?.tools?.dropHint) hint.textContent = s.tools.dropHint;
+
+  const pick = () => file.click();
+  zone.addEventListener('click', pick);
+  zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag');
+    const f = e.dataTransfer?.files?.[0];
+    if (f) checkDroppedImage(f);
+  });
+  file.addEventListener('change', () => { if (file.files?.[0]) checkDroppedImage(file.files[0]); });
+}
+
+async function checkDroppedImage(blob) {
+  const result = $('image-check-result');
+  const s = S();
+  result.hidden = false;
+  result.textContent = s ? s.tools.checking : 'Checking…';
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+  const r = await send({ type: 'RMF_DETECT_DATA', dataUrl });
+  if (!r?.ok) {
+    result.textContent = r?.error || 'Check failed';
+    return;
+  }
+  const res = r.result;
+  const high = res.confidence >= 90;
+  const flagged = res.isAI && res.confidence >= 70;
+  result.textContent = flagged
+    ? `${high ? '🤖 AI Generated' : '⚠️ Likely AI'} · ${Math.round(res.confidence)}%`
+    : `✓ Normal · ${Math.round(res.confidence)}%`;
+  result.className = 'image-check-result ' + (flagged ? (high ? 'bad' : 'warn') : 'ok');
+}
+
+async function exportCorrections() {
+  const r = await send({ type: 'RMF_GET_CORRECTIONS' });
+  const data = (r.ok && r.corrections) ? r.corrections : [];
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'shopshield-corrections.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${data.length} correction${data.length === 1 ? '' : 's'}`);
+}
+
+async function shareStatsCard() {
+  const hist = (await chrome.storage.local.get({ rmf_scan_history: [] })).rmf_scan_history || [];
+  const total = hist.reduce((n, h) => n + (h.scanned || 0), 0);
+  const ai = hist.reduce((n, h) => n + (h.ai || 0), 0);
+  const canvas = document.createElement('canvas');
+  canvas.width = 600; canvas.height = 340;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 600, 340);
+  grad.addColorStop(0, '#4F46E5');
+  grad.addColorStop(1, '#6366f1');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 600, 340);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 32px system-ui,sans-serif';
+  ctx.fillText('ShopShield', 40, 60);
+  ctx.font = '18px system-ui,sans-serif';
+  ctx.fillText('My shopping scan stats', 40, 95);
+  ctx.font = 'bold 56px system-ui,sans-serif';
+  ctx.fillText(String(total), 40, 175);
+  ctx.font = '20px system-ui,sans-serif';
+  ctx.fillText('products scanned', 40, 205);
+  ctx.font = 'bold 40px system-ui,sans-serif';
+  ctx.fillStyle = '#fecaca';
+  ctx.fillText(String(ai), 40, 270);
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px system-ui,sans-serif';
+  ctx.fillText('AI-flagged', 40, 300);
+  const a = document.createElement('a');
+  a.download = 'shopshield-stats.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('Stats card downloaded');
 }
 
 function detailsText(p) {
@@ -433,8 +534,9 @@ function setupCompareSites() {
     input.addEventListener('change', async () => {
       const sites = Array.from(box.querySelectorAll('input[data-site]:checked')).map((el) => el.dataset.site);
       state.compareSites = sites.length ? sites : [...ALL_COMPARE_SITES];
+      window.__compareSettingsSites = state.compareSites;
       await chrome.storage.sync.set({ compareSites: state.compareSites });
-      if (!$('panel-compare').hidden) renderCompare();
+      if (!$('panel-compare').hidden) window.RMF_ComparePanel?.render?.(getActiveProduct);
     });
   });
   const s = S();
@@ -487,6 +589,11 @@ function setupSettings() {
   slider.addEventListener('change', async () => {
     state.minConfidence = Number(slider.value);
     await chrome.storage.sync.set({ minConfidence: state.minConfidence });
+    if ($('scan-confidence')) {
+      $('scan-confidence').value = state.minConfidence;
+      $('scan-confidence-val').textContent = `${state.minConfidence}%`;
+    }
+    sendToActiveTab({ type: 'SET_MIN_CONFIDENCE', minConfidence: state.minConfidence });
     updateScan();
   });
 
@@ -510,6 +617,16 @@ function setupSettings() {
     toast(`Cleared ${keys.length} cached`);
     updateScan();
   });
+
+  const serpKey = $('serp-api-key');
+  if (serpKey) {
+    serpKey.value = state.serpApiKey || '';
+    $('serp-save')?.addEventListener('click', async () => {
+      state.serpApiKey = serpKey.value.trim();
+      await chrome.storage.sync.set({ serpApiKey: state.serpApiKey });
+      toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
+    });
+  }
 }
 
 async function connectHuggingFace() {

@@ -14,6 +14,10 @@ const $ = (id) => document.getElementById(id);
 let state = { ...DEFAULTS };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const ver = chrome.runtime.getManifest().version;
+  $('version').textContent = `v${ver}`;
+  const aboutVer = $('about-ver');
+  if (aboutVer) aboutVer.textContent = `v${ver}`;
   state = await chrome.storage.sync.get(DEFAULTS);
   renderEngine();
   renderPrefs();
@@ -212,7 +216,7 @@ async function updateStats() {
 function exportSettings() {
   const out = {};
   for (const k of PORTABLE_KEYS) out[k] = state[k];
-  const blob = new Blob([JSON.stringify({ app: 'ShopShield', version: '1.3.0', settings: out }, null, 2)],
+  const blob = new Blob([JSON.stringify({ app: 'ShopShield', version: chrome.runtime.getManifest().version, settings: out }, null, 2)],
     { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

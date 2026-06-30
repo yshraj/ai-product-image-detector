@@ -1,6 +1,6 @@
 {
   "name": "shopshield",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "Shop smarter on Myntra, Flipkart, Meesho & Nykaa — compare prices, copy product details, spot AI photos, and more.",
   "private": true,
   "license": "UNLICENSED",
@@ -21,6 +21,7 @@
     "test:e2e:headed": "HEADLESS=0 playwright test --headed",
     "test:headed": "HEADLESS=0 playwright test --headed",
     "test:report": "playwright show-report playwright-report",
+    "test:qa-screenshots": "node scripts/capture-qa-screenshots.cjs",
     "lint": "node scripts/validate.js",
     "lint:firefox": "web-ext lint --source-dir .",
     "start": "web-ext run --target chromium --source-dir .",

@@ -59,7 +59,12 @@
       previewNote: 'Preview heuristic — low accuracy. Connect Hugging Face for a real verdict.',
       modelNote: (model) => `Model: ${model}`,
       confidence: (c) => `${c}% confidence it is AI-generated`,
+      layerExif: (c) => `EXIF check: ${c}% real`,
+      layerTfjs: (c) => `On-device model: ${c}% AI`,
+      layerHf: (c) => `Hugging Face: ${c}% AI`,
+      layerNone: 'Not run',
       close: 'Close',
+      markWrong: 'Not AI? Mark wrong',
     },
 
     // bottom navigation
@@ -78,6 +83,11 @@
       confidence: (n) => `Flagging at ${n}% confidence or higher`,
       whyFlagged: 'Tap any flagged badge on the page for Why flagged?',
       engine: 'AI scanner',
+      scanning: (done, total) => `Scanning ${done} / ${total}…`,
+      filterHint: 'Click a category to highlight matching products on the page.',
+      history: 'Recent scans',
+      historyEmpty: 'Scan a category page to see history here.',
+      confidenceLabel: 'Flag threshold',
     },
 
     // compare tab
@@ -94,11 +104,17 @@
       possibleMatch: 'Possible match',
       matchScore: (n) => `${n}% match`,
       noMatches: 'No close matches found — try the manual search links below.',
-      searchFailed: 'Could not search some sites — try again or use manual links.',
+      searchFailed: 'Search failed — use the manual links below or reload the extension.',
+      sitesFailed: (sites) => `Could not reach ${sites}`,
+      partialResults: (sites) => `Some sites unavailable (${sites})`,
       cached: 'Showing cached results',
       manualSearch: 'Search manually on each site',
       viewOn: (site) => `View on ${site}`,
       price: (p) => p || 'Price unavailable',
+      emptyHint: 'Open a product page on Flipkart, Myntra, Meesho or Nykaa, then search for the same item elsewhere.',
+      filterSites: 'Sites to search',
+      sortBy: 'Sort results',
+      cachedCount: (n) => `${n} cached comparison${n === 1 ? '' : 's'}`,
     },
 
     // tools tab
@@ -118,6 +134,13 @@
       noImage: 'No product image found on this page.',
       lens: 'Google Lens',
       bing: 'Bing Visual Search',
+      imageChecker: 'Check any image',
+      dropHint: 'Drop an image here or click to choose',
+      checking: 'Checking…',
+      sellerTrust: 'Seller trust',
+      sellerEmpty: 'Browse more to build seller trust scores (3+ scans per seller).',
+      shareStats: 'Share my stats',
+      exportCorrections: 'Export corrections',
     },
 
     settings: {

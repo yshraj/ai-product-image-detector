@@ -1,9 +1,20 @@
 /* ShopShield — styles injected into supported pages */
 
+.rmf-badge.rmf-compact .rmf-label { display: none; }
+.rmf-badge.rmf-compact:hover .rmf-label,
+.rmf-badge.rmf-compact:focus-within .rmf-label { display: inline-flex; }
+.rmf-badge.rmf-compact .rmf-compact-ico { display: inline-flex; font-size: 12px; }
+.rmf-badge.rmf-compact:hover .rmf-compact-ico,
+.rmf-badge.rmf-compact:focus-within .rmf-compact-ico { display: none; }
+.rmf-pop-layers { font-size: 10.5px; color: #9aa3b2; margin-top: 6px; line-height: 1.4; }
+.rmf-highlight { outline: 3px solid #6366f1 !important; outline-offset: 2px; transition: outline 0.2s; }
+
 .rmf-badge {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: auto;
+  bottom: 8px;
+  right: 8px;
+  left: auto;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -106,6 +117,21 @@
   background: #1b1f29; color: #9aa3b2; border-radius: 7px; cursor: pointer; font-size: 11px;
 }
 .rmf-pop-close:hover { color: #fff; border-color: #6fb22a; }
+.rmf-pop-wrong {
+  margin-top: 8px; width: 100%; padding: 6px; border: none; background: transparent;
+  color: #9aa3b2; cursor: pointer; font-size: 11px; text-decoration: underline;
+}
+.rmf-pop-wrong:hover { color: #eef1f5; }
+.rmf-trust {
+  display: inline-block; font-size: 10px; font-weight: 600; margin-right: 6px;
+  padding: 2px 6px; border-radius: 4px; background: rgba(99, 102, 241, 0.15); color: #6366f1;
+}
+.rmf-price-tag {
+  position: absolute; top: 8px; left: 8px; z-index: 9998;
+  font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 5px;
+  background: rgba(22, 163, 74, 0.92); color: #fff; pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .rmf-badge, .rmf-pop { animation: none; }

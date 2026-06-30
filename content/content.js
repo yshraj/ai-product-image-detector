@@ -13,7 +13,7 @@
   //   minConfidence <= conf < AI_THRESHOLD → "Likely AI"    (amber)
   //   confidence < minConfidence           → not flagged (no badge)
   // minConfidence (default 70) is the user-tunable floor in Settings.
-  const AI_THRESHOLD = 95;
+  const AI_THRESHOLD = 90;
 
   // Coercers — never trust stored values (settings can be imported from a file
   // or synced from another device). A bad value must degrade safely, never throw.
@@ -34,12 +34,27 @@
   let siteEnabled = !siteDisabled(prefs.disabledSites);
   let notifyOnAI = prefs.notifyOnAI === true;  // opt-in
   let notified = false;                        // one notification per page load
+  let corrections = new Set();                 // image URLs marked "not AI"
+
+  async function loadCorrections() {
+    try {
+      const { rmf_corrections: list = [] } = await chrome.storage.local.get('rmf_corrections');
+      corrections = new Set((list || []).map((c) => c.imageUrl).filter(Boolean));
+    } catch { corrections = new Set(); }
+  }
+  await loadCorrections();
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.rmf_corrections) loadCorrections();
+  });
 
   // Detection runs only when globally enabled AND this site isn't disabled.
   const isActive = () => enabled && siteEnabled;
 
   // Live session counters surfaced to the popup (with verdict breakdown).
-  const session = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0 };
+  const session = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0, total: 0, pending: 0 };
+  let highlightFilter = null;
+  let highlightTimer = null;
 
   // Report counts to the service worker so it can paint the toolbar badge.
   // Debounced so a burst of detections produces at most one update per tick.
@@ -50,7 +65,9 @@
       badgeTimer = null;
       try {
         chrome.runtime.sendMessage({
-          type: 'RMF_BADGE', ai: session.ai, scanned: session.scanned, active: isActive(),
+          type: 'RMF_BADGE',
+          ai: session.ai, aiHigh: session.aiHigh, aiLikely: session.aiLikely,
+          scanned: session.scanned, active: isActive(),
         });
       } catch { /* worker unavailable */ }
       maybeNotify();
@@ -92,7 +109,7 @@
 
     const high = confidence >= AI_THRESHOLD;
     const badge = document.createElement('div');
-    badge.className = 'rmf-badge';
+    badge.className = 'rmf-badge rmf-compact';
     badge.setAttribute('data-conf', high ? 'high' : 'med');
     // Announce to assistive tech (the host page's content, not ours).
     badge.setAttribute('role', 'img');
@@ -109,10 +126,13 @@
     const label = document.createElement('span');
     label.className = 'rmf-label';
     label.textContent = (high ? '🤖 AI Generated' : '⚠️ Likely AI') + (result.preview ? ' ·preview' : '');
+    const compact = document.createElement('span');
+    compact.className = 'rmf-compact-ico';
+    compact.textContent = high ? '🤖' : '⚠️';
     const score = document.createElement('span');
     score.className = 'rmf-score';
     score.textContent = `${Math.round(confidence)}%`;
-    badge.append(label, score);
+    badge.append(compact, label, score);
 
     const bar = document.createElement('div');
     bar.className = 'rmf-bar';
@@ -123,8 +143,10 @@
     const img = card.querySelector(SITE.imageSelector);
     attachDetails(badge, target, {
       confidence, source: result.source, preview: !!result.preview, model: result.model,
+      layers: result.layers || null,
       imageUrl: (img && (img.currentSrc || img.src)) || '',
       query: extractName(card) || '',
+      card,
     });
     applyMode(card);
   }
@@ -205,8 +227,54 @@
       pop.appendChild(n);
     }
 
+    if (info.layers) {
+      const layers = document.createElement('div');
+      layers.className = 'rmf-pop-layers';
+      const rows = [];
+      if (info.layers.exif != null) {
+        rows.push(t((s) => s.details.layerExif(info.layers.exif), `EXIF: ${info.layers.exif}% real`));
+      } else rows.push(t((s) => s.details.layerNone, 'EXIF: not run'));
+      if (info.layers.tfjs != null) {
+        rows.push(t((s) => s.details.layerTfjs(info.layers.tfjs), `On-device: ${info.layers.tfjs}% AI`));
+      }
+      if (info.layers.hf != null) {
+        rows.push(t((s) => s.details.layerHf(info.layers.hf), `Hugging Face: ${info.layers.hf}% AI`));
+      }
+      layers.textContent = rows.join(' · ');
+      pop.appendChild(layers);
+    }
+
     const actions = buildActions(info);
     if (actions) pop.appendChild(actions);
+
+    const wrong = document.createElement('button');
+    wrong.className = 'rmf-pop-wrong';
+    wrong.type = 'button';
+    wrong.textContent = t((s) => s.details.markWrong, 'Not AI? Mark wrong');
+    wrong.addEventListener('click', async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!info.imageUrl) return;
+      const entry = {
+        imageUrl: info.imageUrl,
+        pageUrl: location.href,
+        site: SITE.name,
+        confidence: info.confidence,
+      };
+      try {
+        const { rmf_corrections: list = [] } = await chrome.storage.local.get('rmf_corrections');
+        const next = [{ ...entry, at: Date.now() }, ...list.filter((c) => c.imageUrl !== info.imageUrl)].slice(0, 200);
+        await chrome.storage.local.set({ rmf_corrections: next });
+        corrections.add(info.imageUrl);
+        if (info.card) {
+          info.card.querySelector('.rmf-badge')?.remove();
+          info.card.querySelector('.rmf-bar')?.remove();
+          info.card.setAttribute('data-rmf-ai', 'false');
+          if (info.card.__rmfResult) info.card.__rmfResult.isAI = false;
+        }
+        onClose();
+      } catch { /* ignore */ }
+    });
+    pop.appendChild(wrong);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'rmf-pop-close'; closeBtn.type = 'button';
@@ -264,6 +332,80 @@
   }
 
   // --- display mode --------------------------------------------------------
+  function countCards() {
+    return document.querySelectorAll(SITE.cardSelector).length;
+  }
+
+  function updateSessionCounts() {
+    session.total = countCards();
+    session.pending = document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="pending"]`).length;
+  }
+
+  function recordScanHistory() {
+    if (!session.scanned) return;
+    try {
+      chrome.storage.local.get({ rmf_scan_history: [] }).then((data) => {
+        const hist = Array.isArray(data.rmf_scan_history) ? data.rmf_scan_history : [];
+        hist.unshift({
+          site: SITE.name,
+          scanned: session.scanned,
+          ai: session.ai,
+          aiHigh: session.aiHigh,
+          aiLikely: session.aiLikely,
+          at: Date.now(),
+          url: location.href,
+        });
+        chrome.storage.local.set({ rmf_scan_history: hist.slice(0, 10) });
+      });
+    } catch { /* ignore */ }
+  }
+
+  function refilterFromCache() {
+    session.scanned = 0; session.ai = 0; session.aiHigh = 0; session.aiLikely = 0;
+    document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned]`).forEach((card) => {
+      const r = card.__rmfResult;
+      if (!r) return;
+      card.querySelector('.rmf-badge')?.remove();
+      card.querySelector('.rmf-bar')?.remove();
+      if (r.isAI && r.confidence >= minConfidence) injectOverlay(card, r);
+      else {
+        card.setAttribute('data-rmf-scanned', 'true');
+        card.setAttribute('data-rmf-ai', 'false');
+        applyMode(card);
+        session.scanned++;
+      }
+    });
+    updateSessionCounts();
+    reportBadge();
+  }
+
+  function highlightCards(filter) {
+    document.querySelectorAll('.rmf-highlight').forEach((c) => c.classList.remove('rmf-highlight'));
+    if (highlightTimer) { clearTimeout(highlightTimer); highlightTimer = null; }
+    if (!filter || filter === 'all') { highlightFilter = null; return; }
+    highlightFilter = filter;
+    const cards = document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="true"]`);
+    let first = null;
+    cards.forEach((card) => {
+      const r = card.__rmfResult;
+      if (!r) return;
+      const flagged = r.isAI && r.confidence >= minConfidence;
+      const high = flagged && r.confidence >= AI_THRESHOLD;
+      const med = flagged && !high;
+      const ok = !flagged;
+      const match = (filter === 'high' && high) || (filter === 'med' && med) || (filter === 'ok' && ok);
+      if (match) {
+        card.classList.add('rmf-highlight');
+        if (!first) first = card;
+      }
+    });
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightTimer = setTimeout(() => {
+      document.querySelectorAll('.rmf-highlight').forEach((c) => c.classList.remove('rmf-highlight'));
+      highlightFilter = null;
+    }, 4000);
+  }
+
   function applyMode(card) {
     const isAI = card.getAttribute('data-rmf-ai') === 'true';
     // 'hide' removes AI cards entirely; 'all' and 'badge' both keep the card +
@@ -310,17 +452,32 @@
       });
     }
 
+    const imgUrl = imgEl.currentSrc || imgEl.src;
+    if (corrections.has(imgUrl)) {
+      card.setAttribute('data-rmf-scanned', 'true');
+      card.setAttribute('data-rmf-ai', 'false');
+      applyMode(card);
+      session.scanned++;
+      updateSessionCounts();
+      reportBadge();
+      return;
+    }
+
     try {
-      const result = await limit(() => window.RMF_Detect(imgEl.currentSrc || imgEl.src));
+      const result = await limit(() => window.RMF_Detect(imgUrl));
       card.__rmfResult = result; // kept for the page-export report
       injectOverlay(card, result);
       session.scanned++;
       if (result.isAI && result.confidence >= minConfidence) {
         session.ai++;
         if (result.confidence >= AI_THRESHOLD) session.aiHigh++; else session.aiLikely++;
-        logFlag(imgEl.currentSrc || imgEl.src, result);
+        logFlag(imgUrl, result);
+        recordSellerStats(card, result);
+        recordPriceTag(card, imgUrl);
       }
+      updateSessionCounts();
       reportBadge();
+      if (session.pending === 0 && session.scanned > 0) recordScanHistory();
     } catch (err) {
       Log?.debug('processCard error', err);
       card.removeAttribute('data-rmf-scanned'); // allow a retry later
@@ -362,8 +519,69 @@
       .split('\n').map((s) => s.trim())
       .filter((s) => s && !PRICE_RE.test(s) && !NOISE_RE.test(s));
     if (!lines.length) return null;
-    // Brand + title are usually the first one or two meaningful lines.
     return lines.slice(0, 2).join(' ').slice(0, 160);
+  }
+
+  function extractBrand(card) {
+    const name = extractName(card) || '';
+    const first = name.split(/\s+/)[0];
+    return first && first.length > 2 ? first : '';
+  }
+
+  async function recordSellerStats(card, result) {
+    const seller = extractBrand(card);
+    if (!seller) return;
+    const verdict = result.confidence >= AI_THRESHOLD ? 'high' : 'med';
+    try {
+      const { rmf_seller_trust: all = {} } = await chrome.storage.local.get('rmf_seller_trust');
+      const key = seller.toLowerCase().slice(0, 80);
+      const cur = all[key] || { name: seller, aiGenerated: 0, likelyAi: 0, normal: 0, lastSeen: 0 };
+      if (verdict === 'high') cur.aiGenerated++; else cur.likelyAi++;
+      cur.lastSeen = Date.now();
+      cur.name = seller;
+      all[key] = cur;
+      await chrome.storage.local.set({ rmf_seller_trust: all });
+      const total = cur.aiGenerated + cur.likelyAi + cur.normal;
+      if (total >= 3) {
+        const aiPct = Math.round(((cur.aiGenerated + cur.likelyAi) / total) * 100);
+        let tag = card.querySelector('.rmf-trust');
+        if (!tag) {
+          tag = document.createElement('span');
+          tag.className = 'rmf-trust';
+          const anchor = card.querySelector('a') || card;
+          anchor.insertAdjacentElement('afterbegin', tag);
+        }
+        tag.textContent = aiPct >= 50 ? `⚠ ${aiPct}% AI` : `✓ ${100 - aiPct}% real`;
+        tag.title = `${seller}: ${cur.aiGenerated} AI, ${cur.likelyAi} likely, ${cur.normal} normal`;
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function recordPriceTag(card, imgUrl) {
+    const priceText = extractPrice(card);
+    if (!priceText) return;
+    const price = Number(String(priceText).replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(price)) return;
+    const link = card.querySelector('a[href]');
+    const id = link?.href ? new URL(link.href, location.href).pathname.slice(0, 120) : imgUrl.slice(-80);
+    try {
+      const { rmf_price_history: all = {} } = await chrome.storage.local.get('rmf_price_history');
+      const hist = Array.isArray(all[id]) ? all[id] : [];
+      const low = hist.length ? Math.min(...hist.map((h) => h.price)) : price;
+      hist.push({ price, at: Date.now() });
+      all[id] = hist.slice(-20);
+      await chrome.storage.local.set({ rmf_price_history: all });
+      if (price <= low) {
+        const target = resolveOverlayTarget(card);
+        let tag = target.querySelector('.rmf-price-tag');
+        if (!tag) {
+          tag = document.createElement('span');
+          tag.className = 'rmf-price-tag';
+          target.appendChild(tag);
+        }
+        tag.textContent = price < low ? 'Price drop' : 'Lowest seen';
+      }
+    } catch { /* ignore */ }
   }
 
   function engineOf(r) {
@@ -427,10 +645,27 @@
     return '';
   }
 
+  function cleanTitle(raw) {
+    if (!raw) return '';
+    return raw
+      .replace(/\s*[-–—|]\s*Buy\b[^|]*$/i, '')
+      .replace(/\s*[-–—|]\s*Online at Best Prices[^|]*$/i, '')
+      .replace(/\s*\|\s*Flipkart\.com.*$/i, '')
+      .replace(/\s*\|\s*Myntra.*$/i, '')
+      .replace(/\s*\|\s*Nykaa.*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function getProduct() {
     const meta = (sel) => document.querySelector(sel)?.getAttribute('content')?.trim() || '';
+    const jsonTitle = walkJsonLd((item) => {
+      if (item['@type'] === 'Product' && item.name) return String(item.name);
+      return '';
+    });
     const ogTitle = meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]');
-    const title = (ogTitle || document.querySelector('h1')?.textContent || document.title || '').trim().slice(0, 200);
+    const h1 = document.querySelector('h1')?.textContent || '';
+    const title = cleanTitle(jsonTitle || ogTitle || h1 || document.title || '').slice(0, 200);
 
     let image = meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]');
     if (!image) {
@@ -484,7 +719,9 @@
   function scanAll() {
     const cards = document.querySelectorAll(SITE.cardSelector);
     Log?.debug(`scanning ${cards.length} cards on ${SITE.name}`);
-    cards.forEach(processCard); // processCard skips already-scanned; limiter caps concurrency
+    session.total = cards.length;
+    cards.forEach(processCard);
+    updateSessionCounts();
   }
 
   // Coalesce many rapid triggers (mutations, scroll) into one idle rescan.
@@ -559,8 +796,18 @@
         sendResponse?.({ ok: true });
         return true;
       case 'GET_STATS':
+        updateSessionCounts();
         sendResponse({ ...session, active: isActive() });
         return true; // async-safe
+      case 'HIGHLIGHT_FILTER':
+        highlightCards(msg.filter);
+        sendResponse?.({ ok: true });
+        return true;
+      case 'SET_MIN_CONFIDENCE':
+        minConfidence = cleanConf(msg.minConfidence);
+        refilterFromCache();
+        sendResponse?.({ ok: true });
+        return true;
       case 'GET_PAGE_REPORT':
         sendResponse(buildReport());
         return true;
@@ -583,12 +830,16 @@
     }
     if (changes.minConfidence) {
       minConfidence = cleanConf(changes.minConfidence.newValue);
-      rerender(); // recompute badges from cache against the new threshold
+      refilterFromCache();
     }
     if (changes.notifyOnAI) notifyOnAI = changes.notifyOnAI.newValue === true;
   });
 
   // --- init ----------------------------------------------------------------
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && session.scanned > 0) reportBadge();
+  });
+
   if (isActive()) {
     await scanAll();
     startObserver();
