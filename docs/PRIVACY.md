@@ -1,6 +1,6 @@
 # Privacy Policy — ShopShield
 
-_Last updated: 2026-06-27_
+_Last updated: 2026-06-30_
 
 **ShopShield does not collect, store, or transmit any personal data to us.**
 There is no account system, no backend server operated by us, and no analytics,
@@ -9,11 +9,13 @@ advertising, or tracking of any kind.
 ## What stays on your device
 
 - **Preferences** (display mode, minimum-confidence threshold, active marketplaces,
-  enabled state) are stored with `chrome.storage.sync`, which syncs only across your
-  own signed-in Chrome profile. We never receive them.
+  compare marketplace toggles, enabled state) are stored with `chrome.storage.sync`, which
+  syncs only across your own signed-in Chrome profile. We never receive them.
 - **Detection results** are cached in your browser's `chrome.storage.local` (per image
   URL, with a 7-day expiry) purely to avoid re-analyzing the same image. You can clear
   this at any time from the popup or the Settings page.
+- **Activity history** (flagged items) is stored locally in `chrome.storage.local` and
+  never leaves your device unless you export it yourself.
 - **Your Hugging Face access token** (if you connect one) is stored locally on your
   device and is used only to authenticate requests to Hugging Face. It is never sent to
   us, never bundled in the extension, and is excluded from exported settings.
@@ -27,6 +29,9 @@ advertising, or tracking of any kind.
   (`router.huggingface.co`, `huggingface.co`) to classify the image. This is governed by
   [Hugging Face's privacy policy](https://huggingface.co/privacy). We are not an
   intermediary and do not see this traffic.
+- **Compare & Tools:** when you use marketplace search links, reverse image search, or
+  share/copy actions, your browser opens or contacts those third-party services directly
+  (Amazon, Flipkart, Google Lens, etc.). We do not proxy or log those requests.
 
 ## Permissions
 
