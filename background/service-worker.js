@@ -15,17 +15,23 @@
 try {
   if (typeof importScripts === 'function') {
     importScripts(
-      '/utils/strings.js',
-      '/utils/product-query.js',
-      '/utils/product-matcher.js',
-      '/compare/config.js',
-      '/compare/parsers.js',
-      '/compare/search.js',
+      '../utils/product-query.js',
+      '../utils/product-matcher.js',
+      '../compare/config.js',
+      '../compare/parsers.js',
+      '../compare/serp-search.js',
+      '../compare/internal-apis.js',
+      '../compare/search.js',
+      '../compare/tab-search.js',
+      '../utils/trust-storage.js',
     );
   }
-} catch { /* ignore */ }
+} catch (e) {
+  console.error('[RMF] compare modules failed to load:', e);
+}
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
+const TabSearch = (typeof self !== 'undefined' && self.RMF_TabSearch) || null;
 
 const DEFAULTS = {
   enabled: true,
@@ -38,6 +44,7 @@ const DEFAULTS = {
   minConfidence: 70,                     // only flag AI at/above this confidence (floor)
   disabledSites: [],                     // site names to skip, e.g. ['nykaa']
   compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
+  serpApiKey: '',
   notifyOnAI: false,                     // opt-in OS notification when a page has AI
 };
 
@@ -65,7 +72,58 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
       }
       console.log('[RMF] Updated to', chrome.runtime.getManifest().version);
     }
+    setupContextMenu();
   });
+}
+
+const DETECT_SCRIPTS = [
+  'libs/exifr.min.js',
+  'utils/logger.js',
+  'utils/throttle.js',
+  'utils/cache.js',
+  'detection/exif-check.js',
+  'detection/tfjs-detector.js',
+  'detection/remote.js',
+  'detection/pipeline.js',
+];
+
+function setupContextMenu() {
+  if (!chrome.contextMenus?.create) return Promise.resolve();
+  return new Promise((resolve) => {
+    chrome.contextMenus.removeAll(() => {
+      chrome.contextMenus.create({
+        id: 'rmf-check-image',
+        title: 'Check this image with ShopShield',
+        contexts: ['image'],
+      }, () => resolve());
+    });
+  });
+}
+
+async function checkImageFromContextMenu(tabId, imageUrl) {
+  if (!isAllowedHttpUrl(imageUrl) || !chrome.scripting?.executeScript) return;
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (url) => { window.__rmf_check_image_url = url; },
+    args: [imageUrl],
+  });
+  await chrome.scripting.executeScript({ target: { tabId }, files: DETECT_SCRIPTS });
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['content/check-image.js'] });
+}
+
+if (typeof chrome !== 'undefined' && chrome.contextMenus?.onClicked) {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId !== 'rmf-check-image' || !info.srcUrl || !tab?.id) return;
+    checkImageFromContextMenu(tab.id, info.srcUrl).catch((e) => console.warn('[RMF] context check failed', e));
+  });
+}
+
+// Ensure menu exists when the worker starts (E2E loads unpacked without an install event).
+try { setupContextMenu(); } catch (e) { console.warn('[RMF] context menu setup', e); }
+
+if (typeof self !== 'undefined') {
+  self.RMF_runImageCheck = checkImageFromContextMenu;
+  self.RMF_setupContextMenu = setupContextMenu;
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -156,21 +214,26 @@ function addHistory(entry) {
 let lastNotifyAt = 0;
 function notifyAI(ai) {
   const count = Number(ai) || 0;
-  if (count <= 0 || !STRINGS || typeof chrome === 'undefined' || !chrome.notifications) return;
+  if (count <= 0 || typeof chrome === 'undefined') return;
   const now = Date.now();
   if (now - lastNotifyAt < 30_000) return; // global throttle: at most 1 / 30s
   lastNotifyAt = now;
+  // Observable record (also handy for the popup / tests) — always written when notified.
+  try { chrome.storage.session.set({ rmf_lastNotify: { ai: count, at: now } }); } catch { /* noop */ }
+  if (!chrome.notifications) return;
+  const title = STRINGS?.notify?.title
+    ? (typeof STRINGS.notify.title === 'function' ? STRINGS.notify.title() : STRINGS.notify.title)
+    : 'ShopShield';
+  const message = STRINGS?.notify?.body ? STRINGS.notify.body(count) : `${count} AI image(s) on this page`;
   try {
     chrome.notifications.create('', {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
-      title: typeof STRINGS.notify.title === 'function' ? STRINGS.notify.title() : STRINGS.notify.title,
-      message: STRINGS.notify.body(count),
+      title,
+      message,
       priority: 0,
     });
   } catch { /* notifications unavailable */ }
-  // Observable record (also handy for the popup / tests).
-  try { chrome.storage.session.set({ rmf_lastNotify: { ai: count, at: now } }); } catch { /* noop */ }
 }
 
 // ---- toolbar badge (per-tab AI count) -------------------------------------
@@ -179,17 +242,33 @@ function notifyAI(ai) {
 function updateBadge(tabId, info) {
   if (tabId == null) return;
   const ai = Number(info?.ai) || 0;
+  const aiHigh = Number(info?.aiHigh) || 0;
+  const aiLikely = Number(info?.aiLikely) || 0;
   const scanned = Number(info?.scanned) || 0;
   const active = info?.active !== false;
   const text = active && ai > 0 ? String(ai) : '';
   const title = STRINGS
     ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff())
     : 'ShopShield';
-  const color = (STRINGS && STRINGS.badge.color) || '#e24b4a';
-  // Each call is best-effort: the tab may have closed.
+  let color = '#e24b4a';
+  if (active && ai > 0) {
+    color = aiHigh > 0 ? '#e24b4a' : '#EF9F27';
+  }
   try { chrome.action.setBadgeText({ tabId, text }); } catch { /* tab gone */ }
   try { chrome.action.setBadgeBackgroundColor({ tabId, color }); } catch { /* noop */ }
   try { chrome.action.setTitle({ tabId, title }); } catch { /* noop */ }
+}
+
+function clearBadge(tabId) {
+  if (tabId == null) return;
+  try { chrome.action.setBadgeText({ tabId, text: '' }); } catch { /* noop */ }
+}
+
+if (typeof chrome !== 'undefined' && chrome.tabs) {
+  chrome.tabs.onActivated.addListener(({ tabId }) => clearBadge(tabId));
+  chrome.tabs.onUpdated.addListener((tabId, info) => {
+    if (info.status === 'loading') clearBadge(tabId);
+  });
 }
 
 // ---- engine health (surfaced to the popup) --------------------------------
@@ -278,6 +357,46 @@ async function detectHuggingFace(url, token, model) {
   throw new Error('Model is warming up — retry in ~20s');
 }
 
+async function detectFromDataUrl(dataUrl) {
+  if (!dataUrl || !String(dataUrl).startsWith('data:image/')) {
+    return { error: 'Invalid image data' };
+  }
+  const cfg = await chrome.storage.sync.get(DEFAULTS);
+  try {
+    if (cfg.provider === 'huggingface' && cfg.hfToken) {
+      const model = cfg.hfModel || DEFAULTS.hfModel;
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const endpoint = HF_INFERENCE_BASE + model;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const hfRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${cfg.hfToken}`, Accept: 'application/json' },
+          body: blob,
+        });
+        if (hfRes.status === 503) {
+          const j = await hfRes.json().catch(() => ({}));
+          await wait(Math.min(((j.estimated_time || 6) * 1000), 9000));
+          continue;
+        }
+        if (!hfRes.ok) {
+          const body = await hfRes.text().catch(() => '');
+          throw new Error(friendlyHfError(hfRes.status, body));
+        }
+        const r = parseHfResult(await hfRes.json());
+        r.model = model;
+        await recordOk('huggingface');
+        return { result: r };
+      }
+      throw new Error('Model is warming up — retry in ~20s');
+    }
+  } catch (err) {
+    await recordError(cfg.provider, err && err.message);
+    return { error: String((err && err.message) || err) };
+  }
+  return { error: 'Connect Hugging Face in Settings for image checks' };
+}
+
 // ---- remote dispatch ------------------------------------------------------
 async function remoteDetect(url) {
   const cfg = await chrome.storage.sync.get(DEFAULTS);
@@ -356,6 +475,15 @@ function registerMessageRouter() {
       .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
     return true;
   }
+  if (msg?.type === 'RMF_DETECT_DATA' && msg.dataUrl) {
+    detectFromDataUrl(msg.dataUrl)
+      .then((out) => {
+        if (out.result) sendResponse({ ok: true, result: out.result });
+        else sendResponse({ ok: false, error: out.error || 'Detection failed' });
+      })
+      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
+    return true;
+  }
   if (msg?.type === 'RMF_VALIDATE') {
     validateHuggingFace(msg.token)
       .then((r) => sendResponse(r))
@@ -391,6 +519,33 @@ function registerMessageRouter() {
       .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
     return true;
   }
+  if (msg?.type === 'RMF_COMPARE_CACHE' && msg.product) {
+    handleCompareCache(msg.product)
+      .then((r) => sendResponse(r))
+      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
+    return true;
+  }
+  if (msg?.type === 'RMF_GET_SELLERS') {
+    const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
+    (Trust ? Trust.getSellerList() : Promise.resolve([]))
+      .then((list) => sendResponse({ ok: true, sellers: list }))
+      .catch(() => sendResponse({ ok: true, sellers: [] }));
+    return true;
+  }
+  if (msg?.type === 'RMF_GET_CORRECTIONS') {
+    const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
+    (Trust ? Trust.getCorrections() : Promise.resolve([]))
+      .then((list) => sendResponse({ ok: true, corrections: list }))
+      .catch(() => sendResponse({ ok: true, corrections: [] }));
+    return true;
+  }
+  if (msg?.type === 'RMF_RUN_IMAGE_CHECK' && msg.tabId && msg.url) {
+    if (!isAllowedHttpUrl(msg.url)) { sendResponse({ ok: false, error: 'blocked URL' }); return true; }
+    checkImageFromContextMenu(msg.tabId, msg.url)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
+    return true;
+  }
   return false;
   });
 }
@@ -400,7 +555,9 @@ registerMessageRouter();
 const COMPARE_CACHE_TTL_MS = 15 * 60 * 1000;
 
 async function handleCompareSearch(msg) {
-  if (!CompareSearch) return { ok: false, error: 'compare module unavailable' };
+  if (!CompareSearch) {
+    return { ok: false, error: 'Compare module failed to load — reload the extension' };
+  }
   const product = msg.product;
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   const sites = Array.isArray(msg.sites) && msg.sites.length
@@ -419,12 +576,32 @@ async function handleCompareSearch(msg) {
     } catch { /* ignore */ }
   }
 
-  const data = await CompareSearch.searchAll(product, sites);
+  const tabFetchFn = (TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
+    ? TabSearch.fetchSearchPageViaTab
+    : null;
+
+  const data = await CompareSearch.searchAll(product, sites, {
+    tabFetchFn,
+    serpApiKey: cfg.serpApiKey || '',
+  });
   try {
     await chrome.storage.local.set({ [key]: { timestamp: Date.now(), data } });
   } catch { /* ignore */ }
 
   return { ok: true, cached: false, ...data };
+}
+
+async function handleCompareCache(product) {
+  if (!CompareSearch) return { ok: false, error: 'compare module unavailable' };
+  const key = CompareSearch.cacheKey(product);
+  try {
+    const cached = await chrome.storage.local.get(key);
+    const entry = cached[key];
+    if (entry && (Date.now() - entry.timestamp) < COMPARE_CACHE_TTL_MS) {
+      return { ok: true, cached: true, ...entry.data };
+    }
+  } catch { /* ignore */ }
+  return { ok: false, error: 'no cache' };
 }
 
 // Exposed for unit tests when this file is required under Node. In the service
