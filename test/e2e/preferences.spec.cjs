@@ -1,70 +1,38 @@
-// test/e2e/preferences.spec.cjs
-// Verifies the detection preferences actually change in-page behaviour:
-//   - minimum-confidence threshold suppresses low-confidence flags
-//   - disabling a marketplace stops detection there entirely
-const { test, expect } = require('@playwright/test');
-const { launch, setSyncStorage } = require('./_setup.cjs');
+// Detection preferences change in-page behaviour.
+const { test, expect } = require('./fixtures/extension.fixture.cjs');
+const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
 
-let context;
-test.beforeAll(async () => { context = await launch(); });
-test.afterAll(async () => { await context?.close(); });
-
-test('minimum-confidence threshold suppresses lower-confidence flags', async () => {
-  // Heuristic flags the AI fixtures at ~92%. A 95% threshold should suppress them.
-  await setSyncStorage(context, { provider: 'heuristic', enabled: true, minConfidence: 95, disabledSites: [] });
-  const page = await context.newPage();
-  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
-
-  await expect.poll(() => page.locator('.product-base[data-rmf-scanned="true"]').count(),
-    { message: 'cards are still scanned', timeout: 20_000 }).toBeGreaterThan(0);
-
-  expect(await page.locator('.rmf-badge').count(),
-    'no badges when confidence is below the threshold').toBe(0);
-  await page.close();
+test('minimum-confidence threshold suppresses lower-confidence flags', async ({ extensionContext, contentPage }) => {
+  await setSyncStorage(extensionContext, { provider: 'heuristic', enabled: true, minConfidence: 95, disabledSites: [] });
+  await contentPage.gotoListing();
+  await contentPage.waitForScan();
+  expect(await contentPage.badges.count()).toBe(0);
 });
 
-test('disabling a marketplace stops detection there', async () => {
-  await setSyncStorage(context, { provider: 'heuristic', enabled: true, minConfidence: 50, disabledSites: ['myntra'] });
-  const page = await context.newPage();
-  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
-
-  // Give the content script time to (not) run.
-  await page.waitForTimeout(1500);
-  expect(await page.locator('.product-base[data-rmf-scanned]').count(),
-    'a disabled site is never scanned').toBe(0);
-  expect(await page.locator('.rmf-badge').count(), 'no badges on a disabled site').toBe(0);
-  await page.close();
+test('disabling a marketplace stops detection there', async ({ extensionContext, contentPage }) => {
+  await setSyncStorage(extensionContext, { provider: 'heuristic', enabled: true, minConfidence: 50, disabledSites: ['myntra'] });
+  await contentPage.gotoListing();
+  await contentPage.page.waitForTimeout(1500);
+  expect(await contentPage.page.locator('.product-base[data-rmf-scanned]').count()).toBe(0);
 });
 
-test('corrupt / malformed stored settings never break detection', async () => {
-  // Simulates a bad imported settings file or a corrupted sync value. The
-  // content script must coerce these safely and keep working — not throw.
-  await setSyncStorage(context, {
+test('corrupt stored settings never break detection', async ({ extensionContext, contentPage }) => {
+  await setSyncStorage(extensionContext, {
     provider: 'heuristic', enabled: true,
     minConfidence: 'not-a-number', disabledSites: 5, mode: 'bogus',
   });
-  const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
-
-  await expect.poll(() => page.locator('.rmf-badge').count(),
-    { message: 'detection still runs despite bad settings', timeout: 20_000 }).toBeGreaterThan(0);
-  expect(errors, 'no uncaught errors from malformed settings').toEqual([]);
-  await page.close();
+  contentPage.page.on('pageerror', (e) => errors.push(String(e)));
+  await contentPage.gotoListing();
+  await contentPage.waitForBadges();
+  expect(errors).toEqual([]);
 });
 
-test('threshold change applies live without reload', async () => {
-  await setSyncStorage(context, { provider: 'heuristic', enabled: true, minConfidence: 50, disabledSites: [] });
-  const page = await context.newPage();
-  await page.goto('https://www.myntra.com/men-shirts', { waitUntil: 'domcontentloaded' });
+test('threshold change applies live without reload', async ({ extensionContext, contentPage }) => {
+  await setSyncStorage(extensionContext, { provider: 'heuristic', enabled: true, minConfidence: 50, disabledSites: [] });
+  await contentPage.gotoListing();
+  await contentPage.waitForBadges();
 
-  await expect.poll(() => page.locator('.rmf-badge').count(),
-    { message: 'badges appear at the default threshold', timeout: 20_000 }).toBeGreaterThan(0);
-
-  // Raise the threshold from the options/popup surface (storage write) → badges clear.
-  await setSyncStorage(context, { minConfidence: 99 });
-  await expect.poll(() => page.locator('.rmf-badge').count(),
-    { message: 'badges clear live when the threshold is raised', timeout: 10_000 }).toBe(0);
-  await page.close();
+  await setSyncStorage(extensionContext, { minConfidence: 99 });
+  await expect.poll(() => contentPage.badges.count(), { timeout: 10_000 }).toBe(0);
 });

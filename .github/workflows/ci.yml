@@ -31,7 +31,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: End-to-end tests (extension + popup + a11y)
-        run: npm test
+        run: CI=true npm run test:e2e
+        env:
+          CI: true
 
       - name: Upload screenshots & report on failure
         if: failure()
