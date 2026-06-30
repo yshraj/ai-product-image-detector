@@ -25,6 +25,7 @@ const DEFAULTS = {
   hfUser: '',                            // HF username from whoami (display only)
   minConfidence: 70,                     // only flag AI at/above this confidence (floor)
   disabledSites: [],                     // site names to skip, e.g. ['nykaa']
+  compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
   notifyOnAI: false,                     // opt-in OS notification when a page has AI
 };
 
@@ -151,7 +152,7 @@ function notifyAI(ai) {
     chrome.notifications.create('', {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
-      title: STRINGS.notify.title,
+      title: typeof STRINGS.notify.title === 'function' ? STRINGS.notify.title() : STRINGS.notify.title,
       message: STRINGS.notify.body(count),
       priority: 0,
     });
@@ -170,7 +171,7 @@ function updateBadge(tabId, info) {
   const active = info?.active !== false;
   const text = active && ai > 0 ? String(ai) : '';
   const title = STRINGS
-    ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff)
+    ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff())
     : 'ShopShield';
   const color = (STRINGS && STRINGS.badge.color) || '#e24b4a';
   // Each call is best-effort: the tab may have closed.

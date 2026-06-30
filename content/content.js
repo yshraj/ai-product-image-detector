@@ -38,8 +38,8 @@
   // Detection runs only when globally enabled AND this site isn't disabled.
   const isActive = () => enabled && siteEnabled;
 
-  // Live session counters surfaced to the popup.
-  const session = { scanned: 0, ai: 0 };
+  // Live session counters surfaced to the popup (with verdict breakdown).
+  const session = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0 };
 
   // Report counts to the service worker so it can paint the toolbar badge.
   // Debounced so a burst of detections produces at most one update per tick.
@@ -98,7 +98,7 @@
     badge.setAttribute('role', 'img');
     const verdict = high ? 'AI generated' : 'Likely AI generated';
     badge.setAttribute('aria-label',
-      `ShopShield: ${verdict}, ${Math.round(confidence)}% confidence` +
+      `${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'}: ${verdict}, ${Math.round(confidence)}% confidence` +
       (result.preview ? ' (preview heuristic)' : ''));
     if (result.preview) {
       badge.setAttribute('data-preview', 'true');
@@ -317,6 +317,7 @@
       session.scanned++;
       if (result.isAI && result.confidence >= minConfidence) {
         session.ai++;
+        if (result.confidence >= AI_THRESHOLD) session.aiHigh++; else session.aiLikely++;
         logFlag(imgEl.currentSrc || imgEl.src, result);
       }
       reportBadge();
@@ -392,7 +393,7 @@
       });
     });
     return {
-      app: 'ShopShield',
+      app: (window.RMF_STRINGS?.app?.name) || 'ShopShield',
       site: SITE.name,
       pageUrl: location.href,
       scannedAt: new Date().toISOString(),
@@ -400,6 +401,83 @@
       aiFlagged,
       products,
     };
+  }
+
+  // Best-effort "current product" for the Compare/Tools tabs. Uses Open Graph /
+  // standard meta + heuristics so it works on product pages of any site without
+  // fragile per-site selectors; fields degrade to '' when unavailable.
+  function walkJsonLd(fn) {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const s of scripts) {
+      try {
+        const data = JSON.parse(s.textContent);
+        const items = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          const found = fn(item);
+          if (found) return found;
+          if (item['@graph']) {
+            for (const g of item['@graph']) {
+              const f2 = fn(g);
+              if (f2) return f2;
+            }
+          }
+        }
+      } catch { /* skip malformed blocks */ }
+    }
+    return '';
+  }
+
+  function getProduct() {
+    const meta = (sel) => document.querySelector(sel)?.getAttribute('content')?.trim() || '';
+    const ogTitle = meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]');
+    const title = (ogTitle || document.querySelector('h1')?.textContent || document.title || '').trim().slice(0, 200);
+
+    let image = meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]');
+    if (!image) {
+      let best = '', area = 0;
+      document.querySelectorAll('img').forEach((im) => {
+        const src = im.currentSrc || im.src;
+        if (!src || src.startsWith('data:')) return;
+        const a = (im.naturalWidth || im.width || 0) * (im.naturalHeight || im.height || 0);
+        if (a > area) { area = a; best = src; }
+      });
+      image = best;
+    }
+
+    const brand = meta('meta[property="product:brand"]') || meta('meta[property="og:brand"]') ||
+      walkJsonLd((item) => (item['@type'] === 'Product' && item.brand?.name) || item.brand?.name || '');
+
+    const priceMeta = meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]');
+    let price = priceMeta ? ('₹' + priceMeta).replace('₹₹', '₹') : '';
+    if (!price) { const m = (document.body.innerText || '').match(/₹\s?[\d,]+(?:\.\d+)?/); if (m) price = m[0].replace(/\s/g, ''); }
+
+    let rating = meta('meta[property="og:rating"]') || walkJsonLd((item) => {
+      const ar = item.aggregateRating || (item['@type'] === 'AggregateRating' ? item : null);
+      if (ar?.ratingValue) {
+        const val = String(ar.ratingValue);
+        return ar.bestRating ? `${val}/${ar.bestRating}` : val;
+      }
+      return '';
+    });
+    if (!rating) {
+      const m = (document.body.innerText || '').match(/(\d(?:\.\d)?)\s*(?:★|out of 5|\/\s*5)/i);
+      if (m) rating = m[1] + '/5';
+    }
+
+    let seller = meta('meta[property="product:retailer"]') || walkJsonLd((item) => {
+      const offers = item.offers || (item['@type'] === 'Offer' ? item : null);
+      const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
+      for (const o of list) {
+        if (o.seller?.name) return o.seller.name;
+      }
+      return '';
+    });
+    if (!seller) {
+      const m = (document.body.innerText || '').match(/(?:sold by|seller[:\s]+)([A-Za-z0-9][A-Za-z0-9 &.'-]{1,40})/i);
+      if (m) seller = m[1].trim();
+    }
+
+    return { site: SITE.name, title, brand, price, rating, seller, image, url: location.href };
   }
 
   // --- scanning + observing ------------------------------------------------
@@ -452,7 +530,7 @@
   // Used when the confidence threshold changes.
   function rerender() {
     teardownBadges();
-    session.scanned = 0; session.ai = 0;
+    session.scanned = 0; session.ai = 0; session.aiHigh = 0; session.aiLikely = 0;
     reconcile();
   }
 
@@ -486,6 +564,9 @@
       case 'GET_PAGE_REPORT':
         sendResponse(buildReport());
         return true;
+      case 'GET_PRODUCT':
+        sendResponse(getProduct());
+        return true;
       default:
         break;
     }
@@ -512,5 +593,5 @@
     await scanAll();
     startObserver();
   }
-  Log?.info(`ShopShield on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
+  Log?.info(`${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();

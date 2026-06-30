@@ -4,15 +4,23 @@
 // also exports for Node unit tests.
 (function (root) {
   const RMF_STRINGS = {
+    app: {
+      name: 'ShopShield',
+      shortName: 'ShopShield',
+      tagline: 'Shop smarter. Spot AI. Compare better.',
+    },
+
     // toolbar action badge
     badge: {
       color: '#e24b4a',
       // tooltips shown on the extension icon
-      title: (ai, scanned) =>
-        scanned > 0
-          ? `ShopShield — ${ai} of ${scanned} image${scanned === 1 ? '' : 's'} look AI`
-          : 'ShopShield',
-      titleOff: 'ShopShield — detection paused',
+      title: (ai, scanned) => {
+        const app = RMF_STRINGS.app.shortName;
+        return scanned > 0
+          ? `${app} — ${ai} of ${scanned} image${scanned === 1 ? '' : 's'} look AI`
+          : app;
+      },
+      titleOff: () => `${RMF_STRINGS.app.shortName} — scanning paused`,
     },
 
     // popup page-scan summary
@@ -28,7 +36,7 @@
 
     // opt-in notifications
     notify: {
-      title: 'ShopShield',
+      title: () => RMF_STRINGS.app.shortName,
       body: (ai) => `${ai} AI-looking image${ai === 1 ? '' : 's'} on this page.`,
     },
 
@@ -52,6 +60,58 @@
       modelNote: (model) => `Model: ${model}`,
       confidence: (c) => `${c}% confidence it is AI-generated`,
       close: 'Close',
+    },
+
+    // bottom navigation
+    nav: { scan: 'Scan', compare: 'Compare', tools: 'Tools', settings: 'Settings' },
+
+    // scan breakdown
+    scan: {
+      complete: 'Scan complete',
+      scanned: (n) => `${n} product${n === 1 ? '' : 's'} scanned`,
+      aiGenerated: 'AI generated',
+      likelyAI: 'Likely AI',
+      normal: 'Normal',
+      none: 'No products scanned yet — open a category page and scroll.',
+      paused: 'Scanning is paused — turn it on to analyze images.',
+      unsupported: 'Open a product or category page on Myntra, Flipkart, Meesho or Nykaa.',
+      confidence: (n) => `Flagging at ${n}% confidence or higher`,
+      whyFlagged: 'Tap any flagged badge on the page for Why flagged?',
+      engine: 'AI scanner',
+    },
+
+    // compare tab
+    compare: {
+      heading: 'Compare this product',
+      note: 'Opens search results on each marketplace (live prices coming later).',
+      noProduct: 'Open a product page to compare it elsewhere.',
+      on: (site) => `Search on ${site}`,
+    },
+
+    // tools tab
+    tools: {
+      reverse: 'Reverse image search',
+      copyShare: 'Copy & share',
+      copyTitle: 'Copy title',
+      copyDetails: 'Copy product details',
+      copyUrl: 'Copy product URL',
+      copyImageUrl: 'Copy image URL',
+      downloadImage: 'Download image',
+      share: 'Share product',
+      copied: 'Copied to clipboard',
+      downloaded: 'Image downloading…',
+      shared: 'Share sheet opened',
+      noProduct: 'Open a product page to use these tools.',
+      noImage: 'No product image found on this page.',
+      lens: 'Google Lens',
+      bing: 'Bing Visual Search',
+    },
+
+    settings: {
+      aiDetection: 'AI detection',
+      compareSites: 'Compare marketplaces',
+      compareSitesHint: 'Choose which sites appear in Compare.',
+      more: 'More',
     },
 
     // page export
