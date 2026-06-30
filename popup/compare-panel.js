@@ -331,6 +331,7 @@
     state.product = p;
 
     const titleEl = $('compare-title');
+    const metaEl = $('compare-meta');
     const btn = $('compare-search');
     const note = $('compare-note');
     const emptyEl = $('compare-empty');
@@ -346,13 +347,26 @@
     if (!p?.title) {
       titleEl.textContent = s?.compare?.noProduct || 'Open a product page.';
       titleEl.classList.add('muted');
+      if (metaEl) metaEl.hidden = true;
       if (btn) btn.hidden = true;
-      if (note) note.textContent = s?.compare?.emptyHint || '';
+      if (emptyEl) {
+        emptyEl.hidden = false;
+        emptyEl.innerHTML = '<span class="empty-state-ico" aria-hidden="true">🔍</span>' + (s?.compare?.emptyHint || '');
+      }
+      if (note) note.textContent = '';
       return;
     }
 
     titleEl.textContent = p.title;
     titleEl.classList.remove('muted');
+    if (metaEl) {
+      const parts = [];
+      if (p.site) parts.push(`<span class="site-pill">${p.site}</span>`);
+      if (p.brand) parts.push(p.brand);
+      if (p.price) parts.push(p.price);
+      metaEl.innerHTML = parts.join(' ');
+      metaEl.hidden = !parts.length;
+    }
     if (btn) {
       btn.hidden = false;
       btn.disabled = state.searching;

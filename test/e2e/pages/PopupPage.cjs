@@ -22,9 +22,11 @@ class PopupPage {
   }
 
   async dismissOnboarding() {
-    const overlay = this.page.locator('.onboarding button');
+    const overlay = this.page.locator('.onboarding');
     if (await overlay.isVisible().catch(() => false)) {
-      await overlay.click();
+      const skip = overlay.locator('.onboarding-skip');
+      if (await skip.isVisible().catch(() => false)) await skip.click();
+      else await overlay.locator('button.primary').click();
       await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
     }
   }

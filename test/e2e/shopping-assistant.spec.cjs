@@ -20,7 +20,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
     await popup.locator('#nav-compare').click();
     await expect.poll(async () => {
       const t = await popup.locator('#compare-title').textContent();
@@ -40,7 +40,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
     await popup.locator('#nav-compare').click();
     await expect.poll(async () => {
       const t = await popup.locator('#compare-title').textContent();
@@ -60,7 +60,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
     await popup.locator('#nav-settings').click();
     await popup.locator('#compare-sites input[data-site="amazon"]').waitFor({ state: 'visible' });
     await popup.locator('#nav-compare').click();
@@ -79,7 +79,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
     await popup.locator('#nav-tools').click();
     await expect.poll(() => popup.locator('#reverse-list a').count(), { timeout: 10_000 }).toBeGreaterThan(0);
     await expect.poll(() => popup.locator('#tools-list button').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(5);
@@ -96,7 +96,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     await activateMarketplaceTab(extensionContext, 'men-shirts');
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
     await popup.locator('#nav-scan').click();
     await expect.poll(async () => {
       const t = await popup.locator('#conf-hint').textContent();

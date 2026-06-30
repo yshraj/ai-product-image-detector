@@ -9,7 +9,7 @@ const { setSyncStorage, setLocalStorage } = require('../test/e2e/helpers/chrome-
 const { MYNTRA_PRODUCT_URL, MYNTRA_LISTING_URL } = require('../test/e2e/helpers/constants.cjs');
 const { registerHfInferenceMock } = require('../test/e2e/helpers/mock-routes.cjs');
 
-const OUT = path.resolve(__dirname, '../qa-screenshots');
+const OUT = path.resolve(__dirname, '../qa-screenshots/after');
 
 async function shot(page, name) {
   const file = path.join(OUT, `${name}.png`);

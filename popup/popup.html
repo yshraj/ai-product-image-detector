@@ -87,6 +87,7 @@
       <div class="card">
         <h2 class="card-h">Compare this product</h2>
         <p class="product-title" id="compare-title">—</p>
+        <p class="compare-meta" id="compare-meta" hidden></p>
         <button class="primary" id="compare-search" type="button" hidden>
           <span class="btn-label" id="compare-search-label">Find similar products</span>
           <span class="spinner" aria-hidden="true"></span>
@@ -121,8 +122,9 @@
     <section class="panel" id="panel-tools" role="tabpanel" aria-labelledby="nav-tools" hidden>
       <div class="card">
         <h2 class="card-h">Check any image</h2>
-        <div class="drop-zone" id="image-drop" tabindex="0" role="button">
+        <div class="drop-zone" id="image-drop" tabindex="0" role="button" aria-label="Drop or choose an image to check for AI">
           <input type="file" id="image-file" accept="image/*" hidden />
+          <span class="drop-icon" aria-hidden="true">🖼️</span>
           <p id="image-drop-hint">Drop an image here or click to choose</p>
           <p class="image-check-result" id="image-check-result" hidden></p>
         </div>
@@ -220,6 +222,15 @@
       </div>
 
       <div class="card">
+        <h2 class="card-h">Notifications</h2>
+        <label class="check notify-check">
+          <input type="checkbox" id="notify-on-ai" />
+          <span>Notify when AI images are found on a page</span>
+        </label>
+        <p class="hint">One quiet OS notification per page — off by default.</p>
+      </div>
+
+      <div class="card">
         <h2 class="card-h">Compare search API</h2>
         <p class="hint" id="serp-hint">Optional SerpApi key for reliable cross-site product search (Google Shopping).</p>
         <div class="field">
@@ -238,14 +249,17 @@
           <a class="row-link" id="coffee-link" href="https://www.buymeacoffee.com/" target="_blank" rel="noopener">☕ Buy me a coffee →</a>
           <button class="row-link danger" id="clear-cache" type="button">Clear cache</button>
         </div>
-        <p class="ver-line"><span class="ver" id="version">v1.6.0</span> · ShopShield</p>
+        <p class="ver-line"><span class="ver" id="version">v1.7.0</span> · ShopShield</p>
       </div>
     </section>
   </main>
 
   <nav class="bottom-nav" role="tablist" aria-label="Sections">
     <button class="nav-btn active" role="tab" id="nav-scan" aria-controls="panel-scan" data-tab="scan" aria-selected="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"/><line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span class="nav-ico-wrap">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"/><line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span class="nav-badge" id="nav-scan-badge" hidden aria-hidden="true">0</span>
+      </span>
       <span>Scan</span>
     </button>
     <button class="nav-btn" role="tab" id="nav-compare" aria-controls="panel-compare" data-tab="compare" aria-selected="false">

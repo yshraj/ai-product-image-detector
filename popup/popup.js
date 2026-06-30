@@ -7,6 +7,7 @@ const DEFAULTS = {
   minConfidence: 70,
   compareSites: [...ALL_COMPARE_SITES],
   serpApiKey: '',
+  notifyOnAI: false,
 };
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
@@ -52,6 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('scan-confidence').value = state.minConfidence;
     $('scan-confidence-val').textContent = `${state.minConfidence}%`;
   }
+  if ($('serp-api-key')) $('serp-api-key').value = state.serpApiKey || '';
+  if ($('notify-on-ai')) $('notify-on-ai').checked = state.notifyOnAI === true;
 
   const ver = chrome.runtime.getManifest().version;
   $('version').textContent = `v${ver}`;
@@ -109,17 +112,54 @@ function setupScanPanel() {
 async function maybeShowOnboarding() {
   const { rmf_onboarding_done: done } = await chrome.storage.local.get('rmf_onboarding_done');
   if (done) return;
+
+  const steps = [
+    { title: 'Toggle scanning', body: 'Use the switch in the header to turn AI detection on or off for this browser.' },
+    { title: 'Scan products', body: 'Open <b>Scan</b> to see how many product images on the page look AI-generated.' },
+    { title: 'Read the badges', body: 'Red badges = AI generated (90%+). Amber = likely AI. Tap any badge for a breakdown.' },
+  ];
+  let step = 0;
+
   const overlay = document.createElement('div');
   overlay.className = 'onboarding';
-  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-label="Welcome">
-    <p><b>Welcome to ShopShield!</b> Toggle scanning on/off in the header. Open <b>Scan</b> to see AI flags on product images. Red badges = AI generated, amber = likely AI.</p>
-    <button class="primary" type="button">Got it</button>
+  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-modal="true" aria-label="Welcome to ShopShield">
+    <div class="onboarding-steps" aria-hidden="true"></div>
+    <h3 id="onboard-title"></h3>
+    <p id="onboard-body"></p>
+    <div class="onboarding-actions">
+      <button class="onboarding-skip" type="button">Skip</button>
+      <button class="primary" type="button" id="onboard-next">Next</button>
+    </div>
   </div>`;
-  overlay.querySelector('button').addEventListener('click', async () => {
+  document.body.appendChild(overlay);
+
+  const dots = overlay.querySelector('.onboarding-steps');
+  steps.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'onboarding-dot' + (i === 0 ? ' active' : '');
+    dots.appendChild(d);
+  });
+
+  const finish = async () => {
     await chrome.storage.local.set({ rmf_onboarding_done: true });
     overlay.remove();
+  };
+
+  const renderStep = () => {
+    const s = steps[step];
+    overlay.querySelector('#onboard-title').textContent = s.title;
+    overlay.querySelector('#onboard-body').innerHTML = s.body;
+    overlay.querySelector('#onboard-next').textContent = step === steps.length - 1 ? 'Got it' : 'Next';
+    dots.querySelectorAll('.onboarding-dot').forEach((d, i) => d.classList.toggle('active', i === step));
+  };
+
+  overlay.querySelector('.onboarding-skip').addEventListener('click', finish);
+  overlay.querySelector('#onboard-next').addEventListener('click', () => {
+    if (step >= steps.length - 1) finish();
+    else { step++; renderStep(); }
   });
-  document.body.appendChild(overlay);
+  overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish(); });
+  renderStep();
 }
 
 async function renderScanHistory() {
@@ -133,7 +173,7 @@ async function renderScanHistory() {
   if (!hist.length) {
     card.hidden = false;
     empty.hidden = false;
-    empty.textContent = S()?.scan?.historyEmpty || '';
+    empty.innerHTML = '<span class="empty-state-ico" aria-hidden="true">📋</span>' + (S()?.scan?.historyEmpty || '');
     return;
   }
   card.hidden = false;
@@ -163,15 +203,37 @@ function setupNav() {
 }
 
 function selectTab(tab) {
-  TABS.forEach((t) => { $(`panel-${t}`).hidden = t !== tab; });
+  TABS.forEach((t) => {
+    const panel = $(`panel-${t}`);
+    panel.hidden = t !== tab;
+    if (t === tab) panel.setAttribute('tabindex', '-1');
+  });
   document.querySelectorAll('.nav-btn').forEach((b) => {
     const on = b.dataset.tab === tab;
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', String(on));
   });
+  const main = $('main');
+  if (main) main.scrollTop = 0;
+  const panel = $(`panel-${tab}`);
+  panel?.focus({ preventScroll: true });
   if (tab === 'scan') updateScan();
   if (tab === 'compare') window.RMF_ComparePanel?.render?.(getActiveProduct);
   if (tab === 'tools') renderTools();
+}
+
+function updateNavBadge(live) {
+  const badge = $('nav-scan-badge');
+  if (!badge) return;
+  const ai = Number(live?.ai) || 0;
+  const high = Number(live?.aiHigh) || 0;
+  if (ai > 0) {
+    badge.textContent = ai > 99 ? '99+' : String(ai);
+    badge.hidden = false;
+    badge.classList.toggle('warn', high === 0);
+  } else {
+    badge.hidden = true;
+  }
 }
 
 // ---- active tab / product -------------------------------------------------
@@ -263,6 +325,7 @@ async function updateScan() {
   $('bd-high').textContent = live.aiHigh || 0;
   $('bd-med').textContent = live.aiLikely || 0;
   $('bd-ok').textContent = normal;
+  updateNavBadge(live);
 
   const progress = $('scan-progress');
   const total = live.total || live.scanned || 0;
@@ -372,7 +435,8 @@ async function renderSellerTrust() {
   sellers.slice(0, 15).forEach((sel) => {
     const li = document.createElement('li');
     li.className = 'seller-row';
-    li.innerHTML = `<span class="seller-name">${sel.name}</span><span class="seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}">${sel.aiPct}% AI</span><small>${sel.total} scans</small>`;
+    const barClass = sel.aiPct >= 50 ? '' : 'ok';
+    li.innerHTML = `<span class="seller-name">${sel.name}</span><span class="seller-bar ${barClass}" title="${sel.aiPct}% AI"><span style="width:${sel.aiPct}%"></span></span><span class="seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}">${sel.aiPct}%</span><small>${sel.total}</small>`;
     list.appendChild(li);
   });
 }
@@ -620,11 +684,19 @@ function setupSettings() {
 
   const serpKey = $('serp-api-key');
   if (serpKey) {
-    serpKey.value = state.serpApiKey || '';
     $('serp-save')?.addEventListener('click', async () => {
       state.serpApiKey = serpKey.value.trim();
       await chrome.storage.sync.set({ serpApiKey: state.serpApiKey });
       toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
+    });
+  }
+
+  const notifyToggle = $('notify-on-ai');
+  if (notifyToggle) {
+    notifyToggle.addEventListener('change', async (e) => {
+      state.notifyOnAI = e.target.checked;
+      await chrome.storage.sync.set({ notifyOnAI: state.notifyOnAI });
+      toast(state.notifyOnAI ? 'Notifications enabled' : 'Notifications off');
     });
   }
 }

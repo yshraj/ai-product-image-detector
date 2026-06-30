@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ShopShield — Shopping assistant",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Shop smarter on Myntra, Flipkart, Meesho & Nykaa — compare prices, copy product details, spot AI photos, and more.",
   "icons": {
     "16": "icons/icon-16.png",
