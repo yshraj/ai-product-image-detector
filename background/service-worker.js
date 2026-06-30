@@ -12,8 +12,20 @@
 //      handle the universal context-menu image checks.
 
 // Shared user-facing strings (importScripts is a no-op under Node test require).
-try { if (typeof importScripts === 'function') importScripts('/utils/strings.js'); } catch { /* ignore */ }
+try {
+  if (typeof importScripts === 'function') {
+    importScripts(
+      '/utils/strings.js',
+      '/utils/product-query.js',
+      '/utils/product-matcher.js',
+      '/compare/config.js',
+      '/compare/parsers.js',
+      '/compare/search.js',
+    );
+  }
+} catch { /* ignore */ }
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
+const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
 
 const DEFAULTS = {
   enabled: true,
@@ -373,10 +385,47 @@ function registerMessageRouter() {
       .catch(() => sendResponse({ ok: true, health: null }));
     return true;
   }
+  if (msg?.type === 'RMF_COMPARE_SEARCH' && msg.product) {
+    handleCompareSearch(msg)
+      .then((r) => sendResponse(r))
+      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
+    return true;
+  }
   return false;
   });
 }
 registerMessageRouter();
+
+// ---- cross-marketplace product search -------------------------------------
+const COMPARE_CACHE_TTL_MS = 15 * 60 * 1000;
+
+async function handleCompareSearch(msg) {
+  if (!CompareSearch) return { ok: false, error: 'compare module unavailable' };
+  const product = msg.product;
+  const cfg = await chrome.storage.sync.get(DEFAULTS);
+  const sites = Array.isArray(msg.sites) && msg.sites.length
+    ? msg.sites
+    : (cfg.compareSites || DEFAULTS.compareSites);
+  const useCache = msg.cache !== false;
+  const key = CompareSearch.cacheKey(product);
+
+  if (useCache) {
+    try {
+      const cached = await chrome.storage.local.get(key);
+      const entry = cached[key];
+      if (entry && (Date.now() - entry.timestamp) < COMPARE_CACHE_TTL_MS) {
+        return { ok: true, cached: true, ...entry.data };
+      }
+    } catch { /* ignore */ }
+  }
+
+  const data = await CompareSearch.searchAll(product, sites);
+  try {
+    await chrome.storage.local.set({ [key]: { timestamp: Date.now(), data } });
+  } catch { /* ignore */ }
+
+  return { ok: true, cached: false, ...data };
+}
 
 // Exposed for unit tests when this file is required under Node. In the service
 // worker `module` is undefined, so this is a no-op there.

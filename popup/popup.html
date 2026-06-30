@@ -74,7 +74,16 @@
       <div class="card">
         <h2 class="card-h">Compare this product</h2>
         <p class="product-title" id="compare-title">—</p>
-        <div class="action-list" id="compare-list"></div>
+        <button class="primary" id="compare-search" type="button" hidden>
+          <span class="btn-label" id="compare-search-label">Find similar products</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <p class="compare-status" id="compare-status" hidden role="status" aria-live="polite"></p>
+        <div class="compare-results" id="compare-results" hidden></div>
+        <details class="compare-manual" id="compare-manual" hidden>
+          <summary>Search manually on each site</summary>
+          <div class="action-list" id="compare-list"></div>
+        </details>
         <p class="note" id="compare-note"></p>
       </div>
     </section>
@@ -177,7 +186,7 @@
           <a class="row-link" id="coffee-link" href="https://www.buymeacoffee.com/" target="_blank" rel="noopener">☕ Buy me a coffee →</a>
           <button class="row-link danger" id="clear-cache" type="button">Clear cache</button>
         </div>
-        <p class="ver-line"><span class="ver" id="version">v1.3.0</span> · ShopShield</p>
+        <p class="ver-line"><span class="ver" id="version">v1.4.0</span> · ShopShield</p>
       </div>
     </section>
   </main>
@@ -203,6 +212,7 @@
 
   <div id="toast-host" aria-live="assertive"></div>
   <script src="../utils/strings.js"></script>
+  <script src="../compare/config.js"></script>
   <script src="../utils/report.js"></script>
   <script src="popup.js"></script>
 </body>

@@ -10,12 +10,12 @@ const DEFAULTS = {
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
 const TABS = ['scan', 'compare', 'tools', 'settings'];
-const MARKETPLACES = {
-  amazon: { name: 'Amazon', url: (q) => 'https://www.amazon.in/s?k=' + q },
-  flipkart: { name: 'Flipkart', url: (q) => 'https://www.flipkart.com/search?q=' + q },
-  myntra: { name: 'Myntra', url: (q) => 'https://www.myntra.com/' + q },
-  meesho: { name: 'Meesho', url: (q) => 'https://www.meesho.com/search?q=' + q },
-  nykaa: { name: 'Nykaa', url: (q) => 'https://www.nykaa.com/search/result/?q=' + q },
+const MARKETPLACES = (window.RMF_CompareConfig && window.RMF_CompareConfig.MARKETPLACES) || {
+  amazon: { name: 'Amazon', manualUrl: (q) => 'https://www.amazon.in/s?k=' + q },
+  flipkart: { name: 'Flipkart', manualUrl: (q) => 'https://www.flipkart.com/search?q=' + q },
+  myntra: { name: 'Myntra', manualUrl: (q) => 'https://www.myntra.com/' + q.replace(/\s+/g, '-') },
+  meesho: { name: 'Meesho', manualUrl: (q) => 'https://www.meesho.com/search?q=' + q },
+  nykaa: { name: 'Nykaa', manualUrl: (q) => 'https://www.nykaa.com/search/result/?q=' + q },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -24,6 +24,8 @@ const send = (msg) => chrome.runtime.sendMessage(msg).catch(() => null);
 
 let state = { ...DEFAULTS };
 let health = null;
+let compareProduct = null;
+let compareSearching = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   state = await chrome.storage.sync.get(DEFAULTS);
@@ -188,10 +190,20 @@ async function updateScan() {
 async function renderCompare() {
   const s = S();
   const p = await getActiveProduct();
+  compareProduct = p;
   const titleEl = $('compare-title');
   const list = $('compare-list');
   const note = $('compare-note');
+  const searchBtn = $('compare-search');
+  const statusEl = $('compare-status');
+  const resultsEl = $('compare-results');
+  const manualEl = $('compare-manual');
   list.textContent = '';
+  resultsEl.hidden = true;
+  resultsEl.textContent = '';
+  statusEl.hidden = true;
+  manualEl.hidden = true;
+  searchBtn.hidden = true;
 
   if (!p || !p.title) {
     titleEl.textContent = s ? s.compare.noProduct : 'Open a product page.';
@@ -201,23 +213,128 @@ async function renderCompare() {
   }
   titleEl.textContent = p.title;
   titleEl.classList.remove('muted');
+  searchBtn.hidden = false;
+  $('compare-search-label').textContent = s ? s.compare.findSimilar : 'Find similar products';
+  note.textContent = s ? s.compare.note : '';
 
+  renderManualLinks(p, list, s);
+  manualEl.hidden = false;
+
+  if (!compareSearching) {
+    searchBtn.disabled = false;
+    searchBtn.setAttribute('aria-busy', 'false');
+  }
+
+  searchBtn.onclick = () => runCompareSearch(p);
+}
+
+function renderManualLinks(p, list, s) {
   const q = encodeURIComponent(p.title);
   const enabled = new Set(state.compareSites || ALL_COMPARE_SITES);
   ALL_COMPARE_SITES
     .filter((site) => enabled.has(site) && site !== p.site)
     .forEach((site) => {
       const mp = MARKETPLACES[site];
-      list.appendChild(actionLink(s ? s.compare.on(mp.name) : mp.name, mp.url(q)));
+      const urlFn = mp.manualUrl || mp.url;
+      list.appendChild(actionLink(s ? s.compare.on(mp.name) : mp.name, urlFn(q)));
     });
+}
 
-  if (!list.children.length) {
-    const n = document.createElement('p');
-    n.className = 'note';
-    n.textContent = 'Enable marketplaces in Settings to compare.';
-    list.appendChild(n);
+async function runCompareSearch(product) {
+  if (compareSearching) return;
+  const s = S();
+  const searchBtn = $('compare-search');
+  const statusEl = $('compare-status');
+  const resultsEl = $('compare-results');
+
+  compareSearching = true;
+  searchBtn.setAttribute('aria-busy', 'true');
+  searchBtn.disabled = true;
+  statusEl.hidden = false;
+  statusEl.textContent = s ? s.compare.searching : 'Searching marketplaces…';
+  resultsEl.hidden = true;
+  resultsEl.textContent = '';
+
+  const sites = (state.compareSites || ALL_COMPARE_SITES).filter((site) => site !== product.site);
+  const r = await send({ type: 'RMF_COMPARE_SEARCH', product, sites });
+
+  compareSearching = false;
+  searchBtn.setAttribute('aria-busy', 'false');
+  searchBtn.disabled = false;
+
+  if (!r || !r.ok) {
+    statusEl.textContent = s ? s.compare.searchFailed : 'Search failed';
+    return;
   }
-  note.textContent = s ? s.compare.note : '';
+
+  statusEl.textContent = r.cached && s ? s.compare.cached : '';
+  if (!r.matches || !r.matches.length) {
+    statusEl.textContent = (statusEl.textContent ? statusEl.textContent + ' · ' : '')
+      + (s ? s.compare.noMatches : 'No close matches found');
+    resultsEl.hidden = true;
+    return;
+  }
+
+  renderCompareResults(r, s);
+  statusEl.hidden = !r.cached;
+  resultsEl.hidden = false;
+}
+
+function renderCompareResults(data, s) {
+  const resultsEl = $('compare-results');
+  resultsEl.textContent = '';
+
+  for (const entry of data.matches) {
+    const mp = MARKETPLACES[entry.site];
+    const best = entry.best;
+    if (!best) continue;
+
+    const card = document.createElement('a');
+    card.className = 'match-card';
+    card.href = best.url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+
+    const score = best.match.score;
+    const label = best.match.label;
+    let badgeText = s ? s.compare.possibleMatch : 'Possible match';
+    let badgeClass = 'match-badge possible';
+    if (label === 'same') {
+      badgeText = s ? s.compare.sameProduct : 'Same product';
+      badgeClass = 'match-badge same';
+    } else if (label === 'similar') {
+      badgeText = s ? s.compare.similarProduct : 'Similar product';
+      badgeClass = 'match-badge similar';
+    }
+
+    const head = document.createElement('div');
+    head.className = 'match-head';
+    const site = document.createElement('span');
+    site.className = 'match-site';
+    site.textContent = mp?.name || entry.site;
+    const badge = document.createElement('span');
+    badge.className = badgeClass;
+    badge.textContent = s ? s.compare.matchScore(score) : `${score}% match`;
+    badge.title = badgeText;
+    head.append(site, badge);
+
+    const title = document.createElement('div');
+    title.className = 'match-title';
+    title.textContent = best.title;
+
+    const meta = document.createElement('div');
+    meta.className = 'match-meta';
+    const price = document.createElement('span');
+    price.className = 'match-price';
+    price.textContent = s ? s.compare.price(best.price) : (best.price || 'Price unavailable');
+    const hint = document.createElement('span');
+    hint.className = 'match-hint';
+    hint.textContent = badgeText;
+    meta.append(price, hint);
+
+    card.append(head, title, meta);
+    resultsEl.appendChild(card);
+  }
 }
 
 // ---- TOOLS ----------------------------------------------------------------

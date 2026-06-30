@@ -83,9 +83,22 @@
     // compare tab
     compare: {
       heading: 'Compare this product',
-      note: 'Opens search results on each marketplace (live prices coming later).',
+      note: 'We search other marketplaces automatically and score how closely each result matches.',
       noProduct: 'Open a product page to compare it elsewhere.',
       on: (site) => `Search on ${site}`,
+      findSimilar: 'Find similar products',
+      searching: 'Searching marketplaces…',
+      searchingSite: (site) => `Searching ${site}…`,
+      sameProduct: 'Same product',
+      similarProduct: 'Similar product',
+      possibleMatch: 'Possible match',
+      matchScore: (n) => `${n}% match`,
+      noMatches: 'No close matches found — try the manual search links below.',
+      searchFailed: 'Could not search some sites — try again or use manual links.',
+      cached: 'Showing cached results',
+      manualSearch: 'Search manually on each site',
+      viewOn: (site) => `View on ${site}`,
+      price: (p) => p || 'Price unavailable',
     },
 
     // tools tab
