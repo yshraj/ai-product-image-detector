@@ -1,31 +1,20 @@
 // utils/trust-storage.js — seller trust, price history, false-positive corrections.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
+    const priceMod = require('./price.js');
+    const storageMod = require('./storage-local.js');
+    module.exports = factory(priceMod, storageMod);
   } else {
-    root.RMF_TrustStorage = factory();
+    root.RMF_TrustStorage = factory(root.RMF_Price, root.RMF_StorageLocal);
   }
-}(typeof self !== 'undefined' ? self : this, function () {
+}(typeof self !== 'undefined' ? self : this, function (priceMod, storageMod) {
   const SELLER_KEY = 'rmf_seller_trust';
   const PRICE_KEY = 'rmf_price_history';
   const CORRECTIONS_KEY = 'rmf_corrections';
 
-  async function getLocal(key, fallback) {
-    try {
-      const data = await chrome.storage.local.get(key);
-      return data[key] ?? fallback;
-    } catch { return fallback; }
-  }
-
-  async function setLocal(key, value) {
-    try { await chrome.storage.local.set({ [key]: value }); } catch { /* ignore */ }
-  }
-
-  function parsePrice(text) {
-    if (!text) return null;
-    const m = String(text).replace(/,/g, '').match(/(\d+(?:\.\d+)?)/);
-    return m ? Number(m[1]) : null;
-  }
+  const parsePrice = priceMod.parsePrice;
+  const getLocal = storageMod.get;
+  const setLocal = storageMod.set;
 
   function productId(url) {
     try { return new URL(url).pathname.slice(0, 120); } catch { return url || ''; }
@@ -98,7 +87,13 @@
   }
 
   return {
-    recordSeller, getSellerTrust, recordPrice, isCorrected,
-    addCorrection, getCorrections, getSellerList, productId,
+    recordSeller,
+    getSellerTrust,
+    recordPrice,
+    isCorrected,
+    addCorrection,
+    getCorrections,
+    getSellerList,
+    productId,
   };
 }));

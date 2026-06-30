@@ -4,7 +4,7 @@
 // TTL (used to back off briefly on transient remote errors), and a soft cap on
 // the number of entries so the store can't grow without bound.
 (function () {
-  const CACHE_KEY_PREFIX = 'rmf_cache_';
+  const CACHE_KEY_PREFIX = (window.RMF_Defaults && window.RMF_Defaults.CACHE_PREFIX) || 'rmf_cache_';
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
   const MAX_ENTRIES = 3000;                      // soft cap (~well under quota)
   const EVICT_BATCH = 400;                        // oldest N removed when over cap

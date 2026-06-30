@@ -40,6 +40,8 @@
       ],
       "js": [
         "libs/exifr.min.js",
+        "utils/defaults.js",
+        "utils/marketplace-url.js",
         "utils/strings.js",
         "utils/logger.js",
         "utils/throttle.js",

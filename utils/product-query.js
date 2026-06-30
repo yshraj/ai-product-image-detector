@@ -2,11 +2,12 @@
 // UMD: window/self in extension, module.exports for Node tests.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
+    const priceMod = require('./price.js');
+    module.exports = factory(priceMod);
   } else {
-    root.RMF_ProductQuery = factory();
+    root.RMF_ProductQuery = factory(root.RMF_Price);
   }
-}(typeof self !== 'undefined' ? self : this, function () {
+}(typeof self !== 'undefined' ? self : this, function (priceMod) {
   const NOISE = new Set([
     'buy', 'online', 'india', 'free', 'shipping', 'delivery', 'cod',
     'off', 'sale', 'new', 'latest', 'best', 'price', 'offer', 'deals',
@@ -63,10 +64,7 @@
   }
 
   function parsePrice(text) {
-    if (!text) return null;
-    const s = String(text).replace(/,/g, '');
-    const m = s.match(/(?:₹|rs\.?\s*|inr\s*)?(\d+(?:\.\d{1,2})?)/i);
-    return m ? Number(m[1]) : null;
+    return priceMod.parsePrice(text);
   }
 
   return { normalizeTitle, tokenize, buildSearchQuery, parsePrice, NOISE };
