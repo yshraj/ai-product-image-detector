@@ -26,12 +26,17 @@ test('scoreMatch returns lower score for unrelated product', () => {
   assert.ok(r.score < 50);
 });
 
-test('pickBest chooses highest scoring candidate', () => {
+test('pickBest filters below minimum match threshold', () => {
   const best = pickBest(source, [
-    { title: 'Random Jeans', price: '₹999' },
+    { title: 'Unrelated Shoes', price: '₹999' },
     { title: 'Roadster Men Blue Cotton T-Shirt', price: '₹519' },
-    { title: 'Roadster Blue Shirt', price: '₹450' },
-  ]);
+  ], 40);
   assert.match(best.title, /Blue Cotton T-Shirt/i);
-  assert.ok(best.match.score >= 70);
+});
+
+test('pickBest returns null when all candidates below threshold', () => {
+  const best = pickBest(source, [
+    { title: 'Samsung Galaxy M14 5G Smartphone', price: '₹12,999' },
+  ], 40);
+  assert.equal(best, null);
 });

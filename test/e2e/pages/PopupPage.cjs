@@ -18,6 +18,15 @@ class PopupPage {
 
   async goto(url) {
     await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+    await this.dismissOnboarding();
+  }
+
+  async dismissOnboarding() {
+    const overlay = this.page.locator('.onboarding button');
+    if (await overlay.isVisible().catch(() => false)) {
+      await overlay.click();
+      await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    }
   }
 
   nav(tab) {

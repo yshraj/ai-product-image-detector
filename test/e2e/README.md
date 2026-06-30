@@ -57,3 +57,15 @@ GitHub Actions runs `npx playwright install --with-deps chromium` then `npm test
 ## Test assets
 
 Place PNG fixtures in `test/assets/` (`ai0.png`, `real1.png`, …). The CDN mock serves these for cross-origin image detection tests.
+
+## Offline guarantees
+
+- Marketplace pages (Myntra, Flipkart, Meesho, Nykaa, Amazon) are served from `test/e2e/helpers/marketplace-fixture.cjs`
+- SerpApi compare requests are intercepted in `mock-routes.cjs` — no real API quota consumed
+- Context-menu image checks invoke `RMF_runImageCheck` in the service worker (no native OS menu)
+
+## QA screenshots
+
+```bash
+npm run test:qa-screenshots   # writes to qa-screenshots/
+```

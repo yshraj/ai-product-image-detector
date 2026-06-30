@@ -25,8 +25,8 @@ test.describe('Permissions & security', () => {
     expect(res.error).toMatch(/blocked/i);
   });
 
-  test('context menus are not declared (N/A for this extension)', () => {
+  test('context menus permission is declared for image checks', () => {
     const { MANIFEST } = require('./helpers/constants.cjs');
-    expect(MANIFEST.permissions).not.toContain('contextMenus');
+    expect(MANIFEST.permissions).toContain('contextMenus');
   });
 });

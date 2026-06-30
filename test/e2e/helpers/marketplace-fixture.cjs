@@ -3,7 +3,24 @@
 const BATCH1 = ['ai0', 'real1', 'ai2', 'real3', 'ai4', 'real5', 'ai6', 'real7'];
 const BATCH2 = ['ai2', 'real7', 'ai4', 'real1', 'ai6', 'real3', 'ai0', 'real5'];
 
-function card(name, i) {
+const PRODUCT_META = {
+  title: 'Test Brand Men Cotton Casual Shirt',
+  brand: 'Test Brand',
+  price: '1299',
+  image: 'https://assets.myntassets.com/real1.png?product=1',
+  seller: 'Test Seller Pvt Ltd',
+};
+
+function imgCard(src, label, cardClass, imgClass, wrapClass) {
+  return `<div class="${cardClass}" style="display:inline-block;width:200px;min-height:340px;margin:6px;vertical-align:top">
+    <div class="${wrapClass}" style="position:relative;width:200px;height:260px">
+      <img class="${imgClass}" width="200" height="260" src="${src}" alt="${label}">
+    </div>
+    <div>${label}</div>
+  </div>`;
+}
+
+function myntraCard(name, i) {
   const kind = name.replace(/[0-9]/g, '');
   return `
     <li class="product-base" data-testimg="${name}-${i}" style="display:inline-block;width:200px;min-height:340px;vertical-align:top;margin:6px;">
@@ -15,7 +32,7 @@ function card(name, i) {
 }
 
 function listingHtml() {
-  const first = BATCH1.map((n, i) => card(n, i)).join('');
+  const first = BATCH1.map((n, i) => myntraCard(n, i)).join('');
   const second = JSON.stringify(BATCH2);
   return `<!doctype html><html><head><meta charset="utf-8"><title>Myntra Test</title>
   <style>body{margin:0;font-family:sans-serif}.results-base{padding:8px}</style></head>
@@ -44,25 +61,96 @@ function listingHtml() {
   </body></html>`;
 }
 
-function productHtml() {
+function flipkartListingHtml() {
+  const cards = BATCH1.map((n, i) => imgCard(
+    `https://assets.myntassets.com/${n}.png?fk=${i}`,
+    `${n} product ${i}`,
+    '_1AtVbE',
+    '_396cs4',
+    '_4WELSP',
+  )).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Flipkart Test</title></head>
+  <body><div class="_1YokD2 _3Mn1Gg">${cards}</div></body></html>`;
+}
+
+function meeshoListingHtml() {
+  const cards = BATCH1.map((n, i) => `
+    <div class="ProductList__GridCol-sc"><div data-testid="product-card">
+      ${imgCard(`https://assets.myntassets.com/${n}.png?ms=${i}`, `${n} ${i}`, 'ProductCard', 'sc-img', 'ProductCard')}
+    </div></div>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Meesho Test</title></head>
+  <body><main><div class="ProductList__GridCol-sc">${cards}</div></main></body></html>`;
+}
+
+function nykaaListingHtml() {
+  const cards = BATCH1.map((n, i) => imgCard(
+    `https://assets.myntassets.com/${n}.png?nk=${i}`,
+    `${n} product ${i}`,
+    'css-d5z3ro',
+    'img',
+    'imageContainer',
+  )).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Nykaa Test</title></head>
+  <body><div class="css-uo0ckf">${cards}</div></body></html>`;
+}
+
+function productHtml(site = 'myntra') {
+  const p = PRODUCT_META;
   return `<!doctype html><html><head><meta charset="utf-8">
-    <title>Test Cotton Shirt - Buy Online</title>
-    <meta property="og:title" content="Test Brand Men Cotton Casual Shirt" />
-    <meta property="og:image" content="https://assets.myntassets.com/real1.png?product=1" />
-    <meta property="product:brand" content="Test Brand" />
-    <meta property="product:price:amount" content="1299" />
+    <title>${p.title} - Buy Online</title>
+    <meta property="og:title" content="${p.title}" />
+    <meta property="og:image" content="${p.image}" />
+    <meta property="product:brand" content="${p.brand}" />
+    <meta property="product:price:amount" content="${p.price}" />
     <script type="application/ld+json">
-    {"@type":"Product","name":"Test Brand Men Cotton Casual Shirt","brand":{"name":"Test Brand"},
+    {"@type":"Product","name":"${p.title}","brand":{"name":"${p.brand}"},
      "aggregateRating":{"ratingValue":"4.3","bestRating":"5"},
-     "offers":{"seller":{"name":"Test Seller Pvt Ltd"},"price":"1299"}}
+     "offers":{"seller":{"name":"${p.seller}"},"price":"${p.price}"}}
     </script>
-  </head><body>
-    <h1>Test Brand Men Cotton Casual Shirt</h1>
-    <p>₹1,299</p>
+  </head><body data-site="${site}">
+    <h1>${p.title}</h1>
+    <p>₹${Number(p.price).toLocaleString('en-IN')}</p>
     <p>4.3 ★</p>
-    <p>Sold by Test Seller Pvt Ltd</p>
-    <img src="https://assets.myntassets.com/real1.png?product=1" width="400" height="500" alt="shirt">
+    <p>Sold by ${p.seller}</p>
+    <img src="${p.image}" width="400" height="500" alt="shirt">
   </body></html>`;
 }
 
-module.exports = { listingHtml, productHtml, BATCH1, BATCH2 };
+/** Mock SerpApi Google Shopping response for compare tests. */
+function serpShoppingResponse(query) {
+  return {
+    shopping_results: [
+      {
+        title: 'Test Brand Men Cotton Casual Shirt',
+        price: '₹1,299',
+        link: 'https://www.amazon.in/dp/B00TEST',
+        thumbnail: 'https://assets.myntassets.com/real1.png',
+      },
+      {
+        title: 'Test Brand Cotton Shirt Similar',
+        price: '₹1,199',
+        link: 'https://www.flipkart.com/test-shirt/p/itm123',
+        thumbnail: 'https://assets.myntassets.com/real3.png',
+      },
+      {
+        title: 'Test Brand Casual Shirt',
+        price: '₹1,350',
+        link: 'https://www.myntra.com/shirts/test-brand/test-product/1234567/buy',
+        thumbnail: 'https://assets.myntassets.com/real1.png',
+      },
+    ],
+    search_metadata: { q: query },
+  };
+}
+
+module.exports = {
+  listingHtml,
+  flipkartListingHtml,
+  meeshoListingHtml,
+  nykaaListingHtml,
+  productHtml,
+  serpShoppingResponse,
+  BATCH1,
+  BATCH2,
+  PRODUCT_META,
+};

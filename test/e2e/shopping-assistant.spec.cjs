@@ -1,14 +1,15 @@
 // Shopping assistant UI: Compare + Tools tabs (regression).
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
-const { closeMarketplaceTabs, activateMarketplaceTab } = require('./helpers/tab-utils.cjs');
+const { closeMarketplaceTabs } = require('./helpers/tab-utils.cjs');
 const { MYNTRA_PRODUCT_URL } = require('./helpers/constants.cjs');
 
 test.describe('Shopping assistant — Compare & Tools', () => {
   test.beforeEach(async ({ extensionContext }) => {
     await closeMarketplaceTabs(extensionContext);
   });
-  test('Compare tab shows auto-search and manual marketplace links', async ({ extensionContext, popupUrl }) => {
+
+  test('Compare tab shows auto-search and marketplace filter chips', async ({ extensionContext, popupUrl }) => {
     const productTab = await extensionContext.newPage();
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
     const { getProduct } = require('./helpers/chrome-messaging.cjs');
@@ -19,14 +20,34 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
+    await popup.locator('.onboarding button').click().catch(() => {});
     await popup.locator('#nav-compare').click();
     await expect.poll(async () => {
       const t = await popup.locator('#compare-title').textContent();
       return t && /Test Brand/i.test(t);
     }, { timeout: 10_000 }).toBe(true);
     await expect(popup.locator('#compare-search')).toBeVisible();
-    await popup.locator('#compare-manual').evaluate((el) => { el.open = true; });
-    await expect(popup.locator('#compare-list a')).toHaveCount(4);
+    await expect(popup.locator('#compare-filters label, #compare-filters button').count()).resolves.toBeGreaterThan(0);
+    await popup.close();
+    await productTab.close();
+  });
+
+  test('Compare search returns results with mocked SerpApi', async ({ extensionContext, popupUrl }) => {
+    await setSyncStorage(extensionContext, { serpApiKey: 'test_serp_key', compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'] });
+
+    const productTab = await extensionContext.newPage();
+    await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
+
+    const popup = await extensionContext.newPage();
+    await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
+    await popup.locator('.onboarding button').click().catch(() => {});
+    await popup.locator('#nav-compare').click();
+    await expect.poll(async () => {
+      const t = await popup.locator('#compare-title').textContent();
+      return t && /Test Brand/i.test(t);
+    }, { timeout: 10_000 }).toBe(true);
+    await popup.locator('#compare-search').click();
+    await expect.poll(() => popup.locator('.compare-results .result-card').count(), { timeout: 20_000 }).toBeGreaterThan(0);
     await popup.close();
     await productTab.close();
   });
@@ -39,6 +60,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
+    await popup.locator('.onboarding button').click().catch(() => {});
     await popup.locator('#nav-settings').click();
     await popup.locator('#compare-sites input[data-site="amazon"]').waitFor({ state: 'visible' });
     await popup.locator('#nav-compare').click();
@@ -46,8 +68,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
       const t = await popup.locator('#compare-title').textContent();
       return t && /Test Brand/i.test(t);
     }, { timeout: 10_000 }).toBe(true);
-    await popup.locator('#compare-manual').evaluate((el) => { el.open = true; });
-    await expect.poll(() => popup.locator('#compare-list a').count(), { timeout: 10_000 }).toBe(1);
+    await expect.poll(() => popup.locator('#compare-filters input:checked, #compare-filters button.active').count(), { timeout: 10_000 }).toBeGreaterThan(0);
     await popup.close();
     await productTab.close();
   });
@@ -58,6 +79,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
 
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
+    await popup.locator('.onboarding button').click().catch(() => {});
     await popup.locator('#nav-tools').click();
     await expect.poll(() => popup.locator('#reverse-list a').count(), { timeout: 10_000 }).toBeGreaterThan(0);
     await expect.poll(() => popup.locator('#tools-list button').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(5);
@@ -70,9 +92,11 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     await contentPage.gotoListing();
     await contentPage.waitForScan(1);
 
+    const { activateMarketplaceTab } = require('./helpers/tab-utils.cjs');
     await activateMarketplaceTab(extensionContext, 'men-shirts');
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
+    await popup.locator('.onboarding button').click().catch(() => {});
     await popup.locator('#nav-scan').click();
     await expect.poll(async () => {
       const t = await popup.locator('#conf-hint').textContent();

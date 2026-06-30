@@ -39,6 +39,7 @@ async function getSessionStorage(context, keys) {
 /** Reset sync + local detection artifacts to a known baseline. */
 async function resetExtensionStorage(context, overrides = {}) {
   await setSyncStorage(context, { ...DEFAULT_SYNC, ...overrides });
+  await setLocalStorage(context, { rmf_onboarding_done: true });
   await clearDetectionCache(context);
   await clearHistory(context);
   try {

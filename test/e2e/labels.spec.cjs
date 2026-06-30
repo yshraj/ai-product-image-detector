@@ -1,4 +1,4 @@
-// Badge confidence tiers: high (≥95%), medium (70–94%), below floor (no badge).
+// Badge confidence tiers: high (≥90%), medium (70–89%), below floor (no badge).
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
 
@@ -14,8 +14,24 @@ function mockHfScore(extensionContext, aiScore) {
     }));
 }
 
-test('92% is labelled "Likely AI" (amber), not "AI Generated"', async ({ extensionContext, contentPage }) => {
+test('92% is labelled "AI Generated" (red) at the 90% tier', async ({ extensionContext, contentPage }) => {
   await mockHfScore(extensionContext, 0.92);
+  await setSyncStorage(extensionContext, {
+    provider: 'huggingface', hfToken: 'hf_testtoken', hfModel: 'Organika/sdxl-detector', minConfidence: 70, hfVerified: true,
+  });
+
+  await contentPage.setViewportAllVisible();
+  await contentPage.gotoListing();
+  await contentPage.waitForBadges();
+
+  const badge = contentPage.badges.first();
+  await expect(badge).toHaveAttribute('data-conf', 'high');
+  await expect(badge.locator('.rmf-label')).toContainText('AI Generated');
+  await expect(badge.locator('.rmf-score')).toHaveText('92%');
+});
+
+test('85% is labelled "Likely AI" (amber), not "AI Generated"', async ({ extensionContext, contentPage }) => {
+  await mockHfScore(extensionContext, 0.85);
   await setSyncStorage(extensionContext, {
     provider: 'huggingface', hfToken: 'hf_testtoken', hfModel: 'Organika/sdxl-detector', minConfidence: 70, hfVerified: true,
   });
@@ -28,7 +44,7 @@ test('92% is labelled "Likely AI" (amber), not "AI Generated"', async ({ extensi
   await expect(badge).toHaveAttribute('data-conf', 'med');
   await expect(badge.locator('.rmf-label')).toContainText('Likely AI');
   await expect(badge.locator('.rmf-label')).not.toContainText('AI Generated');
-  await expect(badge.locator('.rmf-score')).toHaveText('92%');
+  await expect(badge.locator('.rmf-score')).toHaveText('85%');
 });
 
 test('60% is below the 70% floor → no badge', async ({ extensionContext, contentPage }) => {

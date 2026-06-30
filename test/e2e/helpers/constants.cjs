@@ -16,6 +16,7 @@ const DEFAULT_SYNC = {
   minConfidence: 70,
   disabledSites: [],
   compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
+  serpApiKey: '',
   notifyOnAI: false,
 };
 

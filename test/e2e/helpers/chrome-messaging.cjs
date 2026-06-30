@@ -58,6 +58,22 @@ async function getEngineHealth(context) {
   return sendRuntimeMessage(context, { type: 'RMF_ENGINE_HEALTH' });
 }
 
+async function runImageCheck(context, tabUrlPattern, imageUrl, exactUrl) {
+  return inServiceWorker(context, async ({ pattern, url, exact }) => {
+    const tabs = await chrome.tabs.query({ url: pattern });
+    const tab = exact ? tabs.find((t) => t.url === exact) || tabs[tabs.length - 1] : tabs[tabs.length - 1];
+    if (!tab?.id) return { ok: false, error: 'tab not found' };
+    const run = self.RMF_runImageCheck;
+    if (typeof run !== 'function') return { ok: false, error: 'image check unavailable' };
+    try {
+      await run(tab.id, url);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }, { pattern: tabUrlPattern, url: imageUrl, exact: exactUrl });
+}
+
 module.exports = {
   sendRuntimeMessage,
   getContentStats,
@@ -70,4 +86,5 @@ module.exports = {
   fetchImageViaWorker,
   remoteDetectViaWorker,
   getEngineHealth,
+  runImageCheck,
 };

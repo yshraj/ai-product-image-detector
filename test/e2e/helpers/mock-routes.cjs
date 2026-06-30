@@ -2,23 +2,60 @@
 const fs = require('fs');
 const path = require('path');
 const { ASSET_DIR } = require('./constants.cjs');
-const { listingHtml, productHtml } = require('./marketplace-fixture.cjs');
+const {
+  listingHtml,
+  flipkartListingHtml,
+  meeshoListingHtml,
+  nykaaListingHtml,
+  productHtml,
+  serpShoppingResponse,
+} = require('./marketplace-fixture.cjs');
+
+function isProductUrl(url) {
+  return /\/buy$|\/p\/|\/product\//.test(url) || url.includes('/1234567/');
+}
+
+function marketplaceBody(url) {
+  if (isProductUrl(url)) return productHtml(url.includes('flipkart') ? 'flipkart' : 'myntra');
+  if (url.includes('flipkart.com')) return flipkartListingHtml();
+  if (url.includes('meesho.com')) return meeshoListingHtml();
+  if (url.includes('nykaa.com')) return nykaaListingHtml();
+  return listingHtml();
+}
 
 /**
- * Register default routes: Myntra fixture pages, CDN images, Hugging Face whoami.
+ * Register default routes: marketplace fixtures, CDN images, Hugging Face whoami, SerpApi.
  * @param {import('@playwright/test').BrowserContext} context
- * @param {{ whoami?: (auth: string) => { status: number, body: object } }} [opts]
+ * @param {{ whoami?: (auth: string) => { status: number, body: object }, serp?: boolean }} [opts]
  */
 async function registerDefaultRoutes(context, opts = {}) {
-  await context.route('https://www.myntra.com/**', (route) => {
-    const url = route.request().url();
-    const isProduct = /\/buy$|\/p\//.test(url) || url.includes('/1234567/');
-    route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body: isProduct ? productHtml() : listingHtml(),
+  const hosts = [
+    'https://www.myntra.com/**',
+    'https://www.flipkart.com/**',
+    'https://www.meesho.com/**',
+    'https://www.nykaa.com/**',
+    'https://www.amazon.in/**',
+  ];
+  for (const pattern of hosts) {
+    await context.route(pattern, (route) => {
+      const url = route.request().url();
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: marketplaceBody(url),
+      });
     });
-  });
+  }
+
+  // Internal JSON APIs used by compare fallback — return empty so tests stay offline.
+  await context.route('https://www.myntra.com/gateway/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"products":[]}' }));
+  await context.route('https://www.meesho.com/api/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"catalogs":[]}' }));
+
+  if (opts.serp !== false) {
+    await registerSerpApiMock(context);
+  }
 
   await context.route('https://huggingface.co/api/whoami-v2', (route) => {
     const auth = route.request().headers().authorization || '';
@@ -48,6 +85,16 @@ async function registerDefaultRoutes(context, opts = {}) {
   });
 }
 
+/** Mock SerpApi Google Shopping — no real API quota consumed. */
+async function registerSerpApiMock(context, responseFn) {
+  await context.route('https://serpapi.com/**', (route) => {
+    const url = new URL(route.request().url());
+    const q = url.searchParams.get('q') || '';
+    const body = responseFn ? responseFn(q) : serpShoppingResponse(q);
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+}
+
 /**
  * Mock Hugging Face inference router — call `onRequest` to observe invocations.
  * @param {import('@playwright/test').BrowserContext} context
@@ -68,4 +115,4 @@ async function registerHfInferenceMock(context, responseFn) {
   return { getCallCount: () => calls };
 }
 
-module.exports = { registerDefaultRoutes, registerHfInferenceMock };
+module.exports = { registerDefaultRoutes, registerSerpApiMock, registerHfInferenceMock };
