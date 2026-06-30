@@ -1,7 +1,22 @@
 // popup/compare-panel.js — Compare tab UI (results, skeleton, filters, sort).
+// Sends RMF_COMPARE_SEARCH / RMF_COMPARE_CACHE to the service worker, which
+// runs compare/search.js (HTML scrape or SerpApi). This file only renders results.
 (function () {
   const COMPARE_CACHE_PREFIX = 'rmf_compare_';
-  const ALL_SITES = ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'];
+  const ALL_SITES = window.RMF_Defaults.ALL_COMPARE_SITES;
+  const parsePriceNum = window.RMF_Price.parsePriceForSort;
+  const send = window.RMF_Runtime.sendMessage;
+  const SEARCH_TIMEOUT_MS = 120000;
+
+  async function sendCompare(msg) {
+    return Promise.race([
+      send(msg),
+      new Promise((resolve) => setTimeout(
+        () => resolve({ ok: false, error: (S()?.compare?.searchTimeout) || 'Search timed out' }),
+        SEARCH_TIMEOUT_MS,
+      )),
+    ]);
+  }
 
   const state = {
     product: null,
@@ -16,25 +31,6 @@
   const S = () => window.RMF_STRINGS;
   const MP = () => window.RMF_CompareConfig?.MARKETPLACES || {};
 
-  function parsePriceNum(text) {
-    if (!text) return Infinity;
-    const m = String(text).replace(/,/g, '').match(/(\d+(?:\.\d+)?)/);
-    return m ? Number(m[1]) : Infinity;
-  }
-
-  async function send(msg) {
-    return new Promise((resolve) => {
-      try {
-        chrome.runtime.sendMessage(msg, (r) => {
-          const err = chrome.runtime.lastError;
-          resolve(err ? { ok: false, error: err.message } : (r ?? { ok: false }));
-        });
-      } catch (e) {
-        resolve({ ok: false, error: String(e?.message || e) });
-      }
-    });
-  }
-
   async function updateCacheCount() {
     const all = await chrome.storage.local.get(null);
     const n = Object.keys(all).filter((k) => k.startsWith(COMPARE_CACHE_PREFIX)).length;
@@ -45,9 +41,15 @@
   function siteStatusLine(results) {
     if (!results?.length) return '';
     const s = S();
+    const errLabel = (err) => {
+      if (!err) return '';
+      if (/timeout/i.test(err)) return 'timeout';
+      if (/HTTP/i.test(err)) return 'unreachable';
+      return 'failed';
+    };
     return results.map((r) => {
       const name = MP()[r.site]?.name || r.site;
-      if (!r.ok) return `${name} ✗`;
+      if (!r.ok) return `${name} ✗${errLabel(r.error) ? ` (${errLabel(r.error)})` : ''}`;
       if (r.best) return `${name} ✓`;
       return `${name} ○`;
     }).join(' · ');
@@ -87,8 +89,15 @@
         chip.textContent = MP()[site]?.name || site;
         chip.dataset.site = site;
         chip.addEventListener('click', () => {
-          if (state.searchSites.has(site)) state.searchSites.delete(site);
-          else state.searchSites.add(site);
+          if (state.searchSites.has(site)) {
+            if (state.searchSites.size <= 1) {
+              window.RMF_toast?.(S()?.compare?.noSitesSelected || 'Select at least one marketplace.', true);
+              return;
+            }
+            state.searchSites.delete(site);
+          } else {
+            state.searchSites.add(site);
+          }
           chip.classList.toggle('active');
         });
         wrap.appendChild(chip);
@@ -245,6 +254,36 @@
     return a;
   }
 
+  function setCompareStatus(el, text, variant) {
+    if (!el) return;
+    el.className = 'compare-status' + (variant ? ` is-${variant}` : '');
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  function buildEmptyState(container, title, body) {
+    if (!container) return;
+    container.hidden = false;
+    container.className = 'empty-state';
+    container.textContent = '';
+    const ico = document.createElement('span');
+    ico.className = 'empty-state-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    ico.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    if (title) {
+      const h = document.createElement('p');
+      h.className = 'empty-state-title';
+      h.textContent = title;
+      container.append(ico, h);
+    } else {
+      container.appendChild(ico);
+    }
+    const p = document.createElement('p');
+    p.className = 'empty-state-body';
+    p.textContent = body || '';
+    container.appendChild(p);
+  }
+
   function applySearchResult(r) {
     const s = S();
     state.data = r;
@@ -261,13 +300,17 @@
     const hasMatches = (r.matches || []).length > 0;
 
     if (noteEl) {
-      if (r.cached) noteEl.textContent = s?.compare?.cached || '';
-      else if (hasMatches && failed) noteEl.textContent = s?.compare?.partialResults?.(
-        r.failed.map((f) => MP()[f.site]?.name || f.site).join(', '),
-      ) || '';
-      else if (!hasMatches) noteEl.textContent = s?.compare?.noMatches || '';
-      else noteEl.textContent = '';
-      noteEl.hidden = !noteEl.textContent;
+      let text = '';
+      let variant = '';
+      if (r.cached) { text = s?.compare?.cached || ''; variant = 'success'; }
+      else if (hasMatches && failed) {
+        text = s?.compare?.partialResults?.(
+          r.failed.map((f) => MP()[f.site]?.name || f.site).join(', '),
+        ) || '';
+        variant = 'warn';
+      } else if (!hasMatches) text = s?.compare?.noMatches || '';
+      else if (r.serpFailed) { text = s?.compare?.serpFallback || ''; variant = 'warn'; }
+      setCompareStatus(noteEl, text, variant);
     }
 
     state.filterSites = new Set((r.matches || []).map((m) => m.site));
@@ -291,12 +334,21 @@
     $('compare-empty') && ($('compare-empty').hidden = true);
     $('compare-manual') && ($('compare-manual').hidden = true);
     const noteEl = $('compare-status');
-    if (noteEl) { noteEl.hidden = false; noteEl.textContent = s?.compare?.searching || 'Searching…'; }
+    if (noteEl) { noteEl.hidden = false; setCompareStatus(noteEl, s?.compare?.searching || 'Searching…', 'loading'); }
     $('compare-site-status') && ($('compare-site-status').hidden = true);
     showSkeleton();
 
     const sites = [...state.searchSites].filter((site) => site !== product.site);
-    const r = await send({ type: 'RMF_COMPARE_SEARCH', product, sites, cache: false });
+    if (!sites.length) {
+      state.searching = false;
+      btn?.setAttribute('aria-busy', 'false');
+      if (btn) btn.disabled = false;
+      hideSkeleton();
+      setCompareStatus(noteEl, s?.compare?.noSitesSelected || 'Select at least one marketplace.', 'warn');
+      return;
+    }
+
+    const r = await sendCompare({ type: 'RMF_COMPARE_SEARCH', product, sites, cache: false });
 
     state.searching = false;
     btn?.setAttribute('aria-busy', 'false');
@@ -304,7 +356,7 @@
 
     if (!r?.ok) {
       hideSkeleton();
-      if (noteEl) noteEl.textContent = r?.error || s?.compare?.searchFailed || 'Search failed';
+      setCompareStatus(noteEl, r?.error || s?.compare?.searchFailed || 'Search failed', 'error');
       renderManualLinks(product, true);
       return;
     }
@@ -350,8 +402,13 @@
       if (metaEl) metaEl.hidden = true;
       if (btn) btn.hidden = true;
       if (emptyEl) {
-        emptyEl.hidden = false;
-        emptyEl.innerHTML = '<span class="empty-state-ico" aria-hidden="true">🔍</span>' + (s?.compare?.emptyHint || '');
+        buildEmptyState(
+          emptyEl,
+          s?.compare?.noProduct || 'Open a product page',
+          p?.isProductPage === false
+            ? (s?.compare?.listingPage || s?.compare?.emptyHint || '')
+            : (s?.compare?.emptyHint || ''),
+        );
       }
       if (note) note.textContent = '';
       return;
@@ -360,12 +417,20 @@
     titleEl.textContent = p.title;
     titleEl.classList.remove('muted');
     if (metaEl) {
-      const parts = [];
-      if (p.site) parts.push(`<span class="site-pill">${p.site}</span>`);
-      if (p.brand) parts.push(p.brand);
-      if (p.price) parts.push(p.price);
-      metaEl.innerHTML = parts.join(' ');
-      metaEl.hidden = !parts.length;
+      metaEl.textContent = '';
+      if (p.site) {
+        const pill = document.createElement('span');
+        pill.className = 'site-pill';
+        pill.textContent = p.site;
+        metaEl.appendChild(pill);
+        metaEl.appendChild(document.createTextNode(' '));
+      }
+      if (p.brand) {
+        metaEl.appendChild(document.createTextNode(p.brand));
+        if (p.price) metaEl.appendChild(document.createTextNode(' '));
+      }
+      if (p.price) metaEl.appendChild(document.createTextNode(p.price));
+      metaEl.hidden = !(p.site || p.brand || p.price);
     }
     if (btn) {
       btn.hidden = false;

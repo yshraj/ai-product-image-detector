@@ -15,6 +15,9 @@
 try {
   if (typeof importScripts === 'function') {
     importScripts(
+      '../utils/defaults.js',
+      '../utils/price.js',
+      '../utils/storage-local.js',
       '../utils/product-query.js',
       '../utils/product-matcher.js',
       '../compare/config.js',
@@ -33,20 +36,23 @@ const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
 const TabSearch = (typeof self !== 'undefined' && self.RMF_TabSearch) || null;
 
-const DEFAULTS = {
+const RMFDefaults = (typeof self !== 'undefined' && self.RMF_Defaults) || {};
+const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
   enabled: true,
   mode: 'badge',
-  provider: 'heuristic',                 // 'heuristic' | 'huggingface'
+  provider: 'heuristic',
   hfToken: '',
-  hfModel: 'haywoodsloan/ai-image-detector-deploy', // served (warm) AI-vs-real classifier
-  hfVerified: false,                     // token passed a live whoami check
-  hfUser: '',                            // HF username from whoami (display only)
-  minConfidence: 70,                     // only flag AI at/above this confidence (floor)
-  disabledSites: [],                     // site names to skip, e.g. ['nykaa']
+  hfModel: 'haywoodsloan/ai-image-detector-deploy',
+  hfVerified: false,
+  hfUser: '',
+  minConfidence: 70,
+  disabledSites: [],
   compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
   serpApiKey: '',
-  notifyOnAI: false,                     // opt-in OS notification when a page has AI
+  notifyOnAI: false,
 };
+const HISTORY_KEY = RMFDefaults.HISTORY_KEY || 'rmf_history';
+const CACHE_PREFIX = RMFDefaults.CACHE_PREFIX || 'rmf_cache_';
 
 // Hugging Face moved off the legacy api-inference host (now returns HTTP 410).
 // The current path is the inference router with an explicit provider segment.
@@ -57,7 +63,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   chrome.runtime.onInstalled.addListener(async (details) => {
     if (details.reason === 'install') {
       await chrome.storage.sync.set(DEFAULTS);
-      console.log('[RMF] Installed with defaults');
     } else if (details.reason === 'update') {
       // Backfill any newly-added keys without clobbering user settings.
       const cur = await chrome.storage.sync.get(DEFAULTS);
@@ -68,9 +73,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
       if (cur.hfModel === 'Organika/sdxl-detector') {
         await chrome.storage.sync.set({ hfModel: DEFAULTS.hfModel });
         await clearDetectionCache();
-        console.log('[RMF] Migrated default model → ', DEFAULTS.hfModel);
       }
-      console.log('[RMF] Updated to', chrome.runtime.getManifest().version);
     }
     setupContextMenu();
   });
@@ -101,25 +104,62 @@ function setupContextMenu() {
 }
 
 async function checkImageFromContextMenu(tabId, imageUrl) {
-  if (!isAllowedHttpUrl(imageUrl) || !chrome.scripting?.executeScript) return;
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    func: (url) => { window.__rmf_check_image_url = url; },
-    args: [imageUrl],
-  });
-  await chrome.scripting.executeScript({ target: { tabId }, files: DETECT_SCRIPTS });
-  await chrome.scripting.executeScript({ target: { tabId }, files: ['content/check-image.js'] });
+  if (!tabId) return;
+  if (!isAllowedHttpUrl(imageUrl)) {
+    await injectContextFeedback(tabId, 'This image URL cannot be checked (blocked for security).');
+    return;
+  }
+  if (!chrome.scripting?.executeScript) {
+    await injectContextFeedback(tabId, 'ShopShield could not run on this page.');
+    return;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (url) => { window.__rmf_check_image_url = url; },
+      args: [imageUrl],
+    });
+    await chrome.scripting.executeScript({ target: { tabId }, files: DETECT_SCRIPTS });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content/check-image.js'] });
+  } catch (e) {
+    await injectContextFeedback(tabId, 'Image check failed — reload the page and try again.');
+  }
+}
+
+async function injectContextFeedback(tabId, message) {
+  if (!chrome.scripting?.executeScript) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (msg) => {
+        const existing = document.querySelector('.rmf-ctx-badge');
+        if (existing) existing.remove();
+        const wrap = document.createElement('div');
+        wrap.className = 'rmf-ctx-badge';
+        wrap.setAttribute('role', 'alert');
+        wrap.textContent = msg;
+        wrap.style.cssText = [
+          'position:fixed', 'z-index:2147483647', 'padding:10px 14px', 'border-radius:10px',
+          'font:600 13px -apple-system,sans-serif', 'box-shadow:0 4px 20px rgba(0,0,0,.25)',
+          'background:#374151;color:#fff', 'top:16px', 'right:16px', 'max-width:280px',
+        ].join(';');
+        document.body.appendChild(wrap);
+        setTimeout(() => wrap.remove(), 6000);
+      },
+      args: [message],
+    });
+  } catch { /* page may not allow injection */ }
 }
 
 if (typeof chrome !== 'undefined' && chrome.contextMenus?.onClicked) {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== 'rmf-check-image' || !info.srcUrl || !tab?.id) return;
-    checkImageFromContextMenu(tab.id, info.srcUrl).catch((e) => console.warn('[RMF] context check failed', e));
+    checkImageFromContextMenu(tab.id, info.srcUrl).catch(() => {});
   });
 }
 
 // Ensure menu exists when the worker starts (E2E loads unpacked without an install event).
-try { setupContextMenu(); } catch (e) { console.warn('[RMF] context menu setup', e); }
+try { setupContextMenu(); } catch { /* contextMenus unavailable in some contexts */ }
 
 if (typeof self !== 'undefined') {
   self.RMF_runImageCheck = checkImageFromContextMenu;
@@ -133,7 +173,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function clearDetectionCache() {
   try {
     const all = await chrome.storage.local.get(null);
-    const keys = Object.keys(all).filter((k) => k.startsWith('rmf_cache_'));
+    const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
     if (keys.length) await chrome.storage.local.remove(keys);
     return keys.length;
   } catch { return 0; }
@@ -181,7 +221,6 @@ async function fetchImage(url) {
 // ---- activity history (local, capped, deduped) ----------------------------
 // A transparent local log of what was flagged — something no competitor offers.
 // The worker is the single writer so concurrent cards can't race the storage.
-const HISTORY_KEY = 'rmf_history';
 const HISTORY_MAX = 200;
 let historyChain = Promise.resolve();
 

@@ -6,14 +6,17 @@
   const Log = window.RMF_Log;
   const limit = window.RMF_Throttle.createLimiter(3); // max 3 detections at once
 
-  const PREF_DEFAULTS = { mode: 'badge', enabled: true, minConfidence: 70, disabledSites: [], notifyOnAI: false };
+  const ContentDefaults = window.RMF_Defaults || {};
+  const PREF_DEFAULTS = ContentDefaults.CONTENT_PREF_DEFAULTS || {
+    mode: 'badge', enabled: true, minConfidence: 70, disabledSites: [], notifyOnAI: false,
+  };
 
   // Badge tiers (confidence = P(AI), 0-100):
   //   confidence >= AI_THRESHOLD          → "AI Generated" (strong, red)
   //   minConfidence <= conf < AI_THRESHOLD → "Likely AI"    (amber)
   //   confidence < minConfidence           → not flagged (no badge)
   // minConfidence (default 70) is the user-tunable floor in Settings.
-  const AI_THRESHOLD = 90;
+  const AI_THRESHOLD = ContentDefaults.AI_THRESHOLD ?? 90;
 
   // Coercers — never trust stored values (settings can be imported from a file
   // or synced from another device). A bad value must degrade safely, never throw.
@@ -272,7 +275,12 @@
           if (info.card.__rmfResult) info.card.__rmfResult.isAI = false;
         }
         onClose();
-      } catch { /* ignore */ }
+      } catch {
+        wrong.textContent = 'Could not save — try again';
+        setTimeout(() => {
+          wrong.textContent = t((s) => s.details.markWrong, 'Not AI? Mark wrong');
+        }, 2500);
+      }
     });
     pop.appendChild(wrong);
 
@@ -446,10 +454,17 @@
     card.setAttribute('data-rmf-scanned', 'pending');
 
     if (!imgEl.complete) {
-      await new Promise((resolve) => {
-        imgEl.addEventListener('load', resolve, { once: true });
-        imgEl.addEventListener('error', resolve, { once: true });
-      });
+      await Promise.race([
+        new Promise((resolve) => {
+          imgEl.addEventListener('load', resolve, { once: true });
+          imgEl.addEventListener('error', resolve, { once: true });
+        }),
+        new Promise((resolve) => setTimeout(resolve, 12000)),
+      ]);
+      if (!imgEl.complete) {
+        card.removeAttribute('data-rmf-scanned');
+        return;
+      }
     }
 
     const imgUrl = imgEl.currentSrc || imgEl.src;
@@ -658,6 +673,11 @@
   }
 
   function getProduct() {
+    const isProductPage = (window.RMF_MarketplaceUrl?.isMarketplaceProductUrl || (() => false))(location.href);
+    if (!isProductPage) {
+      return { site: SITE.name, title: '', isProductPage: false, url: location.href };
+    }
+
     const meta = (sel) => document.querySelector(sel)?.getAttribute('content')?.trim() || '';
     const jsonTitle = walkJsonLd((item) => {
       if (item['@type'] === 'Product' && item.name) return String(item.name);
@@ -712,7 +732,13 @@
       if (m) seller = m[1].trim();
     }
 
-    return { site: SITE.name, title, brand, price, rating, seller, image, url: location.href };
+    return { site: SITE.name, title, brand, price, rating, seller, image, url: location.href, isProductPage: true };
+  }
+
+  function clearStalePending() {
+    document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="pending"]`).forEach((card) => {
+      card.removeAttribute('data-rmf-scanned');
+    });
   }
 
   // --- scanning + observing ------------------------------------------------
@@ -784,7 +810,7 @@
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     switch (msg?.type) {
       case 'SET_MODE':
-        mode = msg.mode;
+        mode = cleanMode(msg.mode);
         applyModeAll();
         break;
       case 'SET_ENABLED':
@@ -841,8 +867,9 @@
   });
 
   if (isActive()) {
+    clearStalePending();
     await scanAll();
     startObserver();
   }
-  Log?.info(`${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
+  Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();

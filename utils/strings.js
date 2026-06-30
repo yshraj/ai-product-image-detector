@@ -80,6 +80,9 @@
       none: 'No products scanned yet — open a category page and scroll.',
       paused: 'Scanning is paused — turn it on to analyze images.',
       unsupported: 'Open a product or category page on Myntra, Flipkart, Meesho or Nykaa.',
+      noActiveTab: 'No active tab — switch to a supported marketplace page.',
+      starting: 'Scanner starting… If this persists, reload the page.',
+      amazonLimited: 'Amazon has limited support — use Myntra, Flipkart, Meesho or Nykaa for full tools.',
       confidence: (n) => `Flagging at ${n}% confidence or higher`,
       whyFlagged: 'Tap any flagged badge on the page for Why flagged?',
       engine: 'AI scanner',
@@ -112,6 +115,10 @@
       viewOn: (site) => `View on ${site}`,
       price: (p) => p || 'Price unavailable',
       emptyHint: 'Open a product page on Flipkart, Myntra, Meesho or Nykaa, then search for the same item elsewhere.',
+      listingPage: 'This looks like a category page — open a specific product to compare.',
+      noSitesSelected: 'Select at least one marketplace to search.',
+      serpFallback: 'SerpApi unavailable — searched marketplaces directly.',
+      searchTimeout: 'Search timed out — try fewer sites or use the manual links below.',
       filterSites: 'Sites to search',
       sortBy: 'Sort results',
       cachedCount: (n) => `${n} cached comparison${n === 1 ? '' : 's'}`,
@@ -141,6 +148,8 @@
       sellerEmpty: 'Browse more to build seller trust scores (3+ scans per seller).',
       shareStats: 'Share my stats',
       exportCorrections: 'Export corrections',
+      checkFailed: 'Could not check this image — try another file.',
+      shareFailed: 'Share unavailable — copied link instead.',
     },
 
     settings: {
@@ -165,6 +174,12 @@
       clear: 'Clear history',
       cleared: 'History cleared',
       heading: 'Recent detections',
+    },
+
+    options: {
+      saveFailed: 'Could not save settings — try again.',
+      readFileFailed: 'Could not read that file.',
+      importInvalid: 'That file isn’t a valid settings export',
     },
   };
 

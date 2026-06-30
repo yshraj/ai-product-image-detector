@@ -1,44 +1,55 @@
-// popup/popup.js — ShopShield (Scan / Compare / Tools / Settings)
-const CACHE_PREFIX = 'rmf_cache_';
-const ALL_COMPARE_SITES = ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'];
-const DEFAULTS = {
-  enabled: true, mode: 'badge', provider: 'heuristic',
-  hfToken: '', hfModel: 'haywoodsloan/ai-image-detector-deploy', hfVerified: false, hfUser: '',
-  minConfidence: 70,
-  compareSites: [...ALL_COMPARE_SITES],
-  serpApiKey: '',
-  notifyOnAI: false,
-};
+// popup/popup.js — ShopShield popup (Scan / Compare / Tools / Settings).
+// Tab-specific messages (GET_STATS, GET_PRODUCT, RESCAN, …) are sent to the
+// active tab only — see ACTIVE_TAB_ONLY. Settings persist via chrome.storage.sync.
+const { SYNC_DEFAULTS, ALL_COMPARE_SITES, CACHE_PREFIX } = window.RMF_Defaults;
+const DEFAULTS = SYNC_DEFAULTS;
+const { isMarketplaceProductUrl, MARKETPLACE_TAB_URLS: MARKETPLACE_TABS } = window.RMF_MarketplaceUrl;
+const send = window.RMF_Runtime.sendMessage;
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
 const TABS = ['scan', 'compare', 'tools', 'settings'];
-const MARKETPLACES = (window.RMF_CompareConfig && window.RMF_CompareConfig.MARKETPLACES) || {
-  amazon: { name: 'Amazon', manualUrl: (q) => 'https://www.amazon.in/s?k=' + q },
-  flipkart: { name: 'Flipkart', manualUrl: (q) => 'https://www.flipkart.com/search?q=' + q },
-  myntra: { name: 'Myntra', manualUrl: (q) => 'https://www.myntra.com/search?q=' + q },
-  meesho: { name: 'Meesho', manualUrl: (q) => 'https://www.meesho.com/search?q=' + q },
-  nykaa: { name: 'Nykaa', manualUrl: (q) => 'https://www.nykaa.com/search/result/?q=' + q },
-};
 
 const $ = (id) => document.getElementById(id);
 const S = () => window.RMF_STRINGS;
-const send = (msg) => new Promise((resolve) => {
-  try {
-    chrome.runtime.sendMessage(msg, (response) => {
-      const err = chrome.runtime.lastError;
-      if (err) resolve({ ok: false, error: err.message });
-      else resolve(response ?? { ok: false, error: 'No response from extension' });
-    });
-  } catch (e) {
-    resolve({ ok: false, error: String(e?.message || e) });
-  }
-});
 
 let state = { ...DEFAULTS };
 let health = null;
 
+const ACTIVE_TAB_ONLY = new Set([
+  'GET_STATS', 'GET_PAGE_REPORT', 'RESCAN', 'HIGHLIGHT_FILTER',
+  'SET_ENABLED', 'SET_MODE', 'SET_MIN_CONFIDENCE',
+]);
+
+function isAmazonUrl(url) {
+  try { return new URL(url).hostname.includes('amazon.'); } catch { return false; }
+}
+
+function isSupportedMarketplaceUrl(url) {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return ['myntra.com', 'flipkart.com', 'meesho.com', 'nykaa.com'].some((h) => host === h || host.endsWith('.' + h));
+  } catch { return false; }
+}
+
+async function saveSync(patch) {
+  state = { ...state, ...patch };
+  try {
+    await chrome.storage.sync.set(patch);
+    return true;
+  } catch {
+    toast(S()?.options?.saveFailed || 'Could not save settings — try again', true);
+    return false;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-  state = await chrome.storage.sync.get(DEFAULTS);
+  try {
+    state = await chrome.storage.sync.get(DEFAULTS);
+  } catch {
+    state = { ...DEFAULTS };
+    toast(S()?.options?.saveFailed || 'Could not load settings — using defaults', true);
+  }
   if (!Array.isArray(state.compareSites) || !state.compareSites.length) {
     state.compareSites = [...ALL_COMPARE_SITES];
   }
@@ -87,9 +98,10 @@ function setupScanPanel() {
         state.minConfidence = val;
         $('popup-confidence').value = val;
         $('popup-confidence-val').textContent = `${val}%`;
-        await chrome.storage.sync.set({ minConfidence: val });
-        sendToActiveTab({ type: 'SET_MIN_CONFIDENCE', minConfidence: val });
-        updateScan();
+        if (await saveSync({ minConfidence: val })) {
+          sendToActiveTab({ type: 'SET_MIN_CONFIDENCE', minConfidence: val });
+          updateScan();
+        }
       }, 200);
     });
   }
@@ -173,7 +185,8 @@ async function renderScanHistory() {
   if (!hist.length) {
     card.hidden = false;
     empty.hidden = false;
-    empty.innerHTML = '<span class="empty-state-ico" aria-hidden="true">📋</span>' + (S()?.scan?.historyEmpty || '');
+    empty.className = 'empty-hint';
+    empty.textContent = S()?.scan?.historyEmpty || '';
     return;
   }
   card.hidden = false;
@@ -181,7 +194,13 @@ async function renderScanHistory() {
   hist.slice(0, 8).forEach((h) => {
     const li = document.createElement('li');
     const d = new Date(h.at);
-    li.innerHTML = `<div class="sh-site">${h.site}</div><div class="sh-meta">${h.scanned} scanned · ${h.ai} AI · ${d.toLocaleDateString()}</div>`;
+    const site = document.createElement('div');
+    site.className = 'sh-site';
+    site.textContent = h.site || '';
+    const meta = document.createElement('div');
+    meta.className = 'sh-meta';
+    meta.textContent = `${h.scanned} scanned · ${h.ai} AI · ${d.toLocaleDateString()}`;
+    li.append(site, meta);
     list.appendChild(li);
   });
 }
@@ -237,26 +256,6 @@ function updateNavBadge(live) {
 }
 
 // ---- active tab / product -------------------------------------------------
-const MARKETPLACE_TABS = [
-  'https://www.myntra.com/*',
-  'https://www.flipkart.com/*',
-  'https://www.meesho.com/*',
-  'https://www.nykaa.com/*',
-];
-
-function isMarketplaceProductUrl(url) {
-  if (!url) return false;
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, '');
-    if (host === 'flipkart.com') return /\/p\//.test(u.pathname);
-    if (host === 'myntra.com') return /\/buy$/.test(u.pathname) || /\d{6,}/.test(u.pathname);
-    if (host === 'meesho.com') return /\/product\//.test(u.pathname);
-    if (host.includes('nykaa.com')) return /\/p\//.test(u.pathname);
-  } catch { /* ignore */ }
-  return false;
-}
-
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   // When popup.html is opened as a tab (common in dev/E2E), fall back to the best
@@ -278,6 +277,13 @@ async function sendToActiveTab(message) {
   };
 
   const active = await getActiveTab();
+  const activeOnly = ACTIVE_TAB_ONLY.has(message.type);
+  const popupAsTab = active?.url?.startsWith('chrome-extension:');
+
+  if (activeOnly && !popupAsTab) {
+    return tryTab(active);
+  }
+
   const primary = await tryTab(active);
   if (primary && (message.type !== 'GET_PRODUCT' || primary.title)) return primary;
 
@@ -297,6 +303,10 @@ async function getActiveProduct() {
   const active = await getActiveTab();
   if (!active?.id) return null;
 
+  if (isAmazonUrl(active.url)) {
+    return { isProductPage: false, amazonLimited: true, title: '', url: active.url };
+  }
+
   const tryTab = async () => {
     try { return await chrome.tabs.sendMessage(active.id, { type: 'GET_PRODUCT' }); } catch { return null; }
   };
@@ -304,7 +314,8 @@ async function getActiveProduct() {
   // Retry on the visible tab only — avoids picking a stale Flipkart tab in the background.
   for (let i = 0; i < 10; i++) {
     const p = await tryTab();
-    if (p?.title) return p;
+    if (p?.title && p.isProductPage !== false) return p;
+    if (p?.isProductPage === false) return null;
     await new Promise((r) => setTimeout(r, 250));
   }
   return null;
@@ -316,10 +327,11 @@ async function updateScan() {
   const all = await chrome.storage.local.get(null);
   $('cache-count').textContent = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX)).length;
 
+  const active = await getActiveTab();
   let live = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0 };
-  let onSupported = false;
+  let scanReady = false;
   const stats = await sendToActiveTab({ type: 'GET_STATS' });
-  if (stats) { live = stats; onSupported = true; }
+  if (stats) { live = stats; scanReady = true; }
 
   const normal = Math.max(0, (live.scanned || 0) - (live.ai || 0));
   $('bd-high').textContent = live.aiHigh || 0;
@@ -331,7 +343,7 @@ async function updateScan() {
   const total = live.total || live.scanned || 0;
   const done = live.scanned || 0;
   const pending = live.pending || 0;
-  if (progress && onSupported && state.enabled && (pending > 0 || (total > done))) {
+  if (progress && scanReady && state.enabled && (pending > 0 || (total > done))) {
     progress.hidden = false;
     progress.textContent = s ? s.scan.scanning(done, total || done + pending) : `Scanning ${done} / ${total || '…'}`;
   } else if (progress) progress.hidden = true;
@@ -341,7 +353,7 @@ async function updateScan() {
   const confHint = $('conf-hint');
   const bd = $('breakdown');
 
-  if (!onSupported) {
+  if (!scanReady) {
     $('scan-title').textContent = s?.app?.shortName || 'ShopShield';
     $('scan-count').textContent = '';
     bd.style.display = 'none';
@@ -350,7 +362,13 @@ async function updateScan() {
     confHint.hidden = true;
     tip.hidden = true;
     hint.hidden = false;
-    hint.textContent = s ? s.scan.unsupported : '';
+    hint.classList.remove('is-starting');
+    if (!active?.id) hint.textContent = s ? s.scan.noActiveTab : '';
+    else if (isAmazonUrl(active.url)) hint.textContent = s ? s.scan.amazonLimited : '';
+    else if (isSupportedMarketplaceUrl(active.url)) {
+      hint.textContent = s ? s.scan.starting : '';
+      hint.classList.add('is-starting');
+    } else hint.textContent = s ? s.scan.unsupported : '';
     return;
   }
 
@@ -391,7 +409,12 @@ async function renderTools() {
   list.textContent = '';
 
   if (!p) {
-    note.textContent = s ? s.tools.noProduct : 'Open a product page.';
+    const active = await getActiveTab();
+    if (active?.url && isAmazonUrl(active.url)) {
+      note.textContent = s ? s.scan.amazonLimited : 'Amazon has limited support.';
+    } else {
+      note.textContent = s ? s.tools.noProduct : 'Open a product page.';
+    }
     return;
   }
   note.textContent = '';
@@ -428,15 +451,39 @@ async function renderSellerTrust() {
   const sellers = (r.ok && r.sellers) ? r.sellers : [];
   if (!sellers.length) {
     empty.hidden = false;
-    empty.textContent = s ? s.tools.sellerEmpty : '';
+    empty.className = 'empty-state';
+    empty.textContent = '';
+    const ico = document.createElement('span');
+    ico.className = 'empty-state-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    ico.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 3l7 4v5c0 4.2-2.8 7.4-7 9-4.2-1.6-7-4.8-7-9V7l7-4Z" stroke="currentColor" stroke-width="1.8"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    const body = document.createElement('p');
+    body.className = 'empty-state-body';
+    body.textContent = s ? s.tools.sellerEmpty : '';
+    empty.append(ico, body);
     return;
   }
   empty.hidden = true;
+  empty.className = 'empty-hint';
   sellers.slice(0, 15).forEach((sel) => {
     const li = document.createElement('li');
     li.className = 'seller-row';
     const barClass = sel.aiPct >= 50 ? '' : 'ok';
-    li.innerHTML = `<span class="seller-name">${sel.name}</span><span class="seller-bar ${barClass}" title="${sel.aiPct}% AI"><span style="width:${sel.aiPct}%"></span></span><span class="seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}">${sel.aiPct}%</span><small>${sel.total}</small>`;
+    const name = document.createElement('span');
+    name.className = 'seller-name';
+    name.textContent = sel.name || '';
+    const bar = document.createElement('span');
+    bar.className = `seller-bar ${barClass}`;
+    bar.title = `${sel.aiPct}% AI`;
+    const fill = document.createElement('span');
+    fill.style.width = `${sel.aiPct}%`;
+    bar.appendChild(fill);
+    const pct = document.createElement('span');
+    pct.className = `seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}`;
+    pct.textContent = `${sel.aiPct}%`;
+    const count = document.createElement('small');
+    count.textContent = String(sel.total);
+    li.append(name, bar, pct, count);
     list.appendChild(li);
   });
 }
@@ -469,24 +516,31 @@ async function checkDroppedImage(blob) {
   const s = S();
   result.hidden = false;
   result.textContent = s ? s.tools.checking : 'Checking…';
-  const dataUrl = await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
-  const r = await send({ type: 'RMF_DETECT_DATA', dataUrl });
-  if (!r?.ok) {
-    result.textContent = r?.error || 'Check failed';
-    return;
+  result.className = 'image-check-result';
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('read failed'));
+      r.readAsDataURL(blob);
+    });
+    const r = await send({ type: 'RMF_DETECT_DATA', dataUrl });
+    if (!r?.ok) {
+      result.textContent = r?.error || s?.tools.checkFailed || 'Check failed';
+      result.className = 'image-check-result warn';
+      return;
+    }
+    const res = r.result;
+    const high = res.confidence >= 90;
+    const flagged = res.isAI && res.confidence >= 70;
+    result.textContent = flagged
+      ? `${high ? '🤖 AI Generated' : '⚠️ Likely AI'} · ${Math.round(res.confidence)}%`
+      : `✓ Normal · ${Math.round(res.confidence)}%`;
+    result.className = 'image-check-result ' + (flagged ? (high ? 'bad' : 'warn') : 'ok');
+  } catch {
+    result.textContent = s?.tools.checkFailed || 'Could not check this image';
+    result.className = 'image-check-result warn';
   }
-  const res = r.result;
-  const high = res.confidence >= 90;
-  const flagged = res.isAI && res.confidence >= 70;
-  result.textContent = flagged
-    ? `${high ? '🤖 AI Generated' : '⚠️ Likely AI'} · ${Math.round(res.confidence)}%`
-    : `✓ Normal · ${Math.round(res.confidence)}%`;
-  result.className = 'image-check-result ' + (flagged ? (high ? 'bad' : 'warn') : 'ok');
 }
 
 async function exportCorrections() {
@@ -549,7 +603,7 @@ function detailsText(p) {
 
 async function copyText(text) {
   if (!text) return;
-  try { await navigator.clipboard.writeText(text); toast(S() ? S().tools.copied : 'Copied'); }
+  try { await navigator.clipboard.writeText(text); toast(S() ? S().tools.copied : 'Copied', false, true); }
   catch { toast('Could not copy', true); }
 }
 
@@ -565,8 +619,15 @@ function downloadImage(p) {
 async function shareProduct(p) {
   const data = { title: p.title || 'Product', url: p.url };
   try {
-    if (navigator.share) { await navigator.share(data); toast(S() ? S().tools.shared : 'Shared'); return; }
-  } catch { return; }
+    if (navigator.share) {
+      await navigator.share(data);
+      toast(S() ? S().tools.shared : 'Shared');
+      return;
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError') return;
+    toast(S()?.tools?.shareFailed || 'Share unavailable — copied link instead', true);
+  }
   copyText(`${p.title}\n${p.url}`);
 }
 
@@ -599,8 +660,9 @@ function setupCompareSites() {
       const sites = Array.from(box.querySelectorAll('input[data-site]:checked')).map((el) => el.dataset.site);
       state.compareSites = sites.length ? sites : [...ALL_COMPARE_SITES];
       window.__compareSettingsSites = state.compareSites;
-      await chrome.storage.sync.set({ compareSites: state.compareSites });
-      if (!$('panel-compare').hidden) window.RMF_ComparePanel?.render?.(getActiveProduct);
+      if (await saveSync({ compareSites: state.compareSites })) {
+        if (!$('panel-compare').hidden) window.RMF_ComparePanel?.render?.(getActiveProduct);
+      }
     });
   });
   const s = S();
@@ -614,7 +676,11 @@ function setupSettings() {
 
   $('toggle-enabled').addEventListener('change', async (e) => {
     state.enabled = e.target.checked;
-    await chrome.storage.sync.set({ enabled: state.enabled });
+    if (!await saveSync({ enabled: state.enabled })) {
+      e.target.checked = !state.enabled;
+      state.enabled = e.target.checked;
+      return;
+    }
     sendToActiveTab({ type: 'SET_ENABLED', enabled: state.enabled });
     renderStatus();
     updateScan();
@@ -624,15 +690,15 @@ function setupSettings() {
     showPanel(p);
     if (p === 'heuristic') {
       state.provider = 'heuristic';
-      await chrome.storage.sync.set({ provider: 'heuristic' });
-      renderStatus();
+      if (await saveSync({ provider: 'heuristic' })) renderStatus();
     }
   });
   setupRovingGroup('mode-seg', MODES, async (mode) => {
     state.mode = mode;
-    await chrome.storage.sync.set({ mode });
-    setActiveMode(mode);
-    sendToActiveTab({ type: 'SET_MODE', mode });
+    if (await saveSync({ mode })) {
+      setActiveMode(mode);
+      sendToActiveTab({ type: 'SET_MODE', mode });
+    }
   }, 'radio');
   setActiveProvider(state.provider);
   setActiveMode(state.mode);
@@ -652,7 +718,7 @@ function setupSettings() {
   slider.addEventListener('input', () => { $('popup-confidence-val').textContent = `${slider.value}%`; });
   slider.addEventListener('change', async () => {
     state.minConfidence = Number(slider.value);
-    await chrome.storage.sync.set({ minConfidence: state.minConfidence });
+    if (!await saveSync({ minConfidence: state.minConfidence })) return;
     if ($('scan-confidence')) {
       $('scan-confidence').value = state.minConfidence;
       $('scan-confidence-val').textContent = `${state.minConfidence}%`;
@@ -664,8 +730,22 @@ function setupSettings() {
   $('export-json').addEventListener('click', () => exportPage('json'));
   $('export-csv').addEventListener('click', () => exportPage('csv'));
   $('rescan').addEventListener('click', async () => {
+    const btn = $('rescan');
+    const s = S();
+    btn.classList.add('is-busy');
+    btn.setAttribute('aria-busy', 'true');
+    if (s?.summary?.rescanning) btn.textContent = s.summary.rescanning;
     await sendToActiveTab({ type: 'RESCAN' });
-    setTimeout(updateScan, 800);
+    for (let i = 0; i < 25; i++) {
+      await new Promise((r) => setTimeout(r, 400));
+      const stats = await sendToActiveTab({ type: 'GET_STATS' });
+      if (!stats?.pending && (stats?.scanned || 0) > 0) break;
+      if (i === 0) updateScan();
+    }
+    btn.classList.remove('is-busy');
+    btn.setAttribute('aria-busy', 'false');
+    btn.textContent = s?.summary?.rescan || 'Rescan';
+    updateScan();
   });
 
   $('open-settings').addEventListener('click', () => {
@@ -686,8 +766,9 @@ function setupSettings() {
   if (serpKey) {
     $('serp-save')?.addEventListener('click', async () => {
       state.serpApiKey = serpKey.value.trim();
-      await chrome.storage.sync.set({ serpApiKey: state.serpApiKey });
-      toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
+      if (await saveSync({ serpApiKey: state.serpApiKey })) {
+        toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
+      }
     });
   }
 
@@ -695,7 +776,11 @@ function setupSettings() {
   if (notifyToggle) {
     notifyToggle.addEventListener('change', async (e) => {
       state.notifyOnAI = e.target.checked;
-      await chrome.storage.sync.set({ notifyOnAI: state.notifyOnAI });
+      if (!await saveSync({ notifyOnAI: state.notifyOnAI })) {
+        e.target.checked = !state.notifyOnAI;
+        state.notifyOnAI = e.target.checked;
+        return;
+      }
       toast(state.notifyOnAI ? 'Notifications enabled' : 'Notifications off');
     });
   }
@@ -729,7 +814,7 @@ async function connectHuggingFace() {
   }
   feedback('ok', r.user ? `Connected as ${r.user}` : 'Token verified — you’re connected');
   renderStatus();
-  toast(modelChanged ? 'Connected · cache cleared — reload the page' : 'Hugging Face connected');
+  toast(modelChanged ? 'Connected · cache cleared — reload the page' : 'Hugging Face connected', false, true);
 }
 
 function showPanel(provider) { PROVIDERS.forEach((p) => { $(`panel-${p}`).hidden = p !== provider; }); }
@@ -843,17 +928,23 @@ async function exportPage(format) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  toast((s && s.exportUI.done(report.products.length)) || `Exported ${report.products.length}`);
+  toast((s && s.exportUI.done(report.products.length)) || `Exported ${report.products.length}`, false, true);
 }
 
 // ---- ui helpers -----------------------------------------------------------
 function setBusy(btnId, busy) { const b = $(btnId); b.setAttribute('aria-busy', String(busy)); b.disabled = busy; }
 function feedback(kind, msg) { const el = $('hf-feedback'); el.className = 'feedback ' + kind; el.textContent = msg; el.hidden = false; }
 function clearFeedback() { const el = $('hf-feedback'); el.hidden = true; el.textContent = ''; }
-function toast(msg, isErr) {
+function toast(msg, isErr, isOk) {
   const t = document.createElement('div');
-  t.className = 'toast' + (isErr ? ' err' : '');
+  t.className = 'toast' + (isErr ? ' err' : isOk ? ' ok' : '');
   t.textContent = msg;
+  t.setAttribute('role', isErr ? 'alert' : 'status');
   $('toast-host').appendChild(t);
-  setTimeout(() => t.remove(), 2400);
+  const dismiss = () => {
+    t.classList.add('out');
+    setTimeout(() => t.remove(), 220);
+  };
+  setTimeout(dismiss, isErr ? 3200 : 2400);
 }
+window.RMF_toast = toast;

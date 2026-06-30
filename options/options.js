@@ -1,12 +1,8 @@
 // options/options.js — full settings surface. All preferences autosave to
 // chrome.storage.sync; content scripts react live via storage.onChanged.
-const CACHE_PREFIX = 'rmf_cache_';
-const ALL_SITES = ['myntra', 'flipkart', 'meesho', 'nykaa'];
-const DEFAULTS = {
-  enabled: true, mode: 'badge', provider: 'heuristic',
-  hfToken: '', hfModel: 'haywoodsloan/ai-image-detector-deploy', hfVerified: false, hfUser: '',
-  minConfidence: 70, disabledSites: [], notifyOnAI: false,
-};
+const { SYNC_DEFAULTS, CACHE_PREFIX, HISTORY_KEY, CONTENT_SITES } = window.RMF_Defaults;
+const DEFAULTS = SYNC_DEFAULTS;
+const ALL_SITES = CONTENT_SITES;
 // Keys that are safe to export/import (never the token).
 const PORTABLE_KEYS = ['enabled', 'mode', 'minConfidence', 'disabledSites', 'hfModel'];
 
@@ -18,15 +14,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('version').textContent = `v${ver}`;
   const aboutVer = $('about-ver');
   if (aboutVer) aboutVer.textContent = `v${ver}`;
-  state = await chrome.storage.sync.get(DEFAULTS);
+  try {
+    state = await chrome.storage.sync.get(DEFAULTS);
+  } catch {
+    state = { ...DEFAULTS };
+    toast((window.RMF_STRINGS?.options?.saveFailed) || 'Could not load settings', true);
+  }
   renderEngine();
   renderPrefs();
   updateStats();
   renderHistory();
   wireEvents();
 });
-
-const HISTORY_KEY = 'rmf_history';
 
 // ---- engine status (read-only) -------------------------------------------
 function renderEngine() {
@@ -66,9 +65,18 @@ function setMode(mode) {
 }
 
 async function save(patch) {
+  const prev = { ...state };
   state = { ...state, ...patch };
-  await chrome.storage.sync.set(patch);
-  flashSaved();
+  try {
+    await chrome.storage.sync.set(patch);
+    flashSaved();
+    return true;
+  } catch {
+    state = prev;
+    toast((window.RMF_STRINGS?.options?.saveFailed) || 'Could not save settings — try again', true);
+    renderPrefs();
+    return false;
+  }
 }
 
 function flashSaved() {
@@ -136,7 +144,15 @@ async function renderHistory() {
 
   if (!items.length) {
     empty.hidden = false;
-    empty.textContent = (S && S.history.empty) || 'Nothing flagged yet.';
+    empty.className = 'empty-state';
+    empty.textContent = '';
+    const ico = document.createElement('span');
+    ico.className = 'empty-state-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    ico.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    const p = document.createElement('p');
+    p.textContent = (S && S.history.empty) || 'Nothing flagged yet.';
+    empty.append(ico, p);
     return;
   }
   empty.hidden = true;
@@ -249,6 +265,10 @@ function importSettings(e) {
   const file = e.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
+  reader.onerror = () => {
+    toast((window.RMF_STRINGS?.options?.readFileFailed) || 'Could not read that file', true);
+    e.target.value = '';
+  };
   reader.onload = async () => {
     try {
       const parsed = JSON.parse(String(reader.result));
@@ -256,11 +276,11 @@ function importSettings(e) {
       if (!incoming || typeof incoming !== 'object') throw new Error('not an object');
       const patch = sanitizeImport(incoming);
       if (!Object.keys(patch).length) throw new Error('no valid settings');
-      await save(patch);
+      if (!await save(patch)) return;
       renderPrefs();
       toast('Settings imported');
     } catch {
-      toast('That file isn’t a valid settings export', true);
+      toast((window.RMF_STRINGS?.options?.importInvalid) || 'That file isn’t a valid settings export', true);
     }
     e.target.value = '';
   };
@@ -284,10 +304,15 @@ async function resetAll() {
 }
 
 // ---- toast ----------------------------------------------------------------
-function toast(msg, isErr) {
+function toast(msg, isErr, isOk) {
   const t = document.createElement('div');
-  t.className = 'toast' + (isErr ? ' err' : '');
+  t.className = 'toast' + (isErr ? ' err' : isOk ? ' ok' : '');
   t.textContent = msg;
+  t.setAttribute('role', isErr ? 'alert' : 'status');
   $('toast-host').appendChild(t);
-  setTimeout(() => t.remove(), 2400);
+  const dismiss = () => {
+    t.classList.add('out');
+    setTimeout(() => t.remove(), 220);
+  };
+  setTimeout(dismiss, isErr ? 3200 : 2400);
 }
