@@ -22,8 +22,8 @@
     myntra: {
       name: 'Myntra',
       host: 'www.myntra.com',
-      searchUrl: (q) => `https://www.myntra.com/${encodeURIComponent(q.replace(/\s+/g, '-'))}`,
-      manualUrl: (q) => `https://www.myntra.com/${q.replace(/\s+/g, '-')}`,
+      searchUrl: (q) => `https://www.myntra.com/search?q=${encodeURIComponent(q)}`,
+      manualUrl: (q) => `https://www.myntra.com/search?q=${q}`,
     },
     meesho: {
       name: 'Meesho',

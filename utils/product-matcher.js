@@ -38,17 +38,18 @@
     return 0.1;
   }
 
+  const MIN_MATCH_SCORE = 40;
+
   function scoreMatch(source, candidate) {
     const srcTokens = tokenize(source.title);
     const candTokens = tokenize(candidate.title);
     const titleSim = jaccard(srcTokens, candTokens);
 
-    // Substring bonus when one title contains most of the other.
     const srcJoined = srcTokens.join(' ');
     const candJoined = candTokens.join(' ');
     let containBonus = 0;
     if (srcJoined && candJoined) {
-      if (candJoined.includes(srcJoined) || srcJoined.includes(candJoined)) containBonus = 0.15;
+      if (candJoined.includes(srcJoined) || srcJoined.includes(candJoined)) containBonus = 0.1;
     }
 
     const brand = brandMatch(source.brand, candidate.title);
@@ -56,13 +57,13 @@
     const candPrice = parsePrice(candidate.price);
     const price = priceScore(srcPrice, candPrice);
 
-    const raw = (titleSim * 0.55) + (brand * 0.30) + (price * 0.10) + containBonus;
+    const raw = (titleSim * 0.60) + (brand * 0.20) + (price * 0.20) + containBonus;
     const score = Math.min(100, Math.round(raw * 100));
 
     let label = 'low';
     if (score >= 90) label = 'same';
     else if (score >= 70) label = 'similar';
-    else if (score >= 50) label = 'possible';
+    else if (score >= MIN_MATCH_SCORE) label = 'possible';
 
     return { score, label, titleSim, brand, price };
   }
@@ -74,10 +75,11 @@
       .slice(0, limit);
   }
 
-  function pickBest(source, candidates) {
-    const ranked = rankResults(source, candidates, 1);
+  function pickBest(source, candidates, minScore = MIN_MATCH_SCORE) {
+    const ranked = rankResults(source, candidates, candidates.length)
+      .filter((c) => c.match.score >= minScore);
     return ranked[0] || null;
   }
 
-  return { scoreMatch, rankResults, pickBest, jaccard, brandMatch, priceScore };
+  return { scoreMatch, rankResults, pickBest, jaccard, brandMatch, priceScore, MIN_MATCH_SCORE };
 }));
