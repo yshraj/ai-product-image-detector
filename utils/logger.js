@@ -9,8 +9,8 @@
 
   window.RMF_Log = {
     debug(...args) { if (enabled()) console.log(prefix, style, ...args); },
-    info(...args) { console.log(prefix, style, ...args); },
-    warn(...args) { console.warn(prefix, style, ...args); },
+    info(...args) { if (enabled()) console.log(prefix, style, ...args); },
+    warn(...args) { if (enabled()) console.warn(prefix, style, ...args); },
     error(...args) { console.error(prefix, style, ...args); },
   };
 })();

@@ -56,5 +56,31 @@ function walk(dir) {
 walk(root);
 if (errors === 0) ok('all project JS files pass syntax check');
 
+// 4. version alignment (package.json ↔ manifest)
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  if (pkg.version !== manifest.version) {
+    fail(`version mismatch: package.json ${pkg.version} vs manifest ${manifest.version}`);
+  } else {
+    ok(`version ${manifest.version} aligned across package.json and manifest`);
+  }
+} catch (e) {
+  fail('package.json version check failed: ' + e.message);
+}
+
+// 5. no stray debugger statements in shipped JS
+const shipDirs = ['background', 'content', 'compare', 'detection', 'options', 'popup', 'utils'];
+for (const dir of shipDirs) {
+  const base = path.join(root, dir);
+  if (!fs.existsSync(base)) continue;
+  for (const file of fs.readdirSync(base, { recursive: true })) {
+    if (!String(file).endsWith('.js')) continue;
+    const full = path.join(base, file);
+    const src = fs.readFileSync(full, 'utf8');
+    if (/\bdebugger\b/.test(src)) fail(`debugger statement in ${path.relative(root, full)}`);
+  }
+}
+if (errors === 0) ok('no debugger statements in shipped JS');
+
 console.log(errors === 0 ? '\n✅ validate: PASS' : `\n❌ validate: ${errors} problem(s)`);
 process.exit(errors === 0 ? 0 : 1);

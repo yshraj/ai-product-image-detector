@@ -12,8 +12,13 @@ module.exports = {
     'package.json',
     'package-lock.json',
     'web-ext-config.cjs',
+    'research',
+    'qa-screenshots',
+    'CHANGELOG.md',
+    'LICENSE',
     'README.md',
     '.gitignore',
+    '.github',
   ],
   build: {
     overwriteDest: true,

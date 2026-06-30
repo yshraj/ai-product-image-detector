@@ -126,14 +126,19 @@
   async function searchAll(product, sites, options = {}) {
     const { fetchFn = fetchSearchPage, tabFetchFn = null, serpApiKey = '' } = options;
     const enabled = (sites || []).filter((s) => s !== product.site && MARKETPLACES[s]);
+    let serpFailed = false;
 
     if (serpApiKey && searchGoogleShopping) {
       try {
         const serpResults = await searchViaSerp(product, enabled, serpApiKey);
         const matched = serpResults.filter((r) => r.best).length;
-        if (matched > 0) return buildResponse(product, sites, serpResults, 'serp');
-      } catch (err) {
-        console.warn('[RMF] SerpApi failed, falling back to direct:', err);
+        if (matched > 0) {
+          const resp = buildResponse(product, sites, serpResults, 'serp');
+          return { ...resp, serpFailed: false };
+        }
+      } catch {
+        serpFailed = true;
+        // SerpApi unavailable — fall through to direct marketplace search.
       }
     }
 
@@ -141,7 +146,8 @@
     for (const site of enabled) {
       results.push(await searchMarketplace(site, product, fetchFn, tabFetchFn));
     }
-    return buildResponse(product, sites, results, 'direct');
+    const resp = buildResponse(product, sites, results, 'direct');
+    return { ...resp, serpFailed };
   }
 
   function cacheKey(product) {

@@ -1,4 +1,5 @@
-// compare/config.js — marketplace search URL builders and metadata.
+// compare/config.js — marketplace search URL builders and display metadata.
+// Used by compare/search.js in the service worker and compare-panel.js in the popup.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
