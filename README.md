@@ -2,151 +2,166 @@
 
 > **Shop smarter. Spot AI. Compare better.**
 
-ShopShield is a **shopping assistant** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa).
-AI image detection is one tool in the kit — alongside price comparison, product utilities, and
-export — so the extension stays useful even if you never scan for AI.
+ShopShield is a **shopping assistant** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). AI image detection is one tool in the kit — alongside price comparison, product utilities, and export.
 
-Manifest V3 · vanilla JS · no build step · runs fully client-side · _formerly RealModel Filter_.
+Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · _formerly RealModel Filter_.
+
+---
+
+## Table of contents
+
+- [What it does](#what-it-does)
+- [Quick start (users)](#quick-start-users)
+- [Developer guide](#developer-guide)
+  - [Prerequisites](#prerequisites)
+  - [Clone and install](#clone-and-install)
+  - [Load the extension](#load-the-extension)
+  - [Development workflow](#development-workflow)
+  - [Debugging](#debugging)
+  - [Project structure](#project-structure)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Build and release](#build-and-release)
+- [Security and privacy](#security-and-privacy)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+
+---
 
 ## What it does
 
 | Tab | Purpose |
 |-----|---------|
-| **Scan** | Scan product images on the page, show AI / Likely AI / Normal breakdown, confidence threshold, rescan, export |
-| **Compare** | Search the current product on Amazon, Flipkart, Myntra, Meesho, Nykaa (opens marketplace search) |
+| **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, export |
+| **Compare** | Search the current product across Amazon, Flipkart, Myntra, Meesho, Nykaa |
 | **Tools** | Google Lens & Bing visual search, copy title/details/URL, download image, share |
-| **Settings** | AI detection engine, display mode, compare marketplace toggles, links to full settings |
+| **Settings** | AI engine, display mode, compare toggles, links to full settings |
 
-The popup uses **bottom navigation** so scanning, comparing, and utilities are one click away.
+### AI detection highlights
 
-## Features at a glance
+- **Inline badges** on product grids: ≥90% AI Generated · 70–94% Likely AI · `·preview` for heuristic mode
+- **Two engines** — Hugging Face (accurate, free token) + on-device Preview heuristic
+- **Private by design** — no backend, no accounts, no tracking
 
-### Shopping assistant
-- **Compare** — one-tap search for the same product across marketplaces (from the product title).
-- **Tools** — reverse image search, copy product details (title, brand, price, rating, seller, URL),
-  copy/download image, native share sheet.
-- **Compare marketplace toggles** — choose which sites appear in Compare (Settings tab).
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### AI detection (one feature, not the whole product)
-- **Inline badges** on product grids: ≥95% AI Generated · 70–94% Likely AI · `·preview` for heuristic.
-- **"Why flagged?"** — click a badge for engine, model, confidence, plus Lens/Bing and search handoffs.
-- **Toolbar badge counter** — AI-flagged count on the extension icon for the current tab.
-- **Scan summary + rescan** in the Scan tab.
-- **Export page report** — JSON or CSV of scanned products (name, price, verdict, confidence, engine, image URL).
+---
 
-### Settings & privacy
-- **Full settings page** — detection prefs, per-site toggles, history, cache, import/export, legal text.
-- **Activity history** — local log of flagged items (Settings page).
-- **Opt-in notifications** — one quiet OS nudge per page when AI is found (off by default).
-- **Two engines** — Hugging Face (accurate, free token) + on-device Preview; `Alt+Shift+R` shortcut.
-- **Private by design** — no backend, no accounts, no tracking.
+## Quick start (users)
 
-## Load it (developer mode)
+1. Install from the Chrome Web Store _(when published)_ **or** load unpacked (developers — see below).
+2. Pin the extension in the toolbar.
+3. Visit a category or product page on [myntra.com](https://www.myntra.com), [flipkart.com](https://www.flipkart.com), [meesho.com](https://www.meesho.com), or [nykaa.com](https://www.nykaa.com).
+4. Open the popup — use **Scan**, **Compare**, or **Tools** as needed.
 
-1. Open Chrome → `chrome://extensions`
-2. Toggle **Developer mode** (top-right)
-3. Click **Load unpacked** → select this project folder
-4. Pin the extension, then visit a category or product page on myntra.com / flipkart.com /
-   meesho.com / nykaa.com
-5. Open DevTools console and run `localStorage.RMF_DEBUG = '1'` then reload to see
-   `[RMF]` debug logs.
+**Connect Hugging Face (recommended for accurate detection):** Settings tab → paste a free Read token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Connect.
 
-## How detection works
+**Keyboard shortcut:** `Alt+Shift+R` toggles scanning (rebind at `chrome://extensions/shortcuts`).
 
-Detection is **API-first** (`detection/pipeline.js`). Confidence = P(AI) on 0–100.
+---
 
-| Priority | Engine | File | Key | Accuracy |
-|---|---|---|---|---|
-| 1 | **Hugging Face** model (recommended) | `remote.js` + worker | free token | accurate |
-| 2 | EXIF camera metadata | `exif-check.js` | none | decisive "real" only |
-| 3 | On-device heuristic (**preview**) | `tfjs-detector.js` | none | low — fast & private |
+## Developer guide
 
-When a Hugging Face token is connected it is **authoritative**. With no token, detection falls
-back to the on-device heuristic, labelled **preview** in the badge and popup.
+Everything below is what you need to clone the repo, run the extension locally, and execute the full test suite — no other docs required.
 
-### Badge tiers
+### Prerequisites
 
-| Confidence | Badge | Colour |
-|---|---|---|
-| **≥ 95%** | 🤖 AI Generated | red |
-| **70–94%** | ⚠️ Likely AI | amber |
-| **< 70%** (default floor) | _no badge_ | — |
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Node.js** | 20+ | Matches CI (`.github/workflows/ci.yml`) |
+| **npm** | 9+ | Ships with Node |
+| **Google Chrome** | Recent stable | For loading unpacked extension and E2E tests |
 
-Raise **minimum confidence** in Settings for stricter, fewer flags.
-
-### Connect Hugging Face (free)
-
-Settings tab → Hugging Face → follow the 3-step stepper:
-
-1. Create a free account at <https://huggingface.co/join>
-2. **Read** token at <https://huggingface.co/settings/tokens>
-3. Paste `hf_…` and press **Connect** (live `whoami` validation)
-
-Default model: `haywoodsloan/ai-image-detector-deploy` (change under *Advanced → Model*).
-
-> Detection uses `https://router.huggingface.co/hf-inference/models/<model>` (the legacy
-> `api-inference` host returns HTTP 410).
-
-### Keeping HF usage low
-
-| Technique | Effect |
-|---|---|
-| **Viewport gating** | Only images scrolled into view are sent |
-| **Per-URL cache** (7-day TTL) | Same image URL never sent twice |
-| **Concurrency cap = 3** | No burst traffic |
-| **Error backoff (60s)** | Rate limits don't hammer the API |
-
-## Keyboard shortcut
-
-**Alt+Shift+R** toggles AI scanning on/off (re-bindable at `chrome://extensions/shortcuts`).
-
-## Settings page
-
-Popup → **Settings** tab → **All settings & history**, or the extension Options page:
-
-- Detection preferences (enable, display mode, confidence floor, per-marketplace toggles)
-- Compare marketplace toggles (popup Settings tab)
-- Activity history, cache stats, export/import settings, clear cache, reset
-- Privacy Policy & Terms (also in [docs/PRIVACY.md](docs/PRIVACY.md) and [docs/TERMS.md](docs/TERMS.md))
-
-## Layout
-
-```
-manifest.json
-background/service-worker.js   remote detection, validation, badge, history, notifications
-content/content.js             scan, overlays, GET_PRODUCT, messaging
-content/sites/*.js             per-site selectors
-detection/                     pipeline, remote, exif, heuristic
-popup/                         four-tab shopping assistant UI
-options/                       full settings page
-utils/                         strings, cache, throttle, logger, report
-test/e2e/                      Playwright extension tests (fixtures, helpers, POM)
-scripts/validate.js            manifest + syntax check
-```
-
-## Tests
+### Clone and install
 
 ```bash
+git clone https://github.com/yshraj/ai-product-image-detector.git
+cd ai-product-image-detector
 npm ci
-npx playwright install --with-deps chromium   # first time
-
-npm run validate      # manifest + file refs + JS syntax
-npm run test:unit     # node:test (service worker, strings, report)
-npm run test:e2e      # 69 Playwright specs (extension loaded in Chromium)
-npm run test:headed   # watch E2E in a visible browser
-npm run test:report   # open HTML report after a run
 ```
 
-E2E tests load the unpacked extension, mock Myntra with a fixture, and cover:
+`npm ci` installs **dev dependencies only** (`@playwright/test`, `@axe-core/playwright`, `web-ext`). There are no runtime npm packages — the extension runs from source files in the repo root.
 
-- Installation, service worker, permissions, messaging between popup/content/background
-- Popup (4-tab nav, HF connect), options page, shopping assistant (Compare/Tools)
-- Content-script scanning, badges, labels, Hugging Face (mocked), error handling
-- Storage persistence, keyboard shortcut, full user workflow, accessibility (axe-core)
+**First-time E2E setup** — install the Playwright Chromium browser:
 
-See [test/e2e/README.md](test/e2e/README.md) for the test architecture.
+```bash
+npx playwright install --with-deps chromium
+```
 
-CI (`.github/workflows/ci.yml`) runs validate + unit + e2e on every push/PR.
+### Load the extension
+
+1. Open Chrome → `chrome://extensions`
+2. Enable **Developer mode** (top-right)
+3. Click **Load unpacked** → select the **repository root folder** (the one containing `manifest.json`)
+4. Confirm ShopShield appears with version **1.7.0**
+
+**Alternative — auto-reload during development:**
+
+```bash
+npm start
+```
+
+This runs `web-ext run --target chromium`, which opens Chrome with the extension loaded and reloads on file changes.
+
+### Development workflow
+
+1. Edit source files directly (no compile step).
+2. After changes to **content scripts** or **service worker**, click the reload icon on `chrome://extensions` (or use `npm start` for automatic reload).
+3. Run validation and tests before pushing:
+
+```bash
+npm run validate      # manifest, file refs, JS syntax, version sync
+npm run test:unit     # 37 Node unit tests
+npm test              # 78 Playwright E2E tests
+```
+
+4. Smoke-test on a real marketplace page with the unpacked extension.
+
+**Updating a marketplace selector** (badges stop appearing after a site redesign):
+
+Edit the matching file under `content/sites/` (e.g. `myntra.js`) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#content-script-content).
+
+**Refreshing the vendored EXIF library:**
+
+```bash
+npm run refresh-exifr
+```
+
+### Debugging
+
+| Context | How to debug |
+|---------|--------------|
+| **Content script** | DevTools on the marketplace tab → Console. Filter `[RMF]` |
+| **Service worker** | `chrome://extensions` → ShopShield → "Service worker" link |
+| **Popup** | Right-click popup → Inspect |
+| **Verbose logs** | On a marketplace tab console: `localStorage.RMF_DEBUG = '1'` then reload |
+
+Debug logging is gated in `utils/logger.js` — production users see no `info`/`warn`/`debug` output unless they opt in.
+
+### Project structure
+
+```
+manifest.json                 MV3 manifest (permissions, content scripts, CSP)
+background/service-worker.js  HF detection, compare, badge, history, image fetch
+content/
+  content.js                  Scan orchestration, badges, popup messaging
+  sites/*.js                  Per-marketplace DOM selectors
+  check-image.js              Context-menu image check
+detection/                    Pipeline: remote → EXIF → heuristic
+compare/                      Cross-marketplace search (loaded in service worker)
+popup/                        Four-tab UI (Scan / Compare / Tools / Settings)
+options/                      Full settings page
+utils/                        Shared modules (defaults, cache, strings, price, …)
+libs/exifr.min.js             Vendored EXIF parser
+icons/                        16 / 48 / 128 px icons
+scripts/validate.js           Manifest + syntax validation
+test/unit/                    Node unit tests
+test/e2e/                     Playwright extension tests
+web-ext-config.cjs            Files excluded from store zip
+```
+
+---
 
 ## Architecture
 
@@ -160,36 +175,143 @@ detection/pipeline.js  →  remote → EXIF → heuristic (preview)
 utils: cache · throttle · strings · report
 ```
 
-## Security & privacy
+**Detection priority** (`detection/pipeline.js`):
 
-- **No backend, no telemetry.** Outbound calls: Hugging Face (if connected) and marketplace image CDNs.
-- **Minimal permissions:** `activeTab`, `storage`, `scripting`, `notifications`.
-- **Token stays on device** in `chrome.storage.sync` (your Chrome profile only).
-- **SSRF hardening:** worker refuses loopback/private URLs.
-- **Strict CSP** on extension pages (`script-src 'self'`).
+| Priority | Engine | When |
+|----------|--------|------|
+| 1 | Hugging Face | User connected a token — authoritative |
+| 2 | EXIF metadata | Decisive "real" when camera EXIF present |
+| 3 | Canvas heuristic | Preview mode when no HF token; tagged `preview: true` |
+
+**Badge tiers:** ≥90% AI Generated (red) · 70–94% Likely AI (amber) · below user floor: no badge.
+
+Full module reference, message protocol, and storage model: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+
+Design rationale: **[docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md)**
+
+---
+
+## Testing
+
+### Commands
+
+```bash
+npm run validate        # manifest + file refs + JS syntax + version + no debugger
+npm run lint            # alias for validate
+npm run test:unit       # Node unit tests (compare, matcher, SSRF, strings, …)
+npm test                # all Playwright E2E tests (78 specs)
+npm run test:e2e        # same as npm test
+npm run test:headed     # E2E with visible browser (HEADLESS=0)
+npm run test:report     # open HTML report after a failed run
+```
+
+### What the tests cover
+
+| Suite | Count | Scope |
+|-------|-------|-------|
+| Unit | 37 | Compare search, product matcher, SSRF guard, HF parsing, defaults, URLs |
+| E2E | 78 | Extension load, popup (4 tabs), options, scanning, badges, HF (mocked), compare, a11y, workflow |
+
+E2E tests load the **real unpacked extension** in Chromium. Marketplace pages and Hugging Face are **mocked offline** — no API keys or network required.
+
+Test architecture details: **[test/e2e/README.md](test/e2e/README.md)**
+
+### CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
+
+```
+npm ci → validate → test:unit → playwright install → test:e2e
+```
+
+---
+
+## Build and release
+
+### Create a store zip
+
+```bash
+npm run build
+```
+
+Output: `dist/shopshield_shopping_assistant-1.7.0.zip` (~110 KB, 54 files).
+
+`web-ext-config.cjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
+
+### Pre-release checklist
+
+```bash
+npm ci
+npm run validate
+npm run test:unit
+npm test
+npm run build
+```
+
+Before bumping version, update **both** `package.json` and `manifest.json` — `npm run validate` fails if they diverge.
+
+Full release audit: **[docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md)**
+
+Upload the zip to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+
+---
+
+## Security and privacy
+
+- **No backend, no telemetry.** Outbound calls: Hugging Face (if connected), marketplace CDNs, optional SerpApi.
+- **Permissions:** `activeTab`, `storage`, `scripting`, `tabs`, `notifications`, `contextMenus` — scoped host permissions per marketplace.
+- **HF token** stored in `chrome.storage.sync` (Chrome profile only); never exported.
+- **SSRF guard** on image fetches in the service worker.
+- **CSP** on extension pages: `script-src 'self'`.
+
+Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
+
+---
 
 ## Troubleshooting
 
 | Symptom | Fix |
-|---|---|
-| No badges | Site CSS changed — update `content/sites/<site>.js` |
-| Compare/Tools empty | Open a **product page** (not just a category grid) |
-| Popup scan shows "unsupported" | Visit a supported marketplace tab first |
-| HF "warming up" | Wait ~20s and rescan |
-| Token rejected | New **Read** token at huggingface.co/settings/tokens |
+|---------|-----|
+| No badges on a site | Site DOM changed — update `content/sites/<site>.js` |
+| Compare/Tools empty | Open a **product page**, not a category listing |
+| Popup shows "unsupported" | Switch to a supported marketplace tab first |
+| HF "warming up" | Wait ~20s and rescan (model cold start) |
+| Token rejected | Create a new **Read** token at huggingface.co/settings/tokens |
 | Stale badges after model change | **Clear cache** in Settings |
+| E2E tests fail locally | Run `npx playwright install --with-deps chromium` |
+| `validate` version error | Sync `version` in `package.json` and `manifest.json` |
+
+Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, message protocol, detection pipeline, storage |
+| [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) | Why vanilla JS, HF in worker, preview fallback, etc. |
+| [docs/EDGE-CASES.md](docs/EDGE-CASES.md) | Invalid inputs, network failures, extension reloads |
+| [docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md) | Release readiness checklist |
+| [test/e2e/README.md](test/e2e/README.md) | Playwright test architecture |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [docs/PRIVACY.md](docs/PRIVACY.md) / [docs/TERMS.md](docs/TERMS.md) | In-app legal text |
+
+---
 
 ## Contributing
 
-1. `npm ci && npx playwright install chromium`
-2. Vanilla JS only — no build step.
-3. `npm run validate && npm run test:unit && npm run test:e2e` before pushing.
-4. Load unpacked at `chrome://extensions` to smoke-test on a real page.
+1. Fork and clone the repo.
+2. `npm ci && npx playwright install --with-deps chromium`
+3. Make changes in vanilla JS — match existing patterns (UMD modules, `RMF_` prefixes).
+4. `npm run validate && npm run test:unit && npm test` must pass.
+5. Load unpacked at `chrome://extensions` and smoke-test on a marketplace page.
+6. Open a pull request against `main`.
 
-## Updating exifr
+**Code conventions:**
+- Shared settings and storage keys live in `utils/defaults.js`
+- User-facing strings live in `utils/strings.js`
+- Per-marketplace DOM selectors live in `content/sites/<name>.js`
+- No `console.log` in shipped code — use `RMF_Log` (gated) or remove before merge
 
-```
-curl -sL -o libs/exifr.min.js https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js
-```
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for status and [CHANGELOG.md](CHANGELOG.md) for release notes.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned work.

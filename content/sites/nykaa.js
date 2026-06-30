@@ -1,4 +1,4 @@
-// content/sites/nykaa.js
+// content/sites/nykaa.js — see content/sites/myntra.js and docs/ARCHITECTURE.md
 if (location.hostname.endsWith('nykaa.com')) {
   window.RMF_SITE = {
     name: 'nykaa',

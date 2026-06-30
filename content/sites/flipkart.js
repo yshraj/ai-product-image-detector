@@ -1,4 +1,4 @@
-// content/sites/flipkart.js
+// content/sites/flipkart.js — see content/sites/myntra.js and docs/ARCHITECTURE.md
 if (location.hostname.endsWith('flipkart.com')) {
   window.RMF_SITE = {
     name: 'flipkart',

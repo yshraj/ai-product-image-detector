@@ -1,4 +1,4 @@
-// content/sites/meesho.js
+// content/sites/meesho.js — see content/sites/myntra.js and docs/ARCHITECTURE.md
 if (location.hostname.endsWith('meesho.com')) {
   window.RMF_SITE = {
     name: 'meesho',

@@ -6,10 +6,11 @@ End-to-end tests for the Chrome extension using Playwright with a real Chromium 
 
 ```bash
 npm ci
-npx playwright install --with-deps chromium
-npm test                 # all E2E tests
-npm run test:unit        # Node unit tests
-npm run test:headed      # E2E with visible browser (HEADLESS=0)
+npx playwright install --with-deps chromium   # first time only
+npm run validate       # manifest + syntax (fast sanity check)
+npm run test:unit      # 37 Node unit tests
+npm test               # 78 Playwright E2E specs
+npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 
 ## Architecture

@@ -1,18 +1,21 @@
 # RealModel Filter — Chrome Extension
 ## End-to-End Developer Guide
 
-> **Purpose of this document:** Full technical spec to build a Chrome extension that detects AI-generated product images on Indian e-commerce sites (Myntra, Flipkart, Meesho, Nykaa) and overlays a badge + confidence score on detected images. Hand this file to Claude as context before starting any implementation session.
-
-> ⚠️ **Historical reference.** This is the original design spec. The shipped product
-> has since diverged in two notable ways — treat the README as the source of truth:
-> 1. **The "AI or Not" API (Layer 3) was removed (v1.2.0).** The engines are now
->    **Hugging Face** (accurate, via `router.huggingface.co`) and the on-device
->    **Preview** heuristic only. Ignore all `api-detector.js` / `aiornot` / `apiKey`
->    references below.
-> 2. **Hugging Face uses the inference router** (`router.huggingface.co/hf-inference`),
->    not the retired `api-inference.huggingface.co` host shown in older snippets.
+> **⚠️ Historical reference.** This is the original v1 design spec. The shipped product has diverged significantly.
+>
+> **Use these docs instead:**
+> - [README.md](../README.md) — install, develop, test, build, release
+> - [ARCHITECTURE.md](ARCHITECTURE.md) — module map and message protocol
+> - [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) — rationale for current architecture
+>
+> Notable changes since this spec was written:
+> 1. **"AI or Not" API removed (v1.2.0)** — engines are Hugging Face + on-device Preview only.
+> 2. **Hugging Face uses `router.huggingface.co`** — not the retired `api-inference` host.
+> 3. **Product renamed to ShopShield** — internal `RMF_` prefixes retained for compatibility.
 
 ---
+
+## Original spec (archived)
 
 ## 1. Project Overview
 
