@@ -8,7 +8,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
   test.beforeEach(async ({ extensionContext }) => {
     await closeMarketplaceTabs(extensionContext);
   });
-  test('Compare tab lists marketplace search links for the current product', async ({ extensionContext, popupUrl }) => {
+  test('Compare tab shows auto-search and manual marketplace links', async ({ extensionContext, popupUrl }) => {
     const productTab = await extensionContext.newPage();
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
     const { getProduct } = require('./helpers/chrome-messaging.cjs');
@@ -24,6 +24,8 @@ test.describe('Shopping assistant — Compare & Tools', () => {
       const t = await popup.locator('#compare-title').textContent();
       return t && /Test Brand/i.test(t);
     }, { timeout: 10_000 }).toBe(true);
+    await expect(popup.locator('#compare-search')).toBeVisible();
+    await popup.locator('#compare-manual').evaluate((el) => { el.open = true; });
     await expect(popup.locator('#compare-list a')).toHaveCount(4);
     await popup.close();
     await productTab.close();
@@ -44,6 +46,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
       const t = await popup.locator('#compare-title').textContent();
       return t && /Test Brand/i.test(t);
     }, { timeout: 10_000 }).toBe(true);
+    await popup.locator('#compare-manual').evaluate((el) => { el.open = true; });
     await expect.poll(() => popup.locator('#compare-list a').count(), { timeout: 10_000 }).toBe(1);
     await popup.close();
     await productTab.close();
