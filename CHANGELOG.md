@@ -7,7 +7,7 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 ## [Unreleased]
 
 ### Added
-- **Product fingerprint** (`utils/product-fingerprint.js`) — stable compare identity from marketplace URL IDs; SPA navigation watcher in content script.
+- **Cross-platform ranked compare** — `compare/search.js` merges site candidates, scores with TF-IDF + optional CLIP, returns flat top-10 `ranked` list; Compare tab renders unified cards.
 - **Live compare Playwright suite** — `npm run test:compare-real` (Tier A scraper mechanics + Tier B end-to-end on real marketplaces).
 - **Compare refresh control** — manual rescan when results are stale after navigation.
 

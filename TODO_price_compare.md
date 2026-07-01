@@ -22,9 +22,9 @@
 - [x] Dedup pass for near-identical candidates (similarity > 0.9) — `compare/similarity.js` dedupCandidates
 
 ## Phase 4 — Ranking & Display
-- [ ] Merge + sort all platform candidates by finalScore, cross-platform (not grouped)
-- [ ] Top-10 slice
-- [ ] Compare tab UI: result cards (image, platform badge, price, title, score, link)
+- [x] Merge + sort all platform candidates by finalScore, cross-platform (not grouped) — `compare/search.js` `rankCrossPlatform`
+- [x] Top-10 slice — `compare/score-config.js` `TOP_RANKED`
+- [x] Compare tab UI: result cards (image, platform badge, price, title, score, link) — `popup/compare-panel.js` renders `data.ranked`
 
 ## Phase 5 — Stale Results Bug Fix
 - [x] Product-change detection (MutationObserver + pushState/popstate listener) — `content/content.js` startProductWatcher

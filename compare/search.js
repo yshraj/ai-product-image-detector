@@ -7,7 +7,9 @@
     const matcher = require('../utils/product-matcher.js');
     const serp = require('./serp-search.js');
     const internal = require('./internal-apis.js');
-    module.exports = factory(config, parsers, query, matcher, serp, internal);
+    const similarity = require('./similarity.js');
+    const scoreConfig = require('./score-config.js');
+    module.exports = factory(config, parsers, query, matcher, serp, internal, similarity, scoreConfig);
   } else {
     root.RMF_CompareSearch = factory(
       root.RMF_CompareConfig,
@@ -16,24 +18,29 @@
       root.RMF_ProductMatcher,
       root.RMF_SerpSearch,
       root.RMF_InternalApis,
+      root.RMF_CompareSimilarity,
+      root.RMF_ScoreConfig,
     );
   }
-}(typeof self !== 'undefined' ? self : this, function (config, parsers, ProductQuery, ProductMatcher, SerpSearch, InternalApis) {
+}(typeof self !== 'undefined' ? self : this, function (
+  config, parsers, ProductQuery, ProductMatcher, SerpSearch, InternalApis, Similarity, ScoreConfig,
+) {
   const { MARKETPLACES } = config;
   const { parseSearchResults } = parsers;
   const { buildSearchQuery } = ProductQuery;
-  const { pickBest, rankResults } = ProductMatcher;
+  const { pickBest } = ProductMatcher;
   const { searchGoogleShopping } = SerpSearch || {};
   const { searchViaInternalApi } = InternalApis || {};
+  const { TOP_RANKED, MIN_FINAL_SCORE } = ScoreConfig || { TOP_RANKED: 10, MIN_FINAL_SCORE: 0.12 };
 
   const FETCH_TIMEOUT_MS = 12_000;
   const MIN_RESULTS = 1;
   const COMPARE_CONCURRENCY = 3;
+  const MAX_CANDIDATES_PER_SITE = 12;
   /** Direct fetch is blocked (Akamai 403); hidden tabs required. */
   const TAB_REQUIRED_SITES = new Set(['nykaa']);
   const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-  /** Run async tasks with a concurrency cap (order preserved in results). */
   async function mapConcurrent(items, fn, limit = COMPARE_CONCURRENCY) {
     const results = new Array(items.length);
     let next = 0;
@@ -97,6 +104,97 @@
     return [];
   }
 
+  function scoreLabel(finalScore) {
+    const pct = Math.round((finalScore || 0) * 100);
+    let label = 'possible';
+    if (pct >= 90) label = 'same';
+    else if (pct >= 70) label = 'similar';
+    return { score: pct, label };
+  }
+
+  function flattenCandidates(siteResults) {
+    const pool = [];
+    for (const r of siteResults) {
+      if (!r.ok || !r.candidates?.length) continue;
+      for (const c of r.candidates) {
+        pool.push({ ...c, site: r.site });
+      }
+    }
+    return pool;
+  }
+
+  async function clipScoresByProductUrl(clipBridge, sourceImage, candidates) {
+    const withImg = candidates.filter((c) => c.image);
+    if (!clipBridge || !sourceImage || !withImg.length) return {};
+    const uniqueImages = [...new Set(withImg.map((c) => c.image))];
+    try {
+      const scoresByImage = await clipBridge.scoreImageBatch(sourceImage, uniqueImages);
+      const byProductUrl = {};
+      for (const c of withImg) {
+        if (scoresByImage[c.image] != null) byProductUrl[c.url] = scoresByImage[c.image];
+      }
+      return byProductUrl;
+    } catch {
+      return {};
+    }
+  }
+
+  async function rankCrossPlatform(product, siteResults, options = {}) {
+    const sim = options.similarity || Similarity;
+    if (!sim) return [];
+
+    const pool = flattenCandidates(siteResults);
+    if (!pool.length) return [];
+
+    const queryStr = buildSearchQuery(product);
+    const imageScores = await clipScoresByProductUrl(
+      options.clipBridge,
+      product.image,
+      pool,
+    );
+
+    let ranked = sim.rankCandidates(queryStr, pool, imageScores);
+    ranked = sim.dedupCandidates(ranked);
+    const minScore = options.minFinalScore ?? MIN_FINAL_SCORE;
+    const topN = options.topN ?? TOP_RANKED;
+
+    return ranked
+      .filter((c) => (c.finalScore || 0) >= minScore)
+      .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+      .slice(0, topN)
+      .map((c) => {
+        const match = scoreLabel(c.finalScore);
+        return {
+          site: c.site,
+          title: c.title,
+          price: c.price,
+          url: c.url,
+          image: c.image || '',
+          match: {
+            ...match,
+            textScore: Math.round((c.textScore || 0) * 100),
+            imageScore: Math.round((c.imageScore || 0) * 100),
+          },
+          finalScore: c.finalScore,
+        };
+      });
+  }
+
+  function matchesFromRanked(ranked) {
+    const seen = new Set();
+    const matches = [];
+    for (const item of ranked) {
+      if (seen.has(item.site)) continue;
+      seen.add(item.site);
+      matches.push({
+        site: item.site,
+        ok: true,
+        best: item,
+      });
+    }
+    return matches.sort((a, b) => (b.best.match.score || 0) - (a.best.match.score || 0));
+  }
+
   async function searchMarketplace(site, product, fetchFn = fetchSearchPage, tabFetchFn = null, tabFallback = false) {
     const mp = MARKETPLACES[site];
     if (!mp) return { site, ok: false, error: 'unknown site' };
@@ -110,7 +208,11 @@
         return { site, ok: true, query: queryStr, searchUrl, best: null, candidates: [], message: 'no results', source: 'direct' };
       }
       const best = pickBest(product, candidates);
-      return { site, ok: true, query: queryStr, searchUrl, best, candidates: candidates.slice(0, 5), source: 'direct' };
+      return {
+        site, ok: true, query: queryStr, searchUrl, best,
+        candidates: candidates.slice(0, MAX_CANDIDATES_PER_SITE),
+        source: 'direct',
+      };
     } catch (err) {
       return { site, ok: false, query: queryStr, searchUrl, error: String(err?.message || err), source: 'direct' };
     }
@@ -136,21 +238,24 @@
     return results;
   }
 
-  function buildResponse(product, sites, results, source) {
+  function buildResponse(product, sites, results, source, ranked = []) {
     const queryStr = buildSearchQuery(product);
-    const matches = results
-      .filter((r) => r.ok && r.best)
-      .sort((a, b) => (b.best?.match?.score || 0) - (a.best?.match?.score || 0));
+    const matches = ranked.length
+      ? matchesFromRanked(ranked)
+      : results
+        .filter((r) => r.ok && r.best)
+        .sort((a, b) => (b.best?.match?.score || 0) - (a.best?.match?.score || 0));
     return {
       ok: true,
       query: queryStr,
       searched: sites.filter((s) => s !== product.site).length,
       results,
+      ranked,
       matches,
-      sameProduct: matches.filter((r) => r.best.match.label === 'same'),
-      similar: matches.filter((r) => r.best.match.label === 'similar'),
+      sameProduct: matches.filter((r) => r.best?.match?.label === 'same'),
+      similar: matches.filter((r) => r.best?.match?.label === 'similar'),
       failed: results.filter((r) => !r.ok),
-      empty: results.filter((r) => r.ok && !r.best),
+      empty: results.filter((r) => r.ok && !r.candidates?.length),
       source,
       timestamp: Date.now(),
     };
@@ -163,6 +268,9 @@
       serpApiKey = '',
       concurrency = COMPARE_CONCURRENCY,
       compareUseTabs = false,
+      similarity: sim = Similarity,
+      clipBridge = null,
+      useClip = true,
     } = options;
     const tabFallback = compareUseTabs === true;
     const enabled = (sites || []).filter((s) => s !== product.site && MARKETPLACES[s]);
@@ -171,14 +279,18 @@
     if (serpApiKey && searchGoogleShopping) {
       try {
         const serpResults = await searchViaSerp(product, enabled, serpApiKey);
-        const matched = serpResults.filter((r) => r.best).length;
+        const ranked = sim
+          ? await rankCrossPlatform(product, serpResults, { similarity: sim, clipBridge: useClip ? clipBridge : null })
+          : [];
+        const matched = ranked.length || serpResults.filter((r) => r.best).length;
         if (matched > 0) {
-          const resp = buildResponse(product, sites, serpResults, 'serp');
-          return { ...resp, serpFailed: false };
+          return {
+            ...buildResponse(product, sites, serpResults, 'serp', ranked),
+            serpFailed: false,
+          };
         }
       } catch {
         serpFailed = true;
-        // SerpApi unavailable — fall through to direct marketplace search.
       }
     }
 
@@ -187,8 +299,10 @@
       (site) => searchMarketplace(site, product, fetchFn, tabFetchFn, tabFallback),
       concurrency,
     );
-    const resp = buildResponse(product, sites, results, 'direct');
-    return { ...resp, serpFailed };
+    const ranked = sim
+      ? await rankCrossPlatform(product, results, { similarity: sim, clipBridge: useClip ? clipBridge : null })
+      : [];
+    return { ...buildResponse(product, sites, results, 'direct', ranked), serpFailed };
   }
 
   function cacheKey(product) {
@@ -201,5 +315,6 @@
   return {
     searchMarketplace, searchAll, buildSearchQuery, cacheKey, FETCH_TIMEOUT_MS,
     mapConcurrent, COMPARE_CONCURRENCY, TAB_REQUIRED_SITES,
+    rankCrossPlatform, flattenCandidates, matchesFromRanked,
   };
 }));

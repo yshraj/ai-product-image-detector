@@ -40,10 +40,26 @@ test('searchAll ranks matches using mocked fetch', async () => {
     price: '₹499',
   };
 
-  const result = await searchAll(product, ['amazon', 'flipkart'], mockFetch);
+  const result = await searchAll(product, ['amazon', 'flipkart'], { fetchFn: mockFetch });
   assert.equal(result.ok, true);
+  assert.ok(result.ranked.length >= 1, 'expected cross-platform ranked results');
+  assert.ok(result.ranked[0].match.score >= 20);
   assert.ok(result.matches.length >= 1);
-  assert.ok(result.matches[0].best.match.score >= 50);
+});
+
+test('searchAll ranked list is capped at top 10 cross-platform', async () => {
+  const Similarity = require('../../compare/similarity.js');
+  const many = Array.from({ length: 15 }, (_, i) => ({
+    site: i % 2 ? 'amazon' : 'flipkart',
+    ok: true,
+    candidates: [{ title: `Roadster Blue Shirt Variant ${i}`, price: '₹499', url: `https://x/${i}`, image: '' }],
+  }));
+  const ranked = await require('../../compare/search.js').rankCrossPlatform(
+    { title: 'Roadster Men Blue Cotton T-Shirt', brand: 'Roadster' },
+    many,
+    { similarity: Similarity },
+  );
+  assert.ok(ranked.length <= 10);
 });
 
 test('searchAll runs marketplace fetches in parallel', async () => {

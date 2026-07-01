@@ -70,9 +70,9 @@
     $('compare-results')?.classList.add('is-stale');
   }
 
-  function siteStatusLine(results) {
+  function siteStatusLine(results, ranked) {
     if (!results?.length) return '';
-    const s = S();
+    const rankedSites = new Set((ranked || []).map((r) => r.site));
     const errLabel = (err) => {
       if (!err) return '';
       if (/timeout/i.test(err)) return 'timeout';
@@ -82,7 +82,8 @@
     return results.map((r) => {
       const name = MP()[r.site]?.name || r.site;
       if (!r.ok) return `${name} ✗${errLabel(r.error) ? ` (${errLabel(r.error)})` : ''}`;
-      if (r.best) return `${name} ✓`;
+      if (rankedSites.has(r.site)) return `${name} ✓`;
+      if (r.candidates?.length) return `${name} ○`;
       return `${name} ○`;
     }).join(' · ');
   }
@@ -138,10 +139,11 @@
 
   function renderDisplayFilters() {
     const wrap = $('compare-display-filters');
-    if (!wrap || !state.data?.matches?.length) { if (wrap) wrap.hidden = true; return; }
+    const ranked = state.data?.ranked || [];
+    if (!wrap || !ranked.length) { if (wrap) wrap.hidden = true; return; }
     wrap.hidden = false;
     wrap.textContent = '';
-    const sites = [...new Set(state.data.matches.map((m) => m.site))];
+    const sites = [...new Set(ranked.map((m) => m.site))];
     sites.forEach((site) => {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -157,15 +159,15 @@
     });
   }
 
-  function sortedMatches() {
-    if (!state.data?.matches) return [];
-    let list = state.data.matches.filter((m) => state.filterSites.has(m.site) && m.best);
+  function sortedRanked() {
+    const ranked = state.data?.ranked || [];
+    let list = ranked.filter((m) => state.filterSites.has(m.site));
     if (state.sort === 'price-asc') {
-      list = [...list].sort((a, b) => parsePriceNum(a.best.price) - parsePriceNum(b.best.price));
+      list = [...list].sort((a, b) => parsePriceNum(a.price) - parsePriceNum(b.price));
     } else if (state.sort === 'price-desc') {
-      list = [...list].sort((a, b) => parsePriceNum(b.best.price) - parsePriceNum(a.best.price));
+      list = [...list].sort((a, b) => parsePriceNum(b.price) - parsePriceNum(a.price));
     } else {
-      list = [...list].sort((a, b) => (b.best?.match?.score || 0) - (a.best?.match?.score || 0));
+      list = [...list].sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0));
     }
     return list;
   }
@@ -181,7 +183,7 @@
     const s = S();
     const resultsEl = $('compare-results');
     const emptyEl = $('compare-empty');
-    const matches = sortedMatches();
+    const matches = sortedRanked();
 
     resultsEl.textContent = '';
     if (!matches.length) {
@@ -195,20 +197,19 @@
     if (emptyEl) emptyEl.hidden = true;
     resultsEl.hidden = false;
 
-    for (const entry of matches) {
-      const best = entry.best;
-      const mp = MP()[entry.site] || {};
-      const badge = badgeForMatch(best.match, s);
-      const score = best.match?.score || 0;
+    for (const item of matches) {
+      const mp = MP()[item.site] || {};
+      const badge = badgeForMatch(item.match, s);
+      const score = item.match?.score || 0;
 
       const card = document.createElement('article');
       card.className = 'result-card';
 
       const thumb = document.createElement('div');
       thumb.className = 'result-thumb';
-      if (best.image) {
+      if (item.image) {
         const img = document.createElement('img');
-        img.src = best.image;
+        img.src = item.image;
         img.alt = '';
         img.loading = 'lazy';
         thumb.appendChild(img);
@@ -224,7 +225,7 @@
       head.className = 'result-head';
       const site = document.createElement('span');
       site.className = 'result-site';
-      site.textContent = mp.name || entry.site;
+      site.textContent = mp.name || item.site;
       const scoreBadge = document.createElement('span');
       scoreBadge.className = `match-badge ${badge.cls}`;
       scoreBadge.textContent = s ? s.compare.matchScore(score) : `${score}%`;
@@ -233,18 +234,18 @@
 
       const title = document.createElement('div');
       title.className = 'result-title';
-      title.textContent = best.title;
+      title.textContent = item.title;
 
       const price = document.createElement('div');
       price.className = 'result-price';
-      price.textContent = s ? s.compare.price(best.price) : (best.price || '—');
+      price.textContent = s ? s.compare.price(item.price) : (item.price || '—');
 
       const view = document.createElement('a');
       view.className = 'result-view';
-      view.href = best.url;
+      view.href = item.url;
       view.target = '_blank';
       view.rel = 'noopener noreferrer';
-      view.textContent = s ? s.compare.viewOn(mp.name || entry.site) : `View on ${entry.site}`;
+      view.textContent = s ? s.compare.viewOn(mp.name || item.site) : `View on ${item.site}`;
 
       body.append(head, title, price, view);
       card.append(thumb, body);
@@ -330,12 +331,12 @@
     const statusEl = $('compare-site-status');
     const noteEl = $('compare-status');
     if (statusEl) {
-      statusEl.textContent = siteStatusLine(r.results);
+      statusEl.textContent = siteStatusLine(r.results, r.ranked);
       statusEl.hidden = !r.results?.length;
     }
 
     const failed = (r.failed || []).length > 0;
-    const hasMatches = (r.matches || []).length > 0;
+    const hasMatches = (r.ranked || r.matches || []).length > 0;
 
     if (noteEl) {
       let text = '';
@@ -350,7 +351,7 @@
       setCompareStatus(noteEl, text, variant);
     }
 
-    state.filterSites = new Set((r.matches || []).map((m) => m.site));
+    state.filterSites = new Set((r.ranked || r.matches || []).map((m) => m.site));
     renderDisplayFilters();
     const toolbar = $('compare-toolbar');
     if (toolbar) toolbar.hidden = !hasMatches;

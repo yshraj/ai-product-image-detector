@@ -10,11 +10,15 @@
   const TEXT_WEIGHT = 0.45;
   const DEDUP_THRESHOLD = 0.9;
   const CLIP_MODEL = 'Xenova/clip-vit-base-patch32';
+  const TOP_RANKED = 10;
+  const MIN_FINAL_SCORE = 0.12;
 
   return {
     IMAGE_WEIGHT,
     TEXT_WEIGHT,
     DEDUP_THRESHOLD,
     CLIP_MODEL,
+    TOP_RANKED,
+    MIN_FINAL_SCORE,
   };
 }));

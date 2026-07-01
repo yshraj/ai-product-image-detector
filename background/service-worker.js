@@ -39,6 +39,7 @@ try {
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
 const TabSearch = (typeof self !== 'undefined' && self.RMF_TabSearch) || null;
+const ClipBridge = (typeof self !== 'undefined' && self.RMF_ClipBridge) || null;
 const ProductFingerprint = (typeof self !== 'undefined' && self.RMF_ProductFingerprint) || null;
 
 const RMFDefaults = (typeof self !== 'undefined' && self.RMF_Defaults) || {};
@@ -621,6 +622,8 @@ async function handleCompareSearch(msg) {
     tabFetchFn,
     compareUseTabs: cfg.compareUseTabs === true,
     serpApiKey: cfg.serpApiKey || '',
+    clipBridge: ClipBridge,
+    useClip: !!product?.image,
   });
   return { ok: true, productFingerprint: fingerprint, ...data };
 }

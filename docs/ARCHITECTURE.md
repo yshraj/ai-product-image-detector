@@ -235,14 +235,9 @@ content.js GET_PRODUCT          popup compare-panel.js
    | Service worker `fetch` | Default for Amazon, Flipkart, Myntra, Meesho | `compare/parsers.js` on HTML |
    | Hidden inactive tab | **Always** for Nykaa (Akamai 403 on fetch); optional for all sites when `compareUseTabs: true` | `compare/tab-search.js` injects `compare/tab-parser.js` |
 
-4. **Scoring** — `utils/product-matcher.js` scores each candidate with Jaccard title similarity, brand/price/color bonuses (minimum score 40 to surface). Returns **one best match per marketplace** (flat cross-platform top-10 not wired yet).
+4. **Scoring** — `compare/search.js` merges candidates from all sites, ranks with `compare/similarity.js` (TF-IDF text + optional CLIP image cosine via `compare/clip-bridge.js` → `offscreen/offscreen.js`), deduplicates near-duplicates, and returns a flat **`ranked`** top-10 (`TOP_RANKED`, `MIN_FINAL_SCORE`). Per-site `matches[].best` is derived from ranked for backward compatibility. Legacy `utils/product-matcher.js` `pickBest` still runs per-site for status lines.
 
-5. **UI** — `popup/compare-panel.js` renders result cards, per-site status line, filters, sort, manual search fallback. **No compare storage cache** — every search is live. Refresh button and fingerprint checks prevent stale results after navigation.
-
-### Future (built, not in search path yet)
-
-- `compare/similarity.js` — TF-IDF + image cosine, combined 55/45 weighting
-- `offscreen/offscreen.js` + `compare/clip-bridge.js` — CLIP embeddings via Transformers.js
+5. **UI** — `popup/compare-panel.js` renders the flat **`ranked`** list (image, platform badge, price, title, match score, link), per-site status line, filters, sort, manual search fallback. **No compare storage cache** — every search is live. Refresh button and fingerprint checks prevent stale results after navigation.
 
 ### Config (`chrome.storage.sync`)
 
