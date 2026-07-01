@@ -9,7 +9,7 @@ npm ci
 npx playwright install --with-deps chromium   # first time only
 npm run validate       # manifest + syntax (fast sanity check)
 npm run test:unit      # 37 Node unit tests
-npm test               # 78 Playwright E2E specs
+npm test               # 90 Playwright E2E specs
 npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 
@@ -31,7 +31,7 @@ test/e2e/
 │   ├── PopupPage.cjs
 │   ├── OptionsPage.cjs
 │   └── ContentPage.cjs
-└── *.spec.cjs                  # Test suites
+└── *.spec.cjs                  # Test suites (incl. regression.spec.cjs)
 ```
 
 ## Writing tests

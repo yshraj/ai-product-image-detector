@@ -4,7 +4,7 @@ const BATCH1 = ['ai0', 'real1', 'ai2', 'real3', 'ai4', 'real5', 'ai6', 'real7'];
 const BATCH2 = ['ai2', 'real7', 'ai4', 'real1', 'ai6', 'real3', 'ai0', 'real5'];
 
 const PRODUCT_META = {
-  title: 'Test Brand Men Cotton Casual Shirt',
+  title: 'Test Brand Men Blue Cotton Casual Shirt',
   brand: 'Test Brand',
   price: '1299',
   image: 'https://assets.myntassets.com/real1.png?product=1',
@@ -121,7 +121,7 @@ function serpShoppingResponse(query) {
   return {
     shopping_results: [
       {
-        title: 'Test Brand Men Cotton Casual Shirt',
+        title: 'Test Brand Men Blue Cotton Casual Shirt',
         price: '₹1,299',
         link: 'https://www.amazon.in/dp/B00TEST',
         thumbnail: 'https://assets.myntassets.com/real1.png',
