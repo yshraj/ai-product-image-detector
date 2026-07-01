@@ -27,13 +27,16 @@
 ) {
   const { MARKETPLACES } = config;
   const { parseSearchResults } = parsers;
-  const { buildSearchQuery } = ProductQuery;
-  const { pickBest } = ProductMatcher;
+  const { buildSearchQuery, inferBrandFromTitle } = ProductQuery;
+  const { pickBest, brandMatch } = ProductMatcher;
   const { searchGoogleShopping } = SerpSearch || {};
   const { searchViaInternalApi } = InternalApis || {};
-  const { TOP_RANKED, MIN_FINAL_SCORE } = ScoreConfig || { TOP_RANKED: 10, MIN_FINAL_SCORE: 0.12 };
+  const { TOP_RANKED, MIN_FINAL_SCORE, MIN_FALLBACK_SCORE } = ScoreConfig || {
+    TOP_RANKED: 10, MIN_FINAL_SCORE: 0.12, MIN_FALLBACK_SCORE: 0.06,
+  };
 
   const FETCH_TIMEOUT_MS = 12_000;
+  const CLIP_RANK_BUDGET_MS = 4_000;
   const MIN_RESULTS = 1;
   const COMPARE_CONCURRENCY = 3;
   const MAX_CANDIDATES_PER_SITE = 12;
@@ -126,17 +129,39 @@
   async function clipScoresByProductUrl(clipBridge, sourceImage, candidates) {
     const withImg = candidates.filter((c) => c.image);
     if (!clipBridge || !sourceImage || !withImg.length) return {};
-    const uniqueImages = [...new Set(withImg.map((c) => c.image))];
-    try {
+
+    const task = (async () => {
+      const uniqueImages = [...new Set(withImg.map((c) => c.image))];
       const scoresByImage = await clipBridge.scoreImageBatch(sourceImage, uniqueImages);
       const byProductUrl = {};
       for (const c of withImg) {
         if (scoresByImage[c.image] != null) byProductUrl[c.url] = scoresByImage[c.image];
       }
       return byProductUrl;
+    })();
+
+    try {
+      return await Promise.race([
+        task,
+        new Promise((resolve) => { setTimeout(() => resolve({}), CLIP_RANK_BUDGET_MS); }),
+      ]);
     } catch {
       return {};
     }
+  }
+
+  function scorePoolForRanking(product, queryStr, pool, imageScores, sim) {
+    const brand = product.brand || inferBrandFromTitle(product.title || '');
+    return pool.map((c) => {
+      const textQ = sim.textSimilarity(queryStr, c.title || '');
+      const textT = product.title ? sim.textSimilarity(product.title, c.title || '') : 0;
+      const textScore = Math.max(textQ, textT);
+      const imageScore = imageScores[c.url] ?? 0;
+      const brandFrac = brand ? brandMatch(brand, c.title) : 0;
+      const brandBoost = brandFrac * 0.12;
+      const finalScore = Math.min(1, sim.combinedScore(imageScore, textScore) + brandBoost);
+      return { ...c, imageScore, textScore, finalScore, brandBoost };
+    });
   }
 
   async function rankCrossPlatform(product, siteResults, options = {}) {
@@ -153,14 +178,26 @@
       pool,
     );
 
-    let ranked = sim.rankCandidates(queryStr, pool, imageScores);
+    let ranked = scorePoolForRanking(product, queryStr, pool, imageScores, sim);
     ranked = sim.dedupCandidates(ranked);
     const minScore = options.minFinalScore ?? MIN_FINAL_SCORE;
+    const minFallback = options.minFallbackScore ?? MIN_FALLBACK_SCORE;
     const topN = options.topN ?? TOP_RANKED;
 
-    return ranked
+    let filtered = ranked
       .filter((c) => (c.finalScore || 0) >= minScore)
-      .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+      .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+
+    if (!filtered.length && ranked.length) {
+      const bestScore = Math.max(...ranked.map((c) => c.finalScore || 0));
+      if (bestScore >= minFallback) {
+        filtered = [...ranked]
+          .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+          .slice(0, topN);
+      }
+    }
+
+    return filtered
       .slice(0, topN)
       .map((c) => {
         const match = scoreLabel(c.finalScore);
@@ -282,13 +319,10 @@
         const ranked = sim
           ? await rankCrossPlatform(product, serpResults, { similarity: sim, clipBridge: useClip ? clipBridge : null })
           : [];
-        const matched = ranked.length || serpResults.filter((r) => r.best).length;
-        if (matched > 0) {
-          return {
-            ...buildResponse(product, sites, serpResults, 'serp', ranked),
-            serpFailed: false,
-          };
-        }
+        return {
+          ...buildResponse(product, sites, serpResults, 'serp', ranked),
+          serpFailed: false,
+        };
       } catch {
         serpFailed = true;
       }
@@ -315,6 +349,6 @@
   return {
     searchMarketplace, searchAll, buildSearchQuery, cacheKey, FETCH_TIMEOUT_MS,
     mapConcurrent, COMPARE_CONCURRENCY, TAB_REQUIRED_SITES,
-    rankCrossPlatform, flattenCandidates, matchesFromRanked,
+    rankCrossPlatform, flattenCandidates, matchesFromRanked, scorePoolForRanking,
   };
 }));

@@ -12,6 +12,8 @@
   const CLIP_MODEL = 'Xenova/clip-vit-base-patch32';
   const TOP_RANKED = 10;
   const MIN_FINAL_SCORE = 0.12;
+  /** When nothing passes MIN_FINAL_SCORE but candidates exist, still surface the best matches. */
+  const MIN_FALLBACK_SCORE = 0.06;
 
   return {
     IMAGE_WEIGHT,
@@ -20,5 +22,6 @@
     CLIP_MODEL,
     TOP_RANKED,
     MIN_FINAL_SCORE,
+    MIN_FALLBACK_SCORE,
   };
 }));
