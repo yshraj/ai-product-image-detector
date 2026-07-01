@@ -1,4 +1,4 @@
-# ShopShield UX Improvements — v1.7.0
+# TrueKart UX Improvements — v1.7.0
 
 ## Analysis summary
 

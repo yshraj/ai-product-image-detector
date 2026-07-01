@@ -1,4 +1,4 @@
-# Design Decisions — ShopShield
+# Design Decisions — TrueKart
 
 This document records **why** the extension is built the way it is. For structure and file locations, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -105,7 +105,7 @@ Popup only renders results; it never scrapes HTML directly.
 
 **Why:**
 - Sync has quota limits (~100 KB); detection cache can reach thousands of entries.
-- HF token in sync is acceptable — it's user-owned and profile-scoped, not sent to any ShopShield server.
+- HF token in sync is acceptable — it's user-owned and profile-scoped, not sent to any TrueKart server.
 
 ---
 
@@ -132,7 +132,7 @@ Popup only renders results; it never scrapes HTML directly.
 
 ## No telemetry or backend
 
-**Decision:** Zero analytics, accounts, or ShopShield-hosted API.
+**Decision:** Zero analytics, accounts, or TrueKart-hosted API.
 
 **Why:** Privacy positioning and Chrome Web Store trust. Outbound network: Hugging Face (optional), marketplace CDNs, SerpApi (optional user key), compare search pages.
 
@@ -166,4 +166,4 @@ Popup only renders results; it never scrapes HTML directly.
 
 **Decision:** Keep `RMF_` prefixes on globals and message types.
 
-**Why:** Renaming would touch every file and break stored cache keys (`rmf_cache_*`, `rmf_history`). Product rebranded to ShopShield; internal prefixes remain for stability.
+**Why:** Renaming would touch every file and break stored cache keys (`rmf_cache_*`, `rmf_history`). Product rebranded to TrueKart; internal prefixes remain for stability.

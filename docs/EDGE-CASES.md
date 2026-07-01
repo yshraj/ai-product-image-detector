@@ -1,4 +1,4 @@
-# Edge Cases & Failure Scenarios — ShopShield v1.7
+# Edge Cases & Failure Scenarios — TrueKart v1.7
 
 This document records edge cases analyzed across all user flows, what was wrong (or risky), and how each was resolved. All changes preserve existing behavior for happy paths; tests verify no regressions.
 

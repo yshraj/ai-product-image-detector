@@ -11,7 +11,7 @@
 > Notable changes since this spec was written:
 > 1. **"AI or Not" API removed (v1.2.0)** — engines are Hugging Face + on-device Preview only.
 > 2. **Hugging Face uses `router.huggingface.co`** — not the retired `api-inference` host.
-> 3. **Product renamed to ShopShield** — internal `RMF_` prefixes retained for compatibility.
+> 3. **Product renamed to TrueKart** — internal `RMF_` prefixes retained for compatibility.
 
 ---
 

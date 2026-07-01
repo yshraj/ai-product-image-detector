@@ -1,4 +1,4 @@
-# End-to-End Test & Feature Plan — ShopShield
+# End-to-End Test & Feature Plan — TrueKart
 
 Comprehensive plan for user workflows, regression coverage, and compare-search improvements.
 
@@ -90,7 +90,7 @@ options page → adjust threshold → disable site → export settings
 ### Journey 6 — Context menu anywhere
 
 ```
-right-click image → "Check this image with ShopShield"
+right-click image → "Check this image with TrueKart"
 → badge overlay on page
 ```
 

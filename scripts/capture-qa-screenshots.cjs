@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Capture QA screenshots of major ShopShield workflows (offline fixtures only).
+// Capture QA screenshots of major TrueKart workflows (offline fixtures only).
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('@playwright/test');

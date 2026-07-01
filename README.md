@@ -1,8 +1,8 @@
-# ShopShield — Chrome Extension
+# TrueKart — Chrome Extension
 
-> **Shop smarter. Spot AI. Compare better.**
+> **Real photos. Best prices. Shop India.**
 
-ShopShield is a **shopping assistant** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). AI image detection is one tool in the kit — alongside price comparison, product utilities, and export.
+TrueKart is a **shopping assistant** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). Spot AI product photos, compare prices, and shop with confidence.
 
 Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · _formerly RealModel Filter_.
 
@@ -94,7 +94,7 @@ npx playwright install --with-deps chromium
 1. Open Chrome → `chrome://extensions`
 2. Enable **Developer mode** (top-right)
 3. Click **Load unpacked** → select the **repository root folder** (the one containing `manifest.json`)
-4. Confirm ShopShield appears with version **1.7.0**
+4. Confirm TrueKart appears with version **1.7.0**
 
 **Alternative — auto-reload during development:**
 
@@ -133,7 +133,7 @@ npm run refresh-exifr
 | Context | How to debug |
 |---------|--------------|
 | **Content script** | DevTools on the marketplace tab → Console. Filter `[RMF]` |
-| **Service worker** | `chrome://extensions` → ShopShield → "Service worker" link |
+| **Service worker** | `chrome://extensions` → TrueKart → "Service worker" link |
 | **Popup** | Right-click popup → Inspect |
 | **Verbose logs** | On a marketplace tab console: `localStorage.RMF_DEBUG = '1'` then reload |
 
@@ -234,7 +234,7 @@ npm ci → validate → test:unit → playwright install → test:e2e
 npm run build
 ```
 
-Output: `dist/shopshield_shopping_assistant-1.7.0.zip` (~110 KB, 54 files).
+Output: `dist/truekart-1.7.0.zip` (~110 KB, 54 files).
 
 `web-ext-config.cjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
 

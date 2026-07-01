@@ -1,8 +1,8 @@
-# Privacy Policy — ShopShield
+# Privacy Policy — TrueKart
 
 _Last updated: 2026-06-30_
 
-**ShopShield does not collect, store, or transmit any personal data to us.**
+**TrueKart does not collect, store, or transmit any personal data to us.**
 There is no account system, no backend server operated by us, and no analytics,
 advertising, or tracking of any kind.
 

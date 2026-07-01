@@ -1,4 +1,4 @@
-# ShopShield QA Report
+# TrueKart QA Report
 
 **Date:** 2026-06-30  
 **Version:** 1.6.0  

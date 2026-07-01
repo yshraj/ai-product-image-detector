@@ -1,8 +1,8 @@
-# ShopShield — Roadmap
+# TrueKart — Roadmap
 
 _Last updated: 2026-06-30_
 
-ShopShield is a **shopping assistant** for Indian e-commerce. AI detection is one tool;
+TrueKart is a **shopping assistant** for Indian e-commerce. AI detection is one tool;
 compare, utilities, and trust signals are the long-term wedge.
 
 ---

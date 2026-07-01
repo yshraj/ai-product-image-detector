@@ -1,10 +1,13 @@
 # Changelog
 
-All notable changes to ShopShield (formerly RealModel Filter) are documented here. The format follows
+All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Changed
+- **Rebranded to TrueKart** — new teal cart + verify icon, updated tagline ("Real photos. Best prices. Shop India."), and Chrome Web Store–friendly listing title.
 
 ### Added
 - **Four-tab shopping assistant popup** — **Scan**, **Compare**, **Tools**, and **Settings**

@@ -1,4 +1,4 @@
-# Production Audit — ShopShield v1.7.0
+# Production Audit — TrueKart v1.7.0
 
 Final release-readiness audit completed **2026-06-30**.
 
@@ -17,7 +17,7 @@ All automated checks pass. The extension is vanilla JavaScript (no TypeScript, n
 | `npm run validate` | ✅ PASS | Manifest parse, file refs, JS syntax, version sync, no `debugger` |
 | `npm run test:unit` | ✅ 41/41 | Compare (parallel), matcher (color), URLs, defaults, SSRF |
 | `npm test` (Playwright) | ✅ 90/90 | Extension, popup, regression, a11y, permissions, workflow |
-| `npm run build` (web-ext) | ✅ | Produces `dist/shopshield_shopping_assistant-1.7.0.zip` |
+| `npm run build` (web-ext) | ✅ | Produces `dist/truekart_shopping_assistant-1.7.0.zip` |
 | `npm run lint:firefox` (web-ext lint) | ⚠️ N/A | Chrome MV3 target; Firefox lint expects Gecko manifest |
 | TypeScript errors | ✅ N/A | Project is JavaScript; no `tsc` |
 | ESLint errors | ✅ N/A | No ESLint config; validate + tests substitute |
@@ -64,7 +64,7 @@ All automated checks pass. The extension is vanilla JavaScript (no TypeScript, n
 |-------|---------------|-------|
 | `libs/exifr.min.js` | ~45 KB | Only vendored lib; lite UMD build |
 | `detection/tfjs-detector.js` | ~5 KB | Heuristic canvas analysis, not full TF.js |
-| Packaged zip (web-ext) | **110 KB** | `dist/shopshield_shopping_assistant-1.7.0.zip`, 54 files |
+| Packaged zip (web-ext) | **110 KB** | `dist/truekart_shopping_assistant-1.7.0.zip`, 54 files |
 | No npm runtime deps | ✅ | DevDeps only: Playwright, web-ext, axe |
 
 ### Dependencies
@@ -141,7 +141,7 @@ npm ci
 npm run validate
 npm run test:unit
 npm test
-npm run build          # → dist/shopshield_shopping_assistant-1.7.0.zip (~110 KB)
+npm run build          # → dist/truekart_shopping_assistant-1.7.0.zip (~110 KB)
 # npm run lint:firefox  # optional; Chrome-only — Firefox lint not applicable
 ```
 

@@ -1,19 +1,19 @@
-# Terms of Use — ShopShield
+# Terms of Use — TrueKart
 
 _Last updated: 2026-06-30_
 
-By installing or using ShopShield ("the extension") you agree to these terms.
+By installing or using TrueKart ("the extension") you agree to these terms.
 
 ## 1. The service
 
-ShopShield is a **shopping assistant** for supported Indian e-commerce sites. It helps you
+TrueKart is a **shopping assistant** for supported Indian e-commerce sites. It helps you
 compare products, copy product details, reverse-image-search, and optionally highlights
 product images that may be AI-generated. It is provided **free of charge** and **"as is"**,
 without warranty of any kind, express or implied.
 
 ## 2. Not a guarantee
 
-ShopShield is a **decision-support tool, not a verification authority**:
+TrueKart is a **decision-support tool, not a verification authority**:
 
 - Price comparison opens third-party search results — we do not verify live prices or availability.
 - The on-device **Preview** heuristic is explicitly low-accuracy and will produce false
