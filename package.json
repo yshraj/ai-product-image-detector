@@ -18,6 +18,7 @@
     "test": "playwright test",
     "test:unit": "node --test test/unit/*.test.cjs",
     "test:e2e": "playwright test",
+    "test:compare-real": "playwright test test/e2e/compare-real-products.spec.cjs --workers=1",
     "test:e2e:headed": "HEADLESS=0 playwright test --headed",
     "test:headed": "HEADLESS=0 playwright test --headed",
     "test:report": "playwright show-report playwright-report",

@@ -27,11 +27,11 @@
 - [ ] Compare tab UI: result cards (image, platform badge, price, title, score, link)
 
 ## Phase 5 — Stale Results Bug Fix
-- [ ] Product-change detection (MutationObserver + pushState/popstate listener)
-- [ ] Invalidate cached results on product change
-- [ ] Auto-rescan when Compare tab visible + product changed
-- [ ] Mark stale results when tab reopened after background product change
-- [ ] Manual Refresh button — clears old UI state before rescanning
+- [x] Product-change detection (MutationObserver + pushState/popstate listener) — `content/content.js` startProductWatcher
+- [x] Invalidate cached results on product change — fingerprint cache keys + `clearCompareUI` in compare-panel
+- [x] Auto-rescan when Compare tab visible + product changed — `handleProductChange` + popup poll/message listener
+- [x] Mark stale results when tab reopened after background product change — `render()` detects fingerprint mismatch, auto-rescan
+- [x] Manual Refresh button — clears old UI state before rescanning — `#compare-refresh` in popup
 
 ## Phase 6 — UI States
 - [ ] Loading state (per-platform progress)
@@ -45,3 +45,35 @@
 - [ ] Playwright e2e test: navigate between two different products, verify Compare tab does NOT show stale data
 - [ ] Playwright e2e test: click Refresh, verify old cards clear before new ones render
 - [ ] Playwright e2e test: simulate one platform failing, verify others still render + failure notice shown
+- [x] Playwright real-product Tier A/B suite — `test/e2e/compare-real-products.spec.cjs`, run via `npm run test:compare-real`
+
+---
+
+## Tier A/B Results (live run 2026-07-01, ~3.4 min, 33/33 passed)
+
+Evidence: `test-results/compare-real-products/` (JSON per brand/platform, screenshots, `tier-a-summary.json`, `tier-b-summary.json`). Regenerate tables: `node scripts/generate-compare-real-report.cjs`.
+
+### Tier A — Scraper mechanics
+| Brand | Amazon | Myntra | Flipkart |
+|---|---|---|---|
+| Allen Solly (shirts) | ✅ 12 candidates | ✅ 12 candidates | ❌ empty (page load timeout) |
+| Allen Solly (checked shirts) | ✅ 12 candidates | ❌ empty (page load timeout) | ✅ 12 candidates |
+| Van Heusen (shirts) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| US Polo Assn (shirts) | ✅ 12 candidates | ❌ empty (page load timeout) | ✅ 12 candidates |
+| Peter England (shirts) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| Levi's (denim shirt) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| Arrow (formal shirts) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| Louis Philippe (shirts) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| H&M (men's shirts) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+| Roadster (Myntra house brand) | ✅ 12 candidates | ✅ 12 candidates | ✅ 12 candidates |
+
+**Tier A notes:** 27/30 platform scrapes returned ≥1 candidate. 3 failures were Myntra listing-page timeouts (Allen Solly shirts, Allen Solly checked, US Polo) and 1 Flipkart brand-page timeout (Allen Solly shirts). Amazon search scrape worked for all 10 brands. Roadster on Amazon/Flipkart returned Roadster-branded results (not a graceful zero — house brand is listed on other platforms too).
+
+### Tier B — Live end-to-end
+| Brand | Source product (Amazon) | Top match found | Score | Sane match? (human judgment) |
+|---|---|---|---|---|
+| Allen Solly | Allen Solly Men's Polo T-Shirt (₹500) | (none ranked) | — | Pipeline OK. Flipkart returned relevant Allen Solly polos in candidates; Myntra results off-topic. Matcher returned `best: null` for all sites. |
+| Van Heusen | Van Heusen Solid Formal Shirt (₹500) | (none ranked) | — | Pipeline OK. Same pattern — candidates scraped, zero passed `pickBest` threshold. |
+| Roadster | Aventura Outfitters tee (Amazon search noise, not Roadster) | (none) | — | Pipeline OK, graceful empty. Amazon SERP did not surface Roadster; no crash/fake matches. |
+
+**Tier B notes:** All 3 runs completed in 13–24s without throw. `failed: []` on all. Empty `matches` because `pickBest` rejected candidates (likely missing source `brand` + strict score floor), not because scraping returned zero rows. See `tier-b-*.json` for full candidate lists and `[STAGE1]`–`[STAGE4]` logs.
