@@ -21,7 +21,7 @@ test('preview engine: discriminates AI vs real and handles infinite scroll', asy
 
   const firstBadge = contentPage.badges.first();
   await expect(firstBadge).toHaveAttribute('role', 'button');
-  await expect(firstBadge).toHaveAttribute('aria-label', /(ShopSmart|ShopShield):.*confidence/);
+  await expect(firstBadge).toHaveAttribute('aria-label', /(ShopSmart|TrueKart):.*confidence/);
 
   await contentPage.scrollToBottom();
   await expect.poll(() => contentPage.productCards.count(), { timeout: 10_000 }).toBeGreaterThan(initialCards);

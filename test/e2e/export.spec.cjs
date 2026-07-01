@@ -8,7 +8,7 @@ test('GET_PAGE_REPORT returns scanned products with verdicts', async ({ extensio
   await contentPage.waitForScan();
 
   const report = await getPageReport(extensionContext);
-  expect(report.app).toMatch(/Shopping Assistant|ShopShield/);
+  expect(report.app).toMatch(/TrueKart/);
   expect(report.site).toBe('myntra');
   expect(report.products.length).toBeGreaterThan(0);
   expect(report.products[0]).toMatchObject({

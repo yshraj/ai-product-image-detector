@@ -17,7 +17,7 @@ test('summary.result formats count + percentage', () => {
 test('badge.title pluralises and falls back', () => {
   assert.match(S.badge.title(1, 1), /1 of 1 image look AI/);
   assert.match(S.badge.title(2, 5), /2 of 5 images look AI/);
-  assert.equal(S.badge.title(0, 0), 'ShopShield');
+  assert.equal(S.badge.title(0, 0), 'TrueKart');
 });
 
 test('notify.body pluralises', () => {

@@ -5,7 +5,7 @@ const { runImageCheck } = require('./helpers/chrome-messaging.cjs');
 const { getExtensionId, extensionUrl, inServiceWorker } = require('./helpers/chrome-api.cjs');
 const { registerHfInferenceMock } = require('./helpers/mock-routes.cjs');
 
-const TEST_PAGE = 'https://www.myntra.com/shopshield-context-test';
+const TEST_PAGE = 'https://www.myntra.com/truekart-context-test';
 const IMAGE_URL = 'https://assets.myntassets.com/ai0.png';
 
 test('context image check injects a result badge on any page', async ({ extensionContext }) => {
