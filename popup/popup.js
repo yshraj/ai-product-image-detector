@@ -1,4 +1,4 @@
-// popup/popup.js — ShopShield popup (Scan / Compare / Tools / Settings).
+// popup/popup.js — TrueKart popup (Scan / Compare / Tools / Settings).
 // Tab-specific messages (GET_STATS, GET_PRODUCT, RESCAN, …) are sent to the
 // active tab only — see ACTIVE_TAB_ONLY. Settings persist via chrome.storage.sync.
 const { SYNC_DEFAULTS, ALL_COMPARE_SITES, CACHE_PREFIX } = window.RMF_Defaults;
@@ -134,7 +134,7 @@ async function maybeShowOnboarding() {
 
   const overlay = document.createElement('div');
   overlay.className = 'onboarding';
-  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-modal="true" aria-label="Welcome to ShopShield">
+  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-modal="true" aria-label="Welcome to TrueKart">
     <div class="onboarding-steps" aria-hidden="true"></div>
     <h3 id="onboard-title"></h3>
     <p id="onboard-body"></p>
@@ -354,7 +354,7 @@ async function updateScan() {
   const bd = $('breakdown');
 
   if (!scanReady) {
-    $('scan-title').textContent = s?.app?.shortName || 'ShopShield';
+    $('scan-title').textContent = s?.app?.shortName || 'TrueKart';
     $('scan-count').textContent = '';
     bd.style.display = 'none';
     $('export-row').hidden = true;
@@ -550,7 +550,7 @@ async function exportCorrections() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'shopshield-corrections.json';
+  a.download = 'truekart-corrections.json';
   a.click();
   URL.revokeObjectURL(url);
   toast(`Exported ${data.length} correction${data.length === 1 ? '' : 's'}`);
@@ -570,7 +570,7 @@ async function shareStatsCard() {
   ctx.fillRect(0, 0, 600, 340);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 32px system-ui,sans-serif';
-  ctx.fillText('ShopShield', 40, 60);
+  ctx.fillText('TrueKart', 40, 60);
   ctx.font = '18px system-ui,sans-serif';
   ctx.fillText('My shopping scan stats', 40, 95);
   ctx.font = 'bold 56px system-ui,sans-serif';
@@ -584,7 +584,7 @@ async function shareStatsCard() {
   ctx.font = '18px system-ui,sans-serif';
   ctx.fillText('AI-flagged', 40, 300);
   const a = document.createElement('a');
-  a.download = 'shopshield-stats.png';
+  a.download = 'truekart-stats.png';
   a.href = canvas.toDataURL('image/png');
   a.click();
   toast('Stats card downloaded');

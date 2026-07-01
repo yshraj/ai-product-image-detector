@@ -8,8 +8,8 @@
   --text: #161a22;
   --muted: #4b5563;
   --muted-2: #5b6270; /* AA on tinted tiles for small text */
-  --accent: #6366f1;
-  --accent-2: #4f46e5;
+  --accent: #0d9488;
+  --accent-2: #0f766e;
   --accent-ink: #ffffff;
   --red: #dc2626;
   --amber: #b45309;
@@ -17,7 +17,7 @@
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 8px 28px rgba(17, 24, 39, 0.08);
-  --ring: 0 0 0 3px rgba(99, 102, 241, 0.30);
+  --ring: 0 0 0 3px rgba(13, 148, 136, 0.30);
 }
 
 * { box-sizing: border-box; }
@@ -26,7 +26,7 @@ body {
   margin: 0;
   padding: 32px 20px 64px;
   background:
-    radial-gradient(70% 45% at 100% 0%, rgba(99, 102, 241, 0.10), transparent 55%),
+    radial-gradient(70% 45% at 100% 0%, rgba(13, 148, 136, 0.10), transparent 55%),
     var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
@@ -54,10 +54,10 @@ body {
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark {
   display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px;
-  background: linear-gradient(145deg, #eef0ff, #e3e6ff); border: 1px solid #d9ddff; color: var(--accent-2);
+  background: #0f766e; flex: none; overflow: hidden;
 }
 .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
-.brand-accent { color: var(--accent-2); }
+.brand-accent { color: #ea580c; }
 .brand-sub { font-size: 12.5px; color: var(--muted-2); margin-top: 2px; }
 .ver { font-size: 12px; color: var(--muted-2); }
 
@@ -202,7 +202,7 @@ kbd { background: var(--bg-2); border: 1px solid var(--line-2); border-bottom-wi
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
   }
   body { background: radial-gradient(70% 45% at 100% 0%, rgba(99, 102, 241, 0.08), transparent 55%), var(--bg); }
-  .brand-mark { background: linear-gradient(145deg, #1e2230, #252a38); border-color: #353b48; }
+  .brand-mark { background: #0f766e; }
   .check, button.ghost { background: var(--panel); color: var(--text); }
   .hist-item { background: var(--panel-2); }
   .empty-state, .empty-state-ico { background: #12151c; }

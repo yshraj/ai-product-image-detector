@@ -232,11 +232,11 @@ async function updateStats() {
 function exportSettings() {
   const out = {};
   for (const k of PORTABLE_KEYS) out[k] = state[k];
-  const blob = new Blob([JSON.stringify({ app: 'ShopShield', version: chrome.runtime.getManifest().version, settings: out }, null, 2)],
+  const blob = new Blob([JSON.stringify({ app: 'TrueKart', version: chrome.runtime.getManifest().version, settings: out }, null, 2)],
     { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'shopshield-settings.json';
+  a.href = url; a.download = 'truekart-settings.json';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
   toast('Settings exported');

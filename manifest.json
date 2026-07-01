@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ShopShield — Shopping assistant",
+  "name": "TrueKart — AI Photo Check & Price Compare",
   "version": "1.7.0",
-  "description": "Shop smarter on Myntra, Flipkart, Meesho & Nykaa — compare prices, copy product details, spot AI photos, and more.",
+  "description": "Real product photos. Best prices. Compare on Myntra, Flipkart, Meesho & Nykaa — spot AI images and shop smarter.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

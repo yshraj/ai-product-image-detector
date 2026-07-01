@@ -118,7 +118,7 @@
     badge.setAttribute('role', 'img');
     const verdict = high ? 'AI generated' : 'Likely AI generated';
     badge.setAttribute('aria-label',
-      `${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'}: ${verdict}, ${Math.round(confidence)}% confidence` +
+      `${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'}: ${verdict}, ${Math.round(confidence)}% confidence` +
       (result.preview ? ' (preview heuristic)' : ''));
     if (result.preview) {
       badge.setAttribute('data-preview', 'true');
@@ -626,7 +626,7 @@
       });
     });
     return {
-      app: (window.RMF_STRINGS?.app?.name) || 'ShopShield',
+      app: (window.RMF_STRINGS?.app?.name) || 'TrueKart',
       site: SITE.name,
       pageUrl: location.href,
       scannedAt: new Date().toISOString(),
@@ -877,5 +877,5 @@
     await scanAll();
     startObserver();
   }
-  Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'ShopShield'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
+  Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();

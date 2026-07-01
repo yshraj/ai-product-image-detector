@@ -5,9 +5,9 @@
 (function (root) {
   const RMF_STRINGS = {
     app: {
-      name: 'ShopShield',
-      shortName: 'ShopShield',
-      tagline: 'Shop smarter. Spot AI. Compare better.',
+      name: 'TrueKart',
+      shortName: 'TrueKart',
+      tagline: 'Real photos. Best prices. Shop India.',
     },
 
     // toolbar action badge

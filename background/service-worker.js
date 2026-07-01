@@ -97,7 +97,7 @@ function setupContextMenu() {
     chrome.contextMenus.removeAll(() => {
       chrome.contextMenus.create({
         id: 'rmf-check-image',
-        title: 'Check this image with ShopShield',
+        title: 'Check this image with TrueKart',
         contexts: ['image'],
       }, () => resolve());
     });
@@ -111,7 +111,7 @@ async function checkImageFromContextMenu(tabId, imageUrl) {
     return;
   }
   if (!chrome.scripting?.executeScript) {
-    await injectContextFeedback(tabId, 'ShopShield could not run on this page.');
+    await injectContextFeedback(tabId, 'TrueKart could not run on this page.');
     return;
   }
   try {
@@ -263,7 +263,7 @@ function notifyAI(ai) {
   if (!chrome.notifications) return;
   const title = STRINGS?.notify?.title
     ? (typeof STRINGS.notify.title === 'function' ? STRINGS.notify.title() : STRINGS.notify.title)
-    : 'ShopShield';
+    : 'TrueKart';
   const message = STRINGS?.notify?.body ? STRINGS.notify.body(count) : `${count} AI image(s) on this page`;
   try {
     chrome.notifications.create('', {
@@ -289,7 +289,7 @@ function updateBadge(tabId, info) {
   const text = active && ai > 0 ? String(ai) : '';
   const title = STRINGS
     ? (active ? STRINGS.badge.title(ai, scanned) : STRINGS.badge.titleOff())
-    : 'ShopShield';
+    : 'TrueKart';
   let color = '#e24b4a';
   if (active && ai > 0) {
     color = aiHigh > 0 ? '#e24b4a' : '#EF9F27';

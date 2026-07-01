@@ -1,10 +1,10 @@
 {
-  "name": "shopshield",
+  "name": "truekart",
   "version": "1.7.0",
-  "description": "Shop smarter on Myntra, Flipkart, Meesho & Nykaa — compare prices, copy product details, spot AI photos, and more.",
+  "description": "Real product photos. Best prices. Compare on Myntra, Flipkart, Meesho & Nykaa — spot AI images and shop smarter.",
   "private": true,
   "license": "UNLICENSED",
-  "author": "ShopShield",
+  "author": "TrueKart",
   "homepage": "https://github.com/yshraj/ai-product-image-detector#readme",
   "repository": {
     "type": "git",
@@ -26,7 +26,8 @@
     "lint:firefox": "web-ext lint --source-dir .",
     "start": "web-ext run --target chromium --source-dir .",
     "build": "web-ext build --source-dir . --artifacts-dir dist --overwrite-dest",
-    "refresh-exifr": "curl -sL -o libs/exifr.min.js https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"
+    "refresh-exifr": "curl -sL -o libs/exifr.min.js https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js",
+    "refresh-icons": "python3 scripts/generate-icons.py"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

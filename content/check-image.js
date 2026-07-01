@@ -28,7 +28,7 @@
   };
 
   if (typeof window.RMF_Detect !== 'function') {
-    showBadge('ShopShield could not load on this page', false, false);
+    showBadge('TrueKart could not load on this page', false, false);
     return;
   }
 
