@@ -25,11 +25,18 @@ test.after(async () => {
   await browser?.close();
 });
 
+const BASE_URL = {
+  amazon: 'https://www.amazon.in',
+  flipkart: 'https://www.flipkart.com',
+  myntra: 'https://www.myntra.com',
+  nykaa: 'https://www.nykaa.com',
+};
+
 for (const case_ of CASES) {
   test(`tab-parser scrapes ${case_.site} search fixture`, async () => {
     const page = await browser.newPage();
     const html = fs.readFileSync(path.join(FIXTURES, case_.fixture), 'utf8');
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', baseURL: BASE_URL[case_.site] });
     await page.addScriptTag({ path: PARSER_PATH });
 
     const items = await page.evaluate(async (site) => {

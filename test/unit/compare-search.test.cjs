@@ -75,6 +75,41 @@ test('searchAll runs marketplace fetches in parallel', async () => {
   assert.ok(maxConcurrent >= 2, `expected parallel fetches, got maxConcurrent=${maxConcurrent}`);
 });
 
+test('searchAll uses tab scrape for Nykaa when fetch returns 403', async () => {
+  const amazonHtml = fs.readFileSync(path.join(FIXTURES, 'amazon-search.html'), 'utf8');
+  const nykaaItems = [{ title: 'Maybelline Lipstick', price: '₹549', url: 'https://www.nykaa.com/x/p/12345', image: '' }];
+
+  const mockFetch = async (url) => {
+    if (url.includes('nykaa.com')) throw new Error('HTTP 403');
+    if (url.includes('amazon.in')) return amazonHtml;
+    return '<html></html>';
+  };
+  const mockTabFetch = async (url, site) => (site === 'nykaa' ? nykaaItems : []);
+
+  const product = {
+    site: 'myntra',
+    title: 'Maybelline Fit Me Foundation',
+    brand: 'Maybelline',
+    price: '₹549',
+  };
+
+  const result = await searchAll(product, ['amazon', 'nykaa'], {
+    fetchFn: mockFetch,
+    tabFetchFn: mockTabFetch,
+  });
+  const nykaa = result.results.find((r) => r.site === 'nykaa');
+  assert.ok(nykaa?.ok, nykaa?.error || 'nykaa should succeed via tab scrape');
+  assert.ok((nykaa?.candidates?.length || 0) >= 1);
+});
+
+test('parseSearchResults extracts Nykaa products from fixture HTML', () => {
+  const html = fs.readFileSync(path.join(FIXTURES, 'nykaa-search.html'), 'utf8');
+  const items = parseSearchResults('nykaa', html, 'https://www.nykaa.com');
+  assert.ok(items.length >= 1);
+  assert.match(items[0].title, /Maybelline/i);
+  assert.match(items[0].url, /\/p\/\d+/);
+});
+
 test('buildSearchQuery includes color for color-aware compare', async () => {
   const { buildSearchQuery } = require('../../utils/product-query.js');
   const q = buildSearchQuery({

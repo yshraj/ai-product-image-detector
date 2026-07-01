@@ -40,6 +40,21 @@
     });
   }
 
+  async function detectPageBlock(tabId) {
+    try {
+      const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          const text = `${document.title}\n${(document.body?.innerText || '').slice(0, 800)}`;
+          return /access denied|request blocked|akamai|reference\s*#/i.test(text);
+        },
+      });
+      return !!result;
+    } catch {
+      return false;
+    }
+  }
+
   async function scrapeTabProducts(tabId, site, scrapeConfig) {
     await chrome.scripting.executeScript({ target: { tabId }, files: [PARSER_FILE] });
     const [{ result }] = await chrome.scripting.executeScript({
@@ -79,6 +94,16 @@
       tabId = tab.id;
       await waitForTabComplete(tabId, timeoutMs);
       const items = await scrapeTabProducts(tabId, platform, scrapeConfig);
+      if (!items.length && await detectPageBlock(tabId)) {
+        return {
+          platform,
+          items: [],
+          ok: false,
+          query,
+          url,
+          error: 'Access denied — open Nykaa in a tab first, then retry',
+        };
+      }
       return { platform, items, ok: true, query, url };
     } catch (err) {
       return {
@@ -98,6 +123,7 @@
   async function fetchSearchPageViaTab(url, site) {
     const query = decodeURIComponent((url.match(/[?&](?:q|k)=([^&]+)/) || [])[1] || '');
     const result = await openHiddenSearchTab(site, query);
+    if (!result.ok) throw new Error(result.error || 'tab scrape failed');
     return result.items;
   }
 

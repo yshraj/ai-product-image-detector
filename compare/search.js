@@ -29,6 +29,8 @@
   const FETCH_TIMEOUT_MS = 12_000;
   const MIN_RESULTS = 1;
   const COMPARE_CONCURRENCY = 3;
+  /** Direct fetch is blocked (Akamai 403); hidden tabs required. */
+  const TAB_REQUIRED_SITES = new Set(['nykaa']);
   const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
   /** Run async tasks with a concurrency cap (order preserved in results). */
@@ -67,26 +69,35 @@
     }
   }
 
-  async function getCandidates(site, searchUrl, fetchFn, tabFetchFn) {
+  async function getCandidates(site, searchUrl, fetchFn, tabFetchFn, tabFallback = false) {
     const queryStr = decodeURIComponent(searchUrl.split(/[?&](?:q|k)=/)[1] || '');
     if (searchViaInternalApi) {
       const internalItems = await searchViaInternalApi(site, queryStr);
       if (internalItems.length) return internalItems;
     }
-    // Direct fetch first — no visible background tabs.
-    try {
-      const html = await fetchFn(searchUrl);
-      const parsed = parseSearchResults(site, html, searchUrl);
-      if (parsed.length) return parsed;
-    } catch { /* fall through to optional tab scrape */ }
-    if (tabFetchFn) {
-      const items = await tabFetchFn(searchUrl, site);
-      if (items.length) return items;
+
+    const needsTab = TAB_REQUIRED_SITES.has(site) || tabFallback;
+
+    if (!TAB_REQUIRED_SITES.has(site)) {
+      try {
+        const html = await fetchFn(searchUrl);
+        const parsed = parseSearchResults(site, html, searchUrl);
+        if (parsed.length) return parsed;
+      } catch { /* fall through to optional tab scrape */ }
+    }
+
+    if (tabFetchFn && needsTab) {
+      try {
+        const items = await tabFetchFn(searchUrl, site);
+        if (items.length) return items;
+      } catch (err) {
+        if (TAB_REQUIRED_SITES.has(site)) throw err;
+      }
     }
     return [];
   }
 
-  async function searchMarketplace(site, product, fetchFn = fetchSearchPage, tabFetchFn = null) {
+  async function searchMarketplace(site, product, fetchFn = fetchSearchPage, tabFetchFn = null, tabFallback = false) {
     const mp = MARKETPLACES[site];
     if (!mp) return { site, ok: false, error: 'unknown site' };
 
@@ -94,7 +105,7 @@
     const searchUrl = mp.searchUrl(queryStr);
 
     try {
-      const candidates = await getCandidates(site, searchUrl, fetchFn, tabFetchFn);
+      const candidates = await getCandidates(site, searchUrl, fetchFn, tabFetchFn, tabFallback);
       if (candidates.length < MIN_RESULTS) {
         return { site, ok: true, query: queryStr, searchUrl, best: null, candidates: [], message: 'no results', source: 'direct' };
       }
@@ -151,7 +162,9 @@
       tabFetchFn = null,
       serpApiKey = '',
       concurrency = COMPARE_CONCURRENCY,
+      compareUseTabs = false,
     } = options;
+    const tabFallback = compareUseTabs === true;
     const enabled = (sites || []).filter((s) => s !== product.site && MARKETPLACES[s]);
     let serpFailed = false;
 
@@ -171,7 +184,7 @@
 
     const results = await mapConcurrent(
       enabled,
-      (site) => searchMarketplace(site, product, fetchFn, tabFetchFn),
+      (site) => searchMarketplace(site, product, fetchFn, tabFetchFn, tabFallback),
       concurrency,
     );
     const resp = buildResponse(product, sites, results, 'direct');
@@ -179,12 +192,14 @@
   }
 
   function cacheKey(product) {
+    const fp = product?.fingerprint;
+    if (fp) return `rmf_compare_${String(fp).slice(0, 100)}`;
     const q = buildSearchQuery(product);
     return `rmf_compare_${product.site || 'x'}_${q.slice(0, 60)}`;
   }
 
   return {
     searchMarketplace, searchAll, buildSearchQuery, cacheKey, FETCH_TIMEOUT_MS,
-    mapConcurrent, COMPARE_CONCURRENCY,
+    mapConcurrent, COMPARE_CONCURRENCY, TAB_REQUIRED_SITES,
   };
 }));

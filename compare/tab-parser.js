@@ -5,8 +5,33 @@
     return (el?.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
+  const SITE_HOSTS = {
+    amazon: 'www.amazon.in',
+    flipkart: 'www.flipkart.com',
+    myntra: 'www.myntra.com',
+    meesho: 'www.meesho.com',
+    nykaa: 'www.nykaa.com',
+  };
+
   function absUrl(href) {
-    try { return new URL(href, location.href).href; } catch { return href || ''; }
+    if (!href || href.startsWith('javascript:') || href.startsWith('#')) return '';
+    if (/^https?:\/\//i.test(href)) {
+      try { return new URL(href).href; } catch { return ''; }
+    }
+    try {
+      const u = new URL(href, location.href);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+    } catch { /* fall through */ }
+    const host = globalThis.__RMF_SCRAPE_HOST;
+    if (host) {
+      const path = href.startsWith('/') ? href : `/${href}`;
+      return `https://${host}${path}`;
+    }
+    return '';
+  }
+
+  function isNykaaProductUrl(url) {
+    return /nykaa\.com/i.test(url) && /\/p\/\d+/i.test(url);
   }
 
   function parseAmazon() {
@@ -86,16 +111,44 @@
   function parseNykaa() {
     const items = [];
     const seen = new Set();
-    document.querySelectorAll('a[href*="/p/"], a[href*="product"]').forEach((a) => {
-      const url = absUrl(a.getAttribute('href'));
-      if (!url || seen.has(url)) return;
-      const title = a.getAttribute('title') || text(a.querySelector('[class*="title"], .css-xrzmfa, div'));
+
+    function pushItem({ title, price, url, image }) {
+      const abs = absUrl(url);
+      if (!abs || !isNykaaProductUrl(abs) || seen.has(abs)) return;
       if (!title || title.length < 5) return;
-      seen.add(url);
-      const card = a.closest('div[class*="product"], li, article') || a.parentElement;
-      const price = text(card?.querySelector('[class*="price"], .css-111z9ua'));
-      items.push({ title, price, url, image: card?.querySelector('img')?.src || '' });
+      seen.add(abs);
+      items.push({
+        title,
+        price: price && !price.startsWith('₹') && /\d/.test(price) ? `₹${price}` : (price || ''),
+        url: abs,
+        image: image || '',
+      });
+    }
+
+    document.querySelectorAll('.css-d5z3ro, [class*="productCard"], [class*="ProductCard"]').forEach((card) => {
+      const link = card.querySelector('a[href*="/p/"]') || card.closest('a[href*="/p/"]');
+      if (!link) return;
+      const title = link.getAttribute('title')
+        || text(card.querySelector('[class*="title"], h2, h3, .css-xrzmfa'))
+        || text(link);
+      const price = text(card.querySelector('[class*="price"], .css-111z9ua, span'));
+      pushItem({
+        title,
+        price,
+        url: link.getAttribute('href'),
+        image: card.querySelector('img')?.src || '',
+      });
     });
+
+    if (!items.length) {
+      document.querySelectorAll('a[href*="/p/"]').forEach((a) => {
+        const title = a.getAttribute('title') || text(a.querySelector('[class*="title"], div'));
+        const card = a.closest('div, li, article') || a.parentElement;
+        const price = text(card?.querySelector('[class*="price"]'));
+        pushItem({ title, price, url: a.getAttribute('href'), image: card?.querySelector('img')?.src || '' });
+      });
+    }
+
     return items.slice(0, 12);
   }
 
@@ -116,18 +169,28 @@
   }
 
   globalThis.RMF_parseSearchPage = function (site) {
+    const prevHost = globalThis.__RMF_SCRAPE_HOST;
+    if (SITE_HOSTS[site]) globalThis.__RMF_SCRAPE_HOST = SITE_HOSTS[site];
     try {
       return (PARSERS[site] || (() => []))();
     } catch {
       return [];
+    } finally {
+      globalThis.__RMF_SCRAPE_HOST = prevHost;
     }
   };
 
   globalThis.RMF_waitAndParseSearchPage = async function (site, cfg = {}) {
+    const prevHost = globalThis.__RMF_SCRAPE_HOST;
+    if (SITE_HOSTS[site]) globalThis.__RMF_SCRAPE_HOST = SITE_HOSTS[site];
     const selector = cfg.readySelector || '[data-asin]';
     const maxWaitMs = cfg.maxWaitMs || 8000;
     const pollMs = cfg.pollIntervalMs || 300;
-    await waitForSelector(selector, maxWaitMs, pollMs);
-    return globalThis.RMF_parseSearchPage(site);
+    try {
+      await waitForSelector(selector, maxWaitMs, pollMs);
+      return globalThis.RMF_parseSearchPage(site);
+    } finally {
+      globalThis.__RMF_SCRAPE_HOST = prevHost;
+    }
   };
 })();

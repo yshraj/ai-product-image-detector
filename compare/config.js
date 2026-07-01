@@ -62,9 +62,9 @@
       searchUrl: (q) => `https://www.nykaa.com/search/result/?q=${encodeURIComponent(q)}`,
       manualUrl: (q) => `https://www.nykaa.com/search/result/?q=${q}`,
       scrape: {
-        readySelector: 'a[href*="/p/"], a[href*="product"]',
-        pollIntervalMs: 300,
-        maxWaitMs: 8000,
+        readySelector: '.css-d5z3ro, a[href*="/p/"]',
+        pollIntervalMs: 400,
+        maxWaitMs: 10000,
         maxResults: 12,
       },
     },

@@ -164,26 +164,30 @@
 
   function parseNykaa(html, base) {
     const items = [];
-    const re = /href="(\/[^"]+\/p\/[^"]+)"[^>]*>[\s\S]*?title="([^"]+)"/gi;
+    const re = /href="(\/[^"]+\/p\/\d+)"[^>]*(?:title="([^"]+)")?/gi;
     let m;
     while ((m = re.exec(html)) !== null && items.length < 12) {
-      const block = html.slice(m.index, m.index + 2000);
+      const block = html.slice(m.index, m.index + 2500);
+      const titleM = m[2] || block.match(/class="[^"]*title[^"]*"[^>]*>([^<]{5,120})</i);
+      const title = stripTags(titleM ? (m[2] || titleM[1]) : '');
+      if (!title || title.length < 5) continue;
       const priceM = block.match(/₹\s*([\d,]+)/);
       items.push({
-        title: decodeHtml(m[2]),
+        title,
         price: priceM ? `₹${priceM[1]}` : '',
         url: absUrl(m[1], base),
         image: '',
       });
     }
     if (!items.length) {
-      const alt = /"name"\s*:\s*"([^"]+)"[\s\S]*?"slug"\s*:\s*"([^"]+)"[\s\S]*?"price"\s*:\s*(\d+)/g;
+      const alt = /"name"\s*:\s*"([^"]+)"[\s\S]*?"slug"\s*:\s*"([^"]+)"[\s\S]*?"product_id"\s*:\s*"?(\d+)"?/g;
       let am;
       while ((am = alt.exec(html)) !== null && items.length < 12) {
+        const priceM = html.slice(am.index, am.index + 500).match(/"price"\s*:\s*(\d+)/);
         items.push({
           title: decodeHtml(am[1]),
-          price: am[3] ? `₹${am[3]}` : '',
-          url: `https://www.nykaa.com/${am[2]}/p/${am[2]}`,
+          price: priceM ? `₹${priceM[1]}` : '',
+          url: `https://www.nykaa.com/${am[2]}/p/${am[3]}`,
           image: '',
         });
       }
