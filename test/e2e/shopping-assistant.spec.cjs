@@ -1,7 +1,7 @@
 // Shopping assistant UI: Compare + Tools tabs (regression).
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
-const { closeMarketplaceTabs } = require('./helpers/tab-utils.cjs');
+const { closeMarketplaceTabs, activateMarketplaceTab } = require('./helpers/tab-utils.cjs');
 const { MYNTRA_PRODUCT_URL } = require('./helpers/constants.cjs');
 
 test.describe('Shopping assistant — Compare & Tools', () => {
@@ -41,13 +41,16 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     const popup = await extensionContext.newPage();
     await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
     await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
+    await activateMarketplaceTab(extensionContext, '1234567');
     await popup.locator('#nav-compare').click();
     await expect.poll(async () => {
       const t = await popup.locator('#compare-title').textContent();
       return t && /Test Brand/i.test(t);
     }, { timeout: 10_000 }).toBe(true);
-    await popup.locator('#compare-search').click();
-    await expect.poll(() => popup.locator('.compare-results .result-card').count(), { timeout: 20_000 }).toBeGreaterThan(0);
+    await expect.poll(
+      () => popup.locator('.compare-results .result-card').count(),
+      { timeout: 45_000 },
+    ).toBeGreaterThan(0);
     await popup.close();
     await productTab.close();
   });

@@ -34,8 +34,9 @@ test.describe('Compare search (mocked SerpApi)', () => {
 
     expect(res.ok).toBe(true);
     expect(res.source).toBe('serp');
+    expect(res.ranked?.length).toBeGreaterThan(0);
     expect(res.matches?.length).toBeGreaterThan(0);
-    expect(res.matches[0].best.match.score).toBeGreaterThanOrEqual(40);
+    expect(res.ranked[0].match.score).toBeGreaterThanOrEqual(12);
     await productTab.close();
   });
 

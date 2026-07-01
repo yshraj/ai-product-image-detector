@@ -9,14 +9,19 @@ const {
   nykaaListingHtml,
   productHtml,
   serpShoppingResponse,
+  PRODUCT_META_2,
 } = require('./marketplace-fixture.cjs');
 
 function isProductUrl(url) {
-  return /\/buy$|\/p\/|\/product\//.test(url) || url.includes('/1234567/');
+  return /\/buy$|\/p\/|\/product\//.test(url) || url.includes('/1234567/') || url.includes('/9876543/');
 }
 
 function marketplaceBody(url) {
-  if (isProductUrl(url)) return productHtml(url.includes('flipkart') ? 'flipkart' : 'myntra');
+  if (isProductUrl(url)) {
+    const site = url.includes('flipkart') ? 'flipkart' : 'myntra';
+    if (url.includes('9876543')) return productHtml(site, PRODUCT_META_2);
+    return productHtml(site);
+  }
   if (url.includes('flipkart.com')) return flipkartListingHtml();
   if (url.includes('meesho.com')) return meeshoListingHtml();
   if (url.includes('nykaa.com')) return nykaaListingHtml();

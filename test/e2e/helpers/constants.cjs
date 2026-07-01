@@ -10,6 +10,7 @@ const DEFAULT_SYNC = { ...SYNC_DEFAULTS };
 
 const MYNTRA_LISTING_URL = 'https://www.myntra.com/men-shirts';
 const MYNTRA_PRODUCT_URL = 'https://www.myntra.com/shirts/test-brand/test-product/1234567/buy';
+const MYNTRA_PRODUCT_URL_2 = 'https://www.myntra.com/shirts/other-brand/red-shirt/9876543/buy';
 
 module.exports = {
   EXT_DIR,
@@ -18,6 +19,7 @@ module.exports = {
   DEFAULT_SYNC,
   MYNTRA_LISTING_URL,
   MYNTRA_PRODUCT_URL,
+  MYNTRA_PRODUCT_URL_2,
   CACHE_PREFIX,
   HISTORY_KEY,
 };

@@ -7,6 +7,7 @@ const ScoreConfig = require('../../compare/score-config.js');
 test('score config exposes named weight constants', () => {
   assert.equal(ScoreConfig.IMAGE_WEIGHT, 0.55);
   assert.equal(ScoreConfig.TEXT_WEIGHT, 0.45);
+  assert.equal(ScoreConfig.MIN_FALLBACK_SCORE, 0.06);
   assert.equal(Similarity.IMAGE_WEIGHT, 0.55);
   assert.equal(Similarity.TEXT_WEIGHT, 0.45);
 });

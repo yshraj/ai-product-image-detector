@@ -62,6 +62,42 @@ test('searchAll ranked list is capped at top 10 cross-platform', async () => {
   assert.ok(ranked.length <= 10);
 });
 
+test('rankCrossPlatform surfaces brand match when source brand is missing', async () => {
+  const Similarity = require('../../compare/similarity.js');
+  const { rankCrossPlatform } = require('../../compare/search.js');
+  const product = { title: "Allen Solly Men's Solid Polo T-Shirt", price: '₹799' };
+  const siteResults = [{
+    site: 'flipkart',
+    ok: true,
+    candidates: [
+      { title: 'Allen Solly Men Solid Polo T-Shirt', price: '₹849', url: 'https://fk/1', image: '' },
+      { title: 'Generic Cotton Polo Shirt', price: '₹399', url: 'https://fk/2', image: '' },
+    ],
+  }];
+  const ranked = await rankCrossPlatform(product, siteResults, { similarity: Similarity });
+  assert.ok(ranked.length >= 1, 'expected ranked match for Allen Solly polo');
+  assert.match(ranked[0].title, /Allen Solly/i);
+});
+
+test('rankCrossPlatform fallback returns best candidate when none pass strict threshold', async () => {
+  const Similarity = require('../../compare/similarity.js');
+  const { rankCrossPlatform } = require('../../compare/search.js');
+  const product = { title: 'Obscure Brand Widget X200', brand: 'Obscure' };
+  const siteResults = [{
+    site: 'amazon',
+    ok: true,
+    candidates: [
+      { title: 'Obscure Widget X200 Replacement Part', price: '₹999', url: 'https://a/1', image: '' },
+    ],
+  }];
+  const ranked = await rankCrossPlatform(product, siteResults, {
+    similarity: Similarity,
+    minFinalScore: 0.99,
+    minFallbackScore: 0.01,
+  });
+  assert.equal(ranked.length, 1);
+});
+
 test('searchAll runs marketplace fetches in parallel', async () => {
   const amazonHtml = fs.readFileSync(path.join(FIXTURES, 'amazon-search.html'), 'utf8');
   const flipkartHtml = fs.readFileSync(path.join(FIXTURES, 'flipkart-search.html'), 'utf8');

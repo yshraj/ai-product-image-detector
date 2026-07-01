@@ -11,6 +11,14 @@ const PRODUCT_META = {
   seller: 'Test Seller Pvt Ltd',
 };
 
+const PRODUCT_META_2 = {
+  title: 'Other Brand Men Red Linen Casual Shirt',
+  brand: 'Other Brand',
+  price: '899',
+  image: 'https://assets.myntassets.com/real3.png?product=2',
+  seller: 'Other Seller Ltd',
+};
+
 function imgCard(src, label, cardClass, imgClass, wrapClass) {
   return `<div class="${cardClass}" style="display:inline-block;width:200px;min-height:340px;margin:6px;vertical-align:top">
     <div class="${wrapClass}" style="position:relative;width:200px;height:260px">
@@ -94,8 +102,8 @@ function nykaaListingHtml() {
   <body><div class="css-uo0ckf">${cards}</div></body></html>`;
 }
 
-function productHtml(site = 'myntra') {
-  const p = PRODUCT_META;
+function productHtml(site = 'myntra', meta = PRODUCT_META) {
+  const p = meta;
   return `<!doctype html><html><head><meta charset="utf-8">
     <title>${p.title} - Buy Online</title>
     <meta property="og:title" content="${p.title}" />
@@ -153,4 +161,5 @@ module.exports = {
   BATCH1,
   BATCH2,
   PRODUCT_META,
+  PRODUCT_META_2,
 };
