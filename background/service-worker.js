@@ -25,10 +25,10 @@ try {
       '../compare/parsers.js',
       '../compare/serp-search.js',
       '../compare/internal-apis.js',
-      '../compare/search.js',
-      '../compare/tab-search.js',
       '../compare/score-config.js',
       '../compare/similarity.js',
+      '../compare/search.js',
+      '../compare/tab-search.js',
       '../compare/clip-bridge.js',
       '../utils/trust-storage.js',
     );
@@ -613,6 +613,7 @@ async function handleCompareSearch(msg) {
   const sites = Array.isArray(msg.sites) && msg.sites.length
     ? msg.sites
     : (cfg.compareSites || DEFAULTS.compareSites);
+  const serpApiKey = msg.serpApiKey || cfg.serpApiKey || '';
 
   const tabFetchFn = (TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
     ? TabSearch.fetchSearchPageViaTab
@@ -621,9 +622,9 @@ async function handleCompareSearch(msg) {
   const data = await CompareSearch.searchAll(product, sites, {
     tabFetchFn,
     compareUseTabs: cfg.compareUseTabs === true,
-    serpApiKey: cfg.serpApiKey || '',
+    serpApiKey,
     clipBridge: ClipBridge,
-    useClip: !!product?.image,
+    useClip: cfg.compareUseClip === true && !!product?.image,
   });
   return { ok: true, productFingerprint: fingerprint, ...data };
 }
