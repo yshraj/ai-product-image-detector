@@ -88,6 +88,17 @@
     }).join(' · ');
   }
 
+  function showSearchingStatus(sites) {
+    const statusEl = $('compare-site-status');
+    const s = S();
+    if (!statusEl || !sites?.length) return;
+    statusEl.hidden = false;
+    statusEl.textContent = sites.map((site) => {
+      const name = MP()[site]?.name || site;
+      return s?.compare?.searchingSite ? s.compare.searchingSite(name) : `${name} …`;
+    }).join(' · ');
+  }
+
   function showSkeleton() {
     const el = $('compare-skeleton');
     const results = $('compare-results');
@@ -337,6 +348,7 @@
 
     const failed = (r.failed || []).length > 0;
     const hasMatches = (r.ranked || r.matches || []).length > 0;
+    const hasCandidates = (r.results || []).some((x) => x.candidates?.length);
 
     if (noteEl) {
       let text = '';
@@ -345,6 +357,9 @@
         text = s?.compare?.partialResults?.(
           r.failed.map((f) => MP()[f.site]?.name || f.site).join(', '),
         ) || '';
+        variant = 'warn';
+      } else if (!hasMatches && hasCandidates) {
+        text = s?.compare?.weakMatches || '';
         variant = 'warn';
       } else if (!hasMatches) text = s?.compare?.noMatches || '';
       else if (r.serpFailed) { text = s?.compare?.serpFallback || ''; variant = 'warn'; }
@@ -356,7 +371,7 @@
     const toolbar = $('compare-toolbar');
     if (toolbar) toolbar.hidden = !hasMatches;
     renderResults();
-    renderManualLinks(state.product, failed || !hasMatches);
+    renderManualLinks(state.product, failed || (!hasMatches && hasCandidates));
   }
 
   async function runSearch(product) {
@@ -394,24 +409,35 @@
       return;
     }
 
-    const r = await sendCompare({
-      type: 'RMF_COMPARE_SEARCH',
-      product,
-      sites,
-    });
+    showSearchingStatus(sites);
 
-    state.searching = false;
-    btn?.setAttribute('aria-busy', 'false');
-    if (btn) btn.disabled = false;
-    if (refreshBtn) refreshBtn.disabled = false;
+    const { serpApiKey = '' } = await chrome.storage.sync.get({ serpApiKey: '' });
 
-    if (!r?.ok) {
+    try {
+      const r = await sendCompare({
+        type: 'RMF_COMPARE_SEARCH',
+        product,
+        sites,
+        serpApiKey,
+      });
+
+      if (!r?.ok) {
+        hideSkeleton();
+        setCompareStatus(noteEl, r?.error || s?.compare?.searchFailed || 'Search failed', 'error');
+        renderManualLinks(product, true);
+        return;
+      }
+      applySearchResult(r);
+    } catch (err) {
       hideSkeleton();
-      setCompareStatus(noteEl, r?.error || s?.compare?.searchFailed || 'Search failed', 'error');
+      setCompareStatus(noteEl, String(err?.message || err) || s?.compare?.searchFailed || 'Search failed', 'error');
       renderManualLinks(product, true);
-      return;
+    } finally {
+      state.searching = false;
+      btn?.setAttribute('aria-busy', 'false');
+      if (btn) btn.disabled = false;
+      if (refreshBtn) refreshBtn.disabled = false;
     }
-    applySearchResult(r);
   }
 
   function bindCompareActions(product) {

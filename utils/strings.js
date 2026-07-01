@@ -107,6 +107,7 @@
       possibleMatch: 'Possible match',
       matchScore: (n) => `${n}% match`,
       noMatches: 'No close matches found — try the manual search links below.',
+      weakMatches: 'Found products on other sites but none matched closely enough — try manual search or refresh.',
       searchFailed: 'Search failed — use the manual links below or reload the extension.',
       sitesFailed: (sites) => `Could not reach ${sites}`,
       partialResults: (sites) => `Some sites unavailable (${sites})`,
