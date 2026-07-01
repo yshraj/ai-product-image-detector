@@ -9,10 +9,10 @@
 - [x] Verify output query length is reasonable (not full title, not too short) — aggregate length test in clean-query.test.cjs
 
 ## Phase 2 — Hidden Tab Scraping Infrastructure
-- [ ] Background: openHiddenSearchTab(platform, query) helper
-- [ ] Content script: per-platform scraper (selector-based, wait-for-element polling)
-- [ ] Per-platform scrape timeout + cleanup (always remove tab, even on failure)
-- [ ] Test each platform scraper independently before combining
+- [x] Background: openHiddenSearchTab(platform, query) helper — `compare/tab-search.js`, per-platform URLs from `compare/config.js`
+- [x] Content script: per-platform scraper (selector-based, wait-for-element polling) — `compare/tab-parser.js` RMF_waitAndParseSearchPage, selectors in config scrape
+- [x] Per-platform scrape timeout + cleanup (always remove tab, even on failure) — SCRAPE_TIMEOUT_MS=10s in config, finally block in tab-search
+- [x] Test each platform scraper independently before combining — `test/unit/tab-parser.test.cjs`, `test/unit/tab-search.test.cjs`, myntra/nykaa fixtures
 
 ## Phase 3 — Similarity Scoring
 - [ ] Integrate transformers.js CLIP model in offscreen document

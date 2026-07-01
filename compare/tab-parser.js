@@ -101,11 +101,33 @@
 
   const PARSERS = { amazon: parseAmazon, flipkart: parseFlipkart, myntra: parseMyntra, meesho: parseMeesho, nykaa: parseNykaa };
 
+  function waitForSelector(selector, maxWaitMs, pollMs) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      function check() {
+        try {
+          if (document.querySelector(selector)) return resolve(true);
+        } catch { /* invalid selector */ }
+        if (Date.now() - start >= maxWaitMs) return resolve(false);
+        setTimeout(check, pollMs);
+      }
+      check();
+    });
+  }
+
   globalThis.RMF_parseSearchPage = function (site) {
     try {
       return (PARSERS[site] || (() => []))();
     } catch {
       return [];
     }
+  };
+
+  globalThis.RMF_waitAndParseSearchPage = async function (site, cfg = {}) {
+    const selector = cfg.readySelector || '[data-asin]';
+    const maxWaitMs = cfg.maxWaitMs || 8000;
+    const pollMs = cfg.pollIntervalMs || 300;
+    await waitForSelector(selector, maxWaitMs, pollMs);
+    return globalThis.RMF_parseSearchPage(site);
   };
 })();
