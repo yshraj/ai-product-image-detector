@@ -34,7 +34,7 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 | Tab | Purpose |
 |-----|---------|
 | **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, export |
-| **Compare** | Search the current product across Amazon, Flipkart, Myntra, Meesho, Nykaa |
+| **Compare** | Live search for the current product on Amazon, Flipkart, Myntra, Meesho, Nykaa (hidden-tab scrape where fetch is blocked) |
 | **Tools** | Google Lens & Bing visual search, copy title/details/URL, download image, share |
 | **Settings** | AI engine, display mode, compare toggles, links to full settings |
 
@@ -112,8 +112,9 @@ This runs `web-ext run --target chromium`, which opens Chrome with the extension
 
 ```bash
 npm run validate      # manifest, file refs, JS syntax, version sync
-npm run test:unit     # 41 Node unit tests
-npm test              # 90 Playwright E2E tests
+npm run test:unit     # Node unit tests
+npm test              # Playwright E2E tests (offline mocks)
+npm run test:compare-real  # Live marketplace scrape suite (network required)
 ```
 
 4. Smoke-test on a real marketplace page with the unpacked extension.
@@ -199,22 +200,32 @@ Design rationale: **[docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md)**
 npm run validate        # manifest + file refs + JS syntax + version + no debugger
 npm run lint            # alias for validate
 npm run test:unit       # Node unit tests (compare, matcher, SSRF, strings, …)
-npm test                # all Playwright E2E tests (90 specs)
+npm test                # Playwright E2E tests (offline mocks)
 npm run test:e2e        # same as npm test
+npm run test:compare-real  # live compare scrape against real marketplaces (network)
 npm run test:headed     # E2E with visible browser (HEADLESS=0)
 npm run test:report     # open HTML report after a failed run
 ```
 
 ### What the tests cover
 
-| Suite | Count | Scope |
-|-------|-------|-------|
-| Unit | 41 | Compare search (parallel), product matcher (color), SSRF guard, HF parsing, defaults, URLs |
-| E2E | 90 | Extension load, popup, options, scanning, compare, regression, a11y, workflow |
+| Suite | Scope |
+|-------|-------|
+| **Unit** (`test:unit`) | Compare search orchestration, tab parsers, product fingerprint, matcher, SSRF guard, HF parsing |
+| **E2E** (`npm test`) | Extension load, popup, options, scanning, compare (mocked SerpApi), regression, a11y — **offline** |
+| **Compare real** (`test:compare-real`) | Tier A/B live scraper + end-to-end runs on Amazon, Myntra, Flipkart — **requires network** |
 
-E2E tests load the **real unpacked extension** in Chromium. Marketplace pages and Hugging Face are **mocked offline** — no API keys or network required.
+Default E2E tests load the **real unpacked extension** in Chromium. Marketplace pages and Hugging Face are **mocked offline** — no API keys required.
 
-Test architecture details: **[test/e2e/README.md](test/e2e/README.md)**
+Test architecture details: **[test/e2e/README.md](test/e2e/README.md)** · Live compare results: **[TODO_price_compare.md](TODO_price_compare.md)**
+
+### Compare troubleshooting
+
+| Symptom | Cause |
+|---------|--------|
+| Wrong product in Compare | SPA navigation — use **Refresh** or reopen Compare; fingerprint should auto-rescan |
+| Nykaa always empty | Nykaa blocks fetch; extension uses a hidden tab — reload extension if broken |
+| No matches but sites show ○ | Candidates found but below matcher score floor (40) — common when `brand` is missing on source |
 
 ### CI
 

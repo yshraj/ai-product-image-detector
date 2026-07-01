@@ -150,8 +150,8 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 | `RMF_BADGE` | Update toolbar badge count |
 | `RMF_HISTORY_ADD` | Append flagged item to local history |
 | `RMF_NOTIFY` | Trigger opt-in OS notification |
-| `RMF_COMPARE_SEARCH` | Search product across marketplaces |
-| `RMF_COMPARE_CACHE` | Load cached compare results |
+| `RMF_COMPARE_SEARCH` | Search product across marketplaces (always fresh; no storage cache) |
+| `RMF_PRODUCT_CHANGED` | Content script → popup when SPA navigation changes product |
 | `RMF_GET_SELLERS` / `RMF_GET_CORRECTIONS` | Trust/correction data |
 | `RMF_TOGGLE_ENABLED` | Keyboard shortcut handler |
 
@@ -195,14 +195,59 @@ Preview/heuristic results include `preview: true` in the result object.
 
 ## Compare module
 
-Runs entirely in the service worker (`compare/search.js` orchestrates):
+Cross-marketplace price compare runs **entirely client-side** in the service worker. There is no backend server. Popup `compare-panel.js` sends `RMF_COMPARE_SEARCH`; the worker returns scored matches per site.
 
-1. `utils/product-query.js` — build search query from product title/brand
-2. Per-site search — SerpApi (if key set) or HTML scrape via `fetch`
-3. `compare/parsers.js` — parse search result HTML
-4. `utils/product-matcher.js` — score and rank candidates
+### Flow
 
-Popup `compare-panel.js` sends `RMF_COMPARE_SEARCH` and renders results. Compare results cache in `chrome.storage.local` under `rmf_compare_*` keys.
+```
+content.js GET_PRODUCT          popup compare-panel.js
+        │                              │
+        │  title, brand, price,        │  RMF_COMPARE_SEARCH
+        │  image, fingerprint          ▼
+        └──────────────────────▶ service-worker.js
+                                      │
+                               compare/search.js searchAll()
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+              SerpApi (opt)     fetch + parsers    hidden tab scrape
+              serp-search.js   parsers.js         tab-search.js
+                                                    tab-parser.js
+                    └─────────────────┬─────────────────┘
+                                      ▼
+                         utils/product-matcher.js pickBest()
+                                      │
+                                      ▼
+                         { matches, results, failed, empty }
+```
+
+### Steps
+
+1. **Product identity** — `content/content.js` extracts title, brand, price, image from the active product page. `utils/product-fingerprint.js` builds a stable ID from URL (`pid` on Flipkart, `/p/123` on Nykaa, etc.) or title+image hash. `startProductWatcher()` detects SPA navigation and emits `RMF_PRODUCT_CHANGED`.
+
+2. **Query extraction** — `utils/product-query.js` `cleanQueryFromProduct()` strips marketplace filler (“pack of 2”, “best seller”) and builds a short search string.
+
+3. **Per-site candidate fetch** — `compare/search.js` searches each enabled marketplace except the source site, up to 3 sites in parallel (`COMPARE_CONCURRENCY`).
+
+   | Method | When | Module |
+   |--------|------|--------|
+   | Optional SerpApi | User set `serpApiKey` in Settings | `compare/serp-search.js` |
+   | Service worker `fetch` | Default for Amazon, Flipkart, Myntra, Meesho | `compare/parsers.js` on HTML |
+   | Hidden inactive tab | **Always** for Nykaa (Akamai 403 on fetch); optional for all sites when `compareUseTabs: true` | `compare/tab-search.js` injects `compare/tab-parser.js` |
+
+4. **Scoring** — `utils/product-matcher.js` scores each candidate with Jaccard title similarity, brand/price/color bonuses (minimum score 40 to surface). Returns **one best match per marketplace** (flat cross-platform top-10 not wired yet).
+
+5. **UI** — `popup/compare-panel.js` renders result cards, per-site status line, filters, sort, manual search fallback. **No compare storage cache** — every search is live. Refresh button and fingerprint checks prevent stale results after navigation.
+
+### Future (built, not in search path yet)
+
+- `compare/similarity.js` — TF-IDF + image cosine, combined 55/45 weighting
+- `offscreen/offscreen.js` + `compare/clip-bridge.js` — CLIP embeddings via Transformers.js
+
+### Config (`chrome.storage.sync`)
+
+- `compareSites` — which marketplaces to search (default: all five)
+- `compareUseTabs` — use hidden tabs for every site (default `false`; Nykaa always uses tabs)
 
 ---
 
@@ -212,9 +257,10 @@ Popup `compare-panel.js` sends `RMF_COMPARE_SEARCH` and renders results. Compare
 |-------|------|----------|
 | `chrome.storage.sync` | Settings from `SYNC_DEFAULTS` | HF token, thresholds, site toggles, compare sites |
 | `chrome.storage.local` | `rmf_cache_*` | Detection verdict cache (7-day TTL) |
-| `chrome.storage.local` | `rmf_compare_*` | Compare search cache |
 | `chrome.storage.local` | `rmf_history` | Activity history |
 | `chrome.storage.local` | `rmf_corrections` | User "not AI" corrections |
+
+On extension install/update, any legacy `rmf_compare_*` keys are purged (`clearCompareCache` in the service worker).
 
 Defaults and key names: `utils/defaults.js`.
 

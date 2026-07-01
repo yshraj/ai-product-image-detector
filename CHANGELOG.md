@@ -6,8 +6,19 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 
 ## [Unreleased]
 
+### Added
+- **Product fingerprint** (`utils/product-fingerprint.js`) — stable compare identity from marketplace URL IDs; SPA navigation watcher in content script.
+- **Live compare Playwright suite** — `npm run test:compare-real` (Tier A scraper mechanics + Tier B end-to-end on real marketplaces).
+- **Compare refresh control** — manual rescan when results are stale after navigation.
+
 ### Changed
 - **Rebranded to TrueKart** — new teal cart + verify icon, updated tagline ("Real photos. Best prices. Shop India."), and Chrome Web Store–friendly listing title.
+- **Compare searches are always fresh** — removed `chrome.storage.local` compare cache and `RMF_COMPARE_CACHE` handler.
+- **Nykaa compare** — always uses hidden background tabs (direct `fetch` blocked by Akamai).
+
+### Fixed
+- **Stale compare results** — popup waits until product URL matches active tab; invalidates UI on `RMF_PRODUCT_CHANGED`.
+- **Nykaa tab parser** — resolves relative product URLs via site host fallback; improved `/p/` link parsing.
 
 ### Added
 - **Four-tab shopping assistant popup** — **Scan**, **Compare**, **Tools**, and **Settings**

@@ -8,8 +8,9 @@ End-to-end tests for the Chrome extension using Playwright with a real Chromium 
 npm ci
 npx playwright install --with-deps chromium   # first time only
 npm run validate       # manifest + syntax (fast sanity check)
-npm run test:unit      # 37 Node unit tests
-npm test               # 90 Playwright E2E specs
+npm run test:unit      # Node unit tests
+npm test               # Playwright E2E specs (offline mocks)
+npm run test:compare-real  # Live marketplace compare suite (network)
 npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 
@@ -18,7 +19,8 @@ npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 test/e2e/
 ├── fixtures/
-│   └── extension.fixture.cjs   # Playwright test.extend — isolated context per test
+│   ├── extension.fixture.cjs       # Default — offline mocks, storage reset per test
+│   └── extension-real.fixture.cjs  # Live network — no marketplace mocks (compare-real)
 ├── helpers/
 │   ├── constants.cjs           # Paths, manifest, defaults
 │   ├── extension-launcher.cjs  # launchPersistentContext + --load-extension
@@ -31,8 +33,20 @@ test/e2e/
 │   ├── PopupPage.cjs
 │   ├── OptionsPage.cjs
 │   └── ContentPage.cjs
-└── *.spec.cjs                  # Test suites (incl. regression.spec.cjs)
+└── *.spec.cjs                  # Test suites (incl. regression.spec.cjs, compare-real-products)
 ```
+
+### Live compare tests (`compare-real-products.spec.cjs`)
+
+Exercises **real** Amazon, Myntra, and Flipkart pages (no `mock-routes`). Run separately — not part of CI by default:
+
+```bash
+npx playwright install chromium   # first time
+npm run test:compare-real
+node scripts/generate-compare-real-report.cjs   # markdown tables from evidence JSON
+```
+
+Evidence is written to `test-results/compare-real-products/` (per-brand JSON, screenshots, tier summaries). See [TODO_price_compare.md](../../TODO_price_compare.md) for latest run notes.
 
 ## Writing tests
 
