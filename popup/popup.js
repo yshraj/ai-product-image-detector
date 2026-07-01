@@ -1,4 +1,4 @@
-// popup/popup.js — TrueKart popup (Scan / Compare / Tools / Settings).
+// popup/popup.js — TrueKart popup (Scan / Similar products / Settings).
 // Tab-specific messages (GET_STATS, GET_PRODUCT, RESCAN, …) are sent to the
 // active tab only — see ACTIVE_TAB_ONLY. Settings persist via chrome.storage.sync.
 const { SYNC_DEFAULTS, ALL_COMPARE_SITES, CACHE_PREFIX } = window.RMF_Defaults;
@@ -7,7 +7,7 @@ const { isMarketplaceProductUrl, MARKETPLACE_TAB_URLS: MARKETPLACE_TABS } = wind
 const send = window.RMF_Runtime.sendMessage;
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
-const TABS = ['scan', 'compare', 'tools', 'settings'];
+const TABS = ['scan', 'compare', 'settings'];
 
 const $ = (id) => document.getElementById(id);
 const S = () => window.RMF_STRINGS;
@@ -71,13 +71,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('version').textContent = `v${ver}`;
   const strings = S();
   if (strings?.app?.tagline) $('brand-tagline').textContent = strings.app.tagline;
+  applyPopupStrings(strings);
 
   await refreshHealth();
   renderStatus();
   setupNav();
   setupSettings();
   setupCompareSites();
-  setupImageDrop();
   window.RMF_ComparePanel?.setupSort?.();
   setupScanPanel();
   maybeShowOnboarding();
@@ -278,7 +278,6 @@ function selectTab(tab) {
       startCompareWatcher();
     });
   }
-  if (tab === 'tools') renderTools();
 }
 
 function updateNavBadge(live) {
@@ -456,256 +455,29 @@ async function updateScan() {
 
 // ---- COMPARE (delegated to compare-panel.js) ------------------------------
 
-// ---- TOOLS ----------------------------------------------------------------
-async function renderTools() {
-  const s = S();
-  const p = await getActiveProduct();
-  const rev = $('reverse-list');
-  const list = $('tools-list');
-  const note = $('tools-note');
-  rev.textContent = '';
-  list.textContent = '';
-
-  if (!p) {
-    const active = await getActiveTab();
-    if (active?.url && isAmazonUrl(active.url)) {
-      note.textContent = s ? s.scan.amazonLimited : 'Amazon has limited support.';
-    } else {
-      note.textContent = s ? s.tools.noProduct : 'Open a product page.';
-    }
-    return;
+function applyPopupStrings(s) {
+  if (!s) return;
+  const nav = s.nav || {};
+  const setNavLabel = (id, text) => {
+    const btn = $(id);
+    const label = btn?.querySelector('span:last-child');
+    if (label && text) label.textContent = text;
+  };
+  setNavLabel('nav-scan', nav.scan);
+  setNavLabel('nav-compare', nav.compare);
+  setNavLabel('nav-settings', nav.settings);
+  if (s.compare?.heading) {
+    const h = $('compare-heading');
+    if (h) h.textContent = s.compare.heading;
   }
-  note.textContent = '';
-
-  if (p.image) {
-    rev.appendChild(actionLink(s ? s.tools.lens : 'Google Lens', 'https://lens.google.com/uploadbyurl?url=' + encodeURIComponent(p.image)));
-    rev.appendChild(actionLink(s ? s.tools.bing : 'Bing Visual Search', 'https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:' + encodeURIComponent(p.image)));
-  } else {
-    const n = document.createElement('p');
-    n.className = 'note';
-    n.textContent = s ? s.tools.noImage : '';
-    rev.appendChild(n);
+  if (s.settings?.compareSites) {
+    const el = $('compare-sites-label');
+    if (el) el.textContent = s.settings.compareSites;
   }
-
-  list.appendChild(actionButton(s ? s.tools.copyUrl : 'Copy product URL', () => copyText(p.url)));
-  list.appendChild(actionButton(s ? s.tools.copyTitle : 'Copy title', () => copyText(p.title)));
-  list.appendChild(actionButton(s ? s.tools.copyDetails : 'Copy product details', () => copyText(detailsText(p))));
-  if (p.image) list.appendChild(actionButton(s ? s.tools.copyImageUrl : 'Copy image URL', () => copyText(p.image)));
-  if (p.image) list.appendChild(actionButton(s ? s.tools.downloadImage : 'Download image', () => downloadImage(p)));
-  list.appendChild(actionButton(s ? s.tools.share : 'Share product', () => shareProduct(p)));
-  list.appendChild(actionButton(s ? s.tools.shareStats : 'Share my stats', () => shareStatsCard()));
-  list.appendChild(actionButton(s ? s.tools.exportCorrections : 'Export corrections', () => exportCorrections()));
-
-  await renderSellerTrust();
-}
-
-async function renderSellerTrust() {
-  const s = S();
-  const list = $('seller-list');
-  const empty = $('seller-empty');
-  if (!list) return;
-  list.textContent = '';
-  const r = await send({ type: 'RMF_GET_SELLERS' });
-  const sellers = (r.ok && r.sellers) ? r.sellers : [];
-  if (!sellers.length) {
-    empty.hidden = false;
-    empty.className = 'empty-state';
-    empty.textContent = '';
-    const ico = document.createElement('span');
-    ico.className = 'empty-state-ico';
-    ico.setAttribute('aria-hidden', 'true');
-    ico.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 3l7 4v5c0 4.2-2.8 7.4-7 9-4.2-1.6-7-4.8-7-9V7l7-4Z" stroke="currentColor" stroke-width="1.8"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-    const body = document.createElement('p');
-    body.className = 'empty-state-body';
-    body.textContent = s ? s.tools.sellerEmpty : '';
-    empty.append(ico, body);
-    return;
+  if (s.settings?.compareSitesHint) {
+    const el = $('compare-sites-hint');
+    if (el) el.textContent = s.settings.compareSitesHint;
   }
-  empty.hidden = true;
-  empty.className = 'empty-hint';
-  sellers.slice(0, 15).forEach((sel) => {
-    const li = document.createElement('li');
-    li.className = 'seller-row';
-    const barClass = sel.aiPct >= 50 ? '' : 'ok';
-    const name = document.createElement('span');
-    name.className = 'seller-name';
-    name.textContent = sel.name || '';
-    const bar = document.createElement('span');
-    bar.className = `seller-bar ${barClass}`;
-    bar.title = `${sel.aiPct}% AI`;
-    const fill = document.createElement('span');
-    fill.style.width = `${sel.aiPct}%`;
-    bar.appendChild(fill);
-    const pct = document.createElement('span');
-    pct.className = `seller-pct ${sel.aiPct >= 50 ? 'bad' : 'ok'}`;
-    pct.textContent = `${sel.aiPct}%`;
-    const count = document.createElement('small');
-    count.textContent = String(sel.total);
-    li.append(name, bar, pct, count);
-    list.appendChild(li);
-  });
-}
-
-function setupImageDrop() {
-  const zone = $('image-drop');
-  const file = $('image-file');
-  const hint = $('image-drop-hint');
-  const result = $('image-check-result');
-  const s = S();
-  if (!zone || !file) return;
-  if (s?.tools?.dropHint) hint.textContent = s.tools.dropHint;
-
-  const pick = () => file.click();
-  zone.addEventListener('click', pick);
-  zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
-  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    zone.classList.remove('drag');
-    const f = e.dataTransfer?.files?.[0];
-    if (f) checkDroppedImage(f);
-  });
-  file.addEventListener('change', () => { if (file.files?.[0]) checkDroppedImage(file.files[0]); });
-}
-
-async function checkDroppedImage(blob) {
-  const result = $('image-check-result');
-  const s = S();
-  result.hidden = false;
-  result.textContent = s ? s.tools.checking : 'Checking…';
-  result.className = 'image-check-result';
-  try {
-    const dataUrl = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = () => reject(new Error('read failed'));
-      r.readAsDataURL(blob);
-    });
-    const r = await send({ type: 'RMF_DETECT_DATA', dataUrl });
-    if (!r?.ok) {
-      result.textContent = r?.error || s?.tools.checkFailed || 'Check failed';
-      result.className = 'image-check-result warn';
-      return;
-    }
-    const res = r.result;
-    const high = res.confidence >= 90;
-    const flagged = res.isAI && res.confidence >= 70;
-    result.textContent = flagged
-      ? `${high ? '🤖 AI Generated' : '⚠️ Likely AI'} · ${Math.round(res.confidence)}%`
-      : `✓ Normal · ${Math.round(res.confidence)}%`;
-    result.className = 'image-check-result ' + (flagged ? (high ? 'bad' : 'warn') : 'ok');
-  } catch {
-    result.textContent = s?.tools.checkFailed || 'Could not check this image';
-    result.className = 'image-check-result warn';
-  }
-}
-
-async function exportCorrections() {
-  const r = await send({ type: 'RMF_GET_CORRECTIONS' });
-  const data = (r.ok && r.corrections) ? r.corrections : [];
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'truekart-corrections.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast(`Exported ${data.length} correction${data.length === 1 ? '' : 's'}`);
-}
-
-async function shareStatsCard() {
-  const hist = (await chrome.storage.local.get({ rmf_scan_history: [] })).rmf_scan_history || [];
-  const total = hist.reduce((n, h) => n + (h.scanned || 0), 0);
-  const ai = hist.reduce((n, h) => n + (h.ai || 0), 0);
-  const canvas = document.createElement('canvas');
-  canvas.width = 600; canvas.height = 340;
-  const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 600, 340);
-  grad.addColorStop(0, '#4F46E5');
-  grad.addColorStop(1, '#6366f1');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 600, 340);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 32px system-ui,sans-serif';
-  ctx.fillText('TrueKart', 40, 60);
-  ctx.font = '18px system-ui,sans-serif';
-  ctx.fillText('My shopping scan stats', 40, 95);
-  ctx.font = 'bold 56px system-ui,sans-serif';
-  ctx.fillText(String(total), 40, 175);
-  ctx.font = '20px system-ui,sans-serif';
-  ctx.fillText('products scanned', 40, 205);
-  ctx.font = 'bold 40px system-ui,sans-serif';
-  ctx.fillStyle = '#fecaca';
-  ctx.fillText(String(ai), 40, 270);
-  ctx.fillStyle = '#fff';
-  ctx.font = '18px system-ui,sans-serif';
-  ctx.fillText('AI-flagged', 40, 300);
-  const a = document.createElement('a');
-  a.download = 'truekart-stats.png';
-  a.href = canvas.toDataURL('image/png');
-  a.click();
-  toast('Stats card downloaded');
-}
-
-function detailsText(p) {
-  return [
-    p.title && `Title: ${p.title}`,
-    p.brand && `Brand: ${p.brand}`,
-    p.price && `Price: ${p.price}`,
-    p.rating && `Rating: ${p.rating}`,
-    p.seller && `Seller: ${p.seller}`,
-    p.url && `URL: ${p.url}`,
-  ].filter(Boolean).join('\n');
-}
-
-async function copyText(text) {
-  if (!text) return;
-  try { await navigator.clipboard.writeText(text); toast(S() ? S().tools.copied : 'Copied', false, true); }
-  catch { toast('Could not copy', true); }
-}
-
-function downloadImage(p) {
-  if (!p.image) return;
-  try {
-    if (chrome.downloads?.download) chrome.downloads.download({ url: p.image });
-    else window.open(p.image, '_blank', 'noopener');
-    toast(S() ? S().tools.downloaded : 'Downloading…');
-  } catch { window.open(p.image, '_blank', 'noopener'); }
-}
-
-async function shareProduct(p) {
-  const data = { title: p.title || 'Product', url: p.url };
-  try {
-    if (navigator.share) {
-      await navigator.share(data);
-      toast(S() ? S().tools.shared : 'Shared');
-      return;
-    }
-  } catch (err) {
-    if (err?.name === 'AbortError') return;
-    toast(S()?.tools?.shareFailed || 'Share unavailable — copied link instead', true);
-  }
-  copyText(`${p.title}\n${p.url}`);
-}
-
-// ---- builders -------------------------------------------------------------
-function actionLink(text, href) {
-  const a = document.createElement('a');
-  a.className = 'action-btn';
-  a.href = href;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  a.textContent = text;
-  return a;
-}
-function actionButton(text, onClick) {
-  const b = document.createElement('button');
-  b.className = 'action-btn';
-  b.type = 'button';
-  b.textContent = text;
-  b.addEventListener('click', onClick);
-  return b;
 }
 
 // ---- compare marketplace toggles ------------------------------------------

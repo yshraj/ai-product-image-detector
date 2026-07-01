@@ -26,6 +26,7 @@
     resultsFingerprint: '',
     stale: false,
     compareVisible: false,
+    searchGeneration: 0,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -183,6 +184,52 @@
     return list;
   }
 
+  function priceBreakdownLabel(label, s) {
+    if (label === 'same') return s?.compare?.priceSame || 'Same';
+    if (label === 'similar') return s?.compare?.priceSimilar || 'Similar';
+    if (label === 'different' || label === 'very-different') return s?.compare?.priceDifferent || 'Different';
+    return s?.compare?.priceUnknown || 'Unknown';
+  }
+
+  function breakdownSymbol(field, s) {
+    const ok = s?.compare?.breakdownOk || '✔';
+    const miss = s?.compare?.breakdownMiss || '✖';
+    const dash = s?.compare?.breakdownUnknown || '—';
+    if (field?.ok === true) return ok;
+    if (field?.ok === false) return miss;
+    return dash;
+  }
+
+  function renderMatchBreakdown(breakdown, s) {
+    if (!breakdown) return null;
+
+    const dl = document.createElement('dl');
+    dl.className = 'match-breakdown';
+
+    function row(label, value) {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      dl.append(dt, dd);
+    }
+
+    row(s?.compare?.breakdownBrand || 'Brand', breakdownSymbol(breakdown.brand, s));
+    row(s?.compare?.breakdownColor || 'Color', breakdownSymbol(breakdown.color, s));
+    row(s?.compare?.breakdownPattern || 'Pattern', breakdownSymbol(breakdown.pattern, s));
+    if (breakdown.fit?.value || breakdown.fit?.ok != null) {
+      row(s?.compare?.breakdownFit || 'Fit', breakdownSymbol(breakdown.fit, s));
+    }
+    const imgScore = breakdown.image?.score;
+    row(
+      s?.compare?.breakdownImage || 'Image',
+      imgScore != null && imgScore > 0 ? imgScore.toFixed(2) : (imgScore === 0 ? '0' : (s?.compare?.breakdownUnknown || '—')),
+    );
+    row(s?.compare?.breakdownPrice || 'Price', priceBreakdownLabel(breakdown.price?.label, s));
+
+    return dl;
+  }
+
   function badgeForMatch(match, s) {
     const label = match?.label || 'possible';
     if (label === 'same') return { cls: 'same', text: s ? s.compare.sameProduct : 'Same product' };
@@ -258,7 +305,11 @@
       view.rel = 'noopener noreferrer';
       view.textContent = s ? s.compare.viewOn(mp.name || item.site) : `View on ${item.site}`;
 
-      body.append(head, title, price, view);
+      const breakdown = renderMatchBreakdown(item.match?.breakdown, s);
+
+      body.append(head, title, price);
+      if (breakdown) body.append(breakdown);
+      body.append(view);
       card.append(thumb, body);
       resultsEl.appendChild(card);
     }
@@ -376,6 +427,9 @@
 
   async function runSearch(product) {
     if (state.searching) return;
+    if (!product?.title) return;
+
+    const gen = ++state.searchGeneration;
     const s = S();
     const btn = $('compare-search');
     const refreshBtn = $('compare-refresh');
@@ -422,13 +476,16 @@
       });
 
       if (!r?.ok) {
+        if (gen !== state.searchGeneration) return;
         hideSkeleton();
         setCompareStatus(noteEl, r?.error || s?.compare?.searchFailed || 'Search failed', 'error');
         renderManualLinks(product, true);
         return;
       }
+      if (gen !== state.searchGeneration) return;
       applySearchResult(r);
     } catch (err) {
+      if (gen !== state.searchGeneration) return;
       hideSkeleton();
       setCompareStatus(noteEl, String(err?.message || err) || s?.compare?.searchFailed || 'Search failed', 'error');
       renderManualLinks(product, true);
@@ -440,11 +497,11 @@
     }
   }
 
-  function bindCompareActions(product) {
+  function bindCompareActions() {
     const btn = $('compare-search');
     const refreshBtn = $('compare-refresh');
-    if (btn) btn.onclick = () => runSearch(product);
-    if (refreshBtn) refreshBtn.onclick = () => runSearch(product);
+    if (btn) btn.onclick = () => runSearch(state.product);
+    if (refreshBtn) refreshBtn.onclick = () => runSearch(state.product);
   }
 
   function updateProductHeader(p, s) {
@@ -504,7 +561,7 @@
 
     state.product = product;
     updateProductHeader(product, S());
-    bindCompareActions(product);
+    bindCompareActions();
 
     if (state.searching) return;
 
@@ -522,19 +579,31 @@
     state.compareVisible = false;
   }
 
+  async function waitForProduct(getProduct, maxMs = 12_000) {
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      const p = await getProduct();
+      if (p?.title && p.isProductPage !== false) return p;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    return getProduct();
+  }
+
   async function render(getProduct) {
     const s = S();
     state.compareVisible = true;
-    const p = await getProduct();
+    const p = await waitForProduct(getProduct);
     const fp = productFp(p);
     const productChanged = fp && state.resultsFingerprint && fp !== state.resultsFingerprint;
 
     if (productChanged) {
       clearCompareUI();
       state.stale = true;
+      state.data = null;
     } else if (fp && state.product && productFp(state.product) !== fp) {
       clearCompareUI();
       state.stale = true;
+      state.data = null;
     }
 
     state.product = p;
@@ -559,7 +628,7 @@
 
     if (emptyEl) emptyEl.hidden = true;
     updateProductHeader(p, s);
-    bindCompareActions(p);
+    bindCompareActions();
 
     const settingsSites = window.__compareSettingsSites || ALL_SITES;
     state.searchSites = new Set(settingsSites.filter((site) => site !== p.site));
@@ -569,22 +638,9 @@
 
     if (state.searching) return;
 
-    if (state.stale || productChanged) {
-      await runSearch(p);
-      return;
-    }
-
-    if (!state.data) {
-      await runSearch(p);
-      return;
-    }
-
-    const dataFp = state.resultsFingerprint || productFp(state.product);
-    if (dataFp && fp && dataFp === fp) {
-      applySearchResult(state.data);
-    } else {
-      await runSearch(p);
-    }
+    // Always run a fresh search when Compare tab opens (popup reopen or tab switch).
+    state.stale = false;
+    await runSearch(p);
   }
 
   function setupSort() {

@@ -68,7 +68,7 @@
     },
 
     // bottom navigation
-    nav: { scan: 'Scan', compare: 'Compare', tools: 'Tools', settings: 'Settings' },
+    nav: { scan: 'Scan', compare: 'Similar products', settings: 'Settings' },
 
     // scan breakdown
     scan: {
@@ -95,9 +95,9 @@
 
     // compare tab
     compare: {
-      heading: 'Compare this product',
+      heading: 'Similar products',
       note: 'We search other marketplaces automatically and score how closely each result matches.',
-      noProduct: 'Open a product page to compare it elsewhere.',
+      noProduct: 'Open a product page to find similar items elsewhere.',
       on: (site) => `Search on ${site}`,
       findSimilar: 'Find similar products',
       searching: 'Searching marketplaces…',
@@ -106,6 +106,20 @@
       similarProduct: 'Similar product',
       possibleMatch: 'Possible match',
       matchScore: (n) => `${n}% match`,
+      breakdownBrand: 'Brand',
+      breakdownColor: 'Color',
+      breakdownPattern: 'Pattern',
+      breakdownFit: 'Fit',
+      breakdownImage: 'Image',
+      breakdownPrice: 'Price',
+      breakdownFinal: 'Final',
+      breakdownOk: '✔',
+      breakdownMiss: '✖',
+      breakdownUnknown: '—',
+      priceSame: 'Same',
+      priceSimilar: 'Similar',
+      priceDifferent: 'Different',
+      priceUnknown: 'Unknown',
       noMatches: 'No close matches found — try the manual search links below.',
       weakMatches: 'Found products on other sites but none matched closely enough — try manual search or refresh.',
       searchFailed: 'Search failed — use the manual links below or reload the extension.',
@@ -116,7 +130,7 @@
       viewOn: (site) => `View on ${site}`,
       price: (p) => p || 'Price unavailable',
       emptyHint: 'Open a product page on Flipkart, Myntra, Meesho or Nykaa, then search for the same item elsewhere.',
-      listingPage: 'This looks like a category page — open a specific product to compare.',
+      listingPage: 'This looks like a category page — open a specific product to find similar items.',
       noSitesSelected: 'Select at least one marketplace to search.',
       serpFallback: 'SerpApi unavailable — searched marketplaces directly.',
       searchTimeout: 'Search timed out — try fewer sites or use the manual links below.',
@@ -157,8 +171,8 @@
 
     settings: {
       aiDetection: 'AI detection',
-      compareSites: 'Compare marketplaces',
-      compareSitesHint: 'Choose which sites appear in Compare.',
+      compareSites: 'Similar products marketplaces',
+      compareSitesHint: 'Choose which sites appear in Similar products.',
       more: 'More',
     },
 

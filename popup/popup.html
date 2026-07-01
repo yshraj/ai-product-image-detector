@@ -87,7 +87,7 @@
     <!-- ============ COMPARE ============ -->
     <section class="panel" id="panel-compare" role="tabpanel" aria-labelledby="nav-compare" hidden>
       <div class="card">
-        <h2 class="card-h">Compare this product</h2>
+        <h2 class="card-h" id="compare-heading">Similar products</h2>
         <p class="product-title" id="compare-title">—</p>
         <p class="compare-meta" id="compare-meta" hidden></p>
         <div class="compare-actions" id="compare-actions" hidden>
@@ -117,35 +117,6 @@
           <div class="action-list" id="compare-list"></div>
         </details>
         <p class="note" id="compare-note"></p>
-      </div>
-    </section>
-
-    <!-- ============ TOOLS ============ -->
-    <section class="panel" id="panel-tools" role="tabpanel" aria-labelledby="nav-tools" hidden>
-      <div class="card">
-        <h2 class="card-h">Check any image</h2>
-        <div class="drop-zone" id="image-drop" tabindex="0" role="button" aria-label="Drop or choose an image to check for AI">
-          <input type="file" id="image-file" accept="image/*" hidden />
-          <span class="drop-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="10" r="1.5" fill="currentColor"/><path d="M3 16l5.5-5 4 3.5L17 9l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <p id="image-drop-hint">Drop an image here or click to choose</p>
-          <p class="image-check-result" id="image-check-result" hidden></p>
-        </div>
-      </div>
-      <div class="card">
-        <h2 class="card-h">Reverse image search</h2>
-        <div class="action-list" id="reverse-list"></div>
-      </div>
-      <div class="card">
-        <h2 class="card-h">Copy &amp; share</h2>
-        <div class="action-grid" id="tools-list"></div>
-        <p class="note" id="tools-note"></p>
-      </div>
-      <div class="card">
-        <h2 class="card-h">Seller trust</h2>
-        <ul class="seller-list" id="seller-list"></ul>
-        <p class="empty-hint" id="seller-empty" hidden></p>
       </div>
     </section>
 
@@ -214,8 +185,8 @@
       </div>
 
       <div class="card">
-        <h2 class="card-h" id="compare-sites-label">Compare marketplaces</h2>
-        <p class="hint" id="compare-sites-hint">Choose which sites appear in Compare.</p>
+        <h2 class="card-h" id="compare-sites-label">Similar products marketplaces</h2>
+        <p class="hint" id="compare-sites-hint">Choose which sites appear in Similar products.</p>
         <div class="checks" id="compare-sites">
           <label class="check"><input type="checkbox" data-site="amazon" checked /> <span>Amazon</span></label>
           <label class="check"><input type="checkbox" data-site="flipkart" checked /> <span>Flipkart</span></label>
@@ -235,7 +206,7 @@
       </div>
 
       <div class="card">
-        <h2 class="card-h">Compare search API</h2>
+        <h2 class="card-h">Similar products search API</h2>
         <p class="hint" id="serp-hint">Optional SerpApi key for reliable cross-site product search (Google Shopping).</p>
         <div class="field">
           <label class="visually-hidden" for="serp-api-key">SerpApi key</label>
@@ -268,11 +239,7 @@
     </button>
     <button class="nav-btn" role="tab" id="nav-compare" aria-controls="panel-compare" data-tab="compare" aria-selected="false">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Compare</span>
-    </button>
-    <button class="nav-btn" role="tab" id="nav-tools" aria-controls="panel-tools" data-tab="tools" aria-selected="false">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M14.5 6a3.5 3.5 0 0 0-4.6 4.3L4 16.2 7.8 20l5.9-5.9A3.5 3.5 0 0 0 18 9.5l-2.2 2.2-1.5-1.5L16.5 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Tools</span>
+      <span>Similar products</span>
     </button>
     <button class="nav-btn" role="tab" id="nav-settings" aria-controls="panel-settings" data-tab="settings" aria-selected="false">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.5M12 18.5V21M21 12h-2.5M5.5 12H3m13.4-6.4-1.8 1.8M8.4 15.6l-1.8 1.8m11.8 0-1.8-1.8M8.4 8.4 6.6 6.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
