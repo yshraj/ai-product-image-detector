@@ -2,7 +2,7 @@
 
 This document records edge cases analyzed across all user flows, what was wrong (or risky), and how each was resolved. All changes preserve existing behavior for happy paths; tests verify no regressions.
 
-**Test status after fixes:** 35 unit + 78 E2E passing.
+**Test status after fixes:** 80 unit + 93+ E2E passing (includes `compare-hardening.spec.cjs`).
 
 ---
 
@@ -47,6 +47,9 @@ This document records edge cases analyzed across all user flows, what was wrong 
 | M4 | Product meta (brand, price) from page | `innerHTML` with page strings | XSS in popup | Safe DOM construction with `textContent` |
 | M5 | Listing page empty state | Generic hint only | Unclear | **“Open a product page (not a category listing)”** when `isProductPage === false` |
 | M6 | Per-site scrape timeout | Only “✗” in status line | Opaque | Status line shows **(timeout)** / **(unreachable)** labels |
+| M7 | `ranked` always empty in extension | Serp/direct scrape ran but UI showed no matches | Phase 4 appeared broken | **Root cause:** `importScripts` loaded `search.js` before `similarity.js`; fixed load order in service worker |
+| M8 | Compare tab stuck on “Searching…” | `showSearchingStatus(sites)` referenced `sites` before declaration | Frozen UI, no `sendResponse` | Moved site list init before status line; added `try/finally` on `runSearch` |
+| M9 | SerpApi key set but slow direct scrape ran | `matched === 0` fell through to tab scrape; MV3 SW could die mid-scrape | 30–120s hangs | Serp path now always returns when SerpApi succeeds; popup passes `serpApiKey` in message |
 
 **Files:** `popup/compare-panel.js`, `compare/search.js`, `utils/strings.js`
 

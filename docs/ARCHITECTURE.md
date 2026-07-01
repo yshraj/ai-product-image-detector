@@ -215,10 +215,11 @@ content.js GET_PRODUCT          popup compare-panel.js
                                                     tab-parser.js
                     └─────────────────┬─────────────────┘
                                       ▼
-                         utils/product-matcher.js pickBest()
+                         compare/similarity.js rankCrossPlatform()
+                         (+ optional CLIP via clip-bridge.js)
                                       │
                                       ▼
-                         { matches, results, failed, empty }
+                         { ranked, matches, results, failed, empty }
 ```
 
 ### Steps

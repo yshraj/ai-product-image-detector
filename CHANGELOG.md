@@ -8,6 +8,7 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 
 ### Added
 - **Cross-platform ranked compare** — `compare/search.js` merges site candidates, scores with TF-IDF + optional CLIP, returns flat top-10 `ranked` list; Compare tab renders unified cards.
+- **Compare hardening E2E** — `test/e2e/compare-hardening.spec.cjs` (stale navigation, refresh, partial SerpApi failure).
 - **Live compare Playwright suite** — `npm run test:compare-real` (Tier A scraper mechanics + Tier B end-to-end on real marketplaces).
 - **Compare refresh control** — manual rescan when results are stale after navigation.
 
@@ -17,6 +18,8 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 - **Nykaa compare** — always uses hidden background tabs (direct `fetch` blocked by Akamai).
 
 ### Fixed
+- **Compare `ranked` always empty in extension** — service worker now loads `similarity.js` before `search.js`.
+- **Compare tab stuck searching** — fixed `sites` ReferenceError in `runSearch`; SerpApi path no longer falls through to slow direct scrape.
 - **Compare match scoring without brand** — infer leading brand tokens from product title when marketplace metadata omits `brand` (common on Amazon); used by `pickBest` and search query building.
 - **Stale compare results** — popup waits until product URL matches active tab; invalidates UI on `RMF_PRODUCT_CHANGED`.
 - **Nykaa tab parser** — resolves relative product URLs via site host fallback; improved `/p/` link parsing.

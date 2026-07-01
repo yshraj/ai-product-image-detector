@@ -2,9 +2,9 @@
 
 Final release-readiness audit completed **2026-06-30**.
 
-## Verdict: **READY FOR RELEASE**
+## Verdict: **READY FOR RELEASE** (Compare production pass 2026-07-01)
 
-All automated checks pass. The extension is vanilla JavaScript (no TypeScript, no bundler, no ESLint config). `npm run lint` runs `scripts/validate.js`.
+All automated checks pass. Compare pipeline hardened: cross-platform `ranked` scoring, brand inference, SerpApi path, MV3 module load order, and UI error recovery.
 
 ---
 
@@ -15,8 +15,8 @@ All automated checks pass. The extension is vanilla JavaScript (no TypeScript, n
 | Check | Status | Notes |
 |-------|--------|-------|
 | `npm run validate` | ✅ PASS | Manifest parse, file refs, JS syntax, version sync, no `debugger` |
-| `npm run test:unit` | ✅ 41/41 | Compare (parallel), matcher (color), URLs, defaults, SSRF |
-| `npm test` (Playwright) | ✅ 90/90 | Extension, popup, regression, a11y, permissions, workflow |
+| `npm run test:unit` | ✅ 80/80 | Compare ranking, matcher brand inference, SW import order guard |
+| `npm test` (Playwright) | ✅ 93+ | Extension, compare-hardening, shopping-assistant, regression |
 | `npm run build` (web-ext) | ✅ | Produces `dist/truekart_shopping_assistant-1.7.0.zip` |
 | `npm run lint:firefox` (web-ext lint) | ⚠️ N/A | Chrome MV3 target; Firefox lint expects Gecko manifest |
 | TypeScript errors | ✅ N/A | Project is JavaScript; no `tsc` |

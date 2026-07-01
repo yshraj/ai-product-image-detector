@@ -34,17 +34,17 @@
 - [x] Manual Refresh button — clears old UI state before rescanning — `#compare-refresh` in popup
 
 ## Phase 6 — UI States
-- [ ] Loading state (per-platform progress)
-- [ ] Stale/outdated badge state
-- [ ] Empty state
-- [ ] Partial failure state (some platforms succeed, some fail)
-- [ ] Success state (final ranked cards)
+- [x] Loading state (per-platform progress) — `showSearchingStatus()` in compare-panel during search
+- [x] Stale/outdated badge state — `#compare-stale-badge` + `is-stale` on results
+- [x] Empty state — `buildEmptyState`, `noMatches`, `weakMatches` when candidates exist but none rank
+- [x] Partial failure state (some platforms succeed, some fail) — `partialResults` status + site status line
+- [x] Success state (final ranked cards) — flat `#compare-results` top-10 cards
 
 ## Phase 7 — Resilience
-- [ ] Per-platform scrape timeout (8-10s) + graceful failure
-- [ ] Playwright e2e test: navigate between two different products, verify Compare tab does NOT show stale data
-- [ ] Playwright e2e test: click Refresh, verify old cards clear before new ones render
-- [ ] Playwright e2e test: simulate one platform failing, verify others still render + failure notice shown
+- [x] Per-platform scrape timeout (8-10s) + graceful failure — `SCRAPE_TIMEOUT_MS` in tab-search, `FETCH_TIMEOUT_MS` in search
+- [x] Playwright e2e test: navigate between two different products, verify Compare tab does NOT show stale data — `compare-hardening.spec.cjs`
+- [x] Playwright e2e test: click Refresh, verify old cards clear before new ones render — `compare-hardening.spec.cjs`
+- [x] Playwright e2e test: simulate one platform failing, verify others still render + failure notice shown — `compare-hardening.spec.cjs` (partial SerpApi response)
 - [x] Playwright real-product Tier A/B suite — `test/e2e/compare-real-products.spec.cjs`, run via `npm run test:compare-real`
 
 ---
