@@ -549,7 +549,7 @@
     if (refreshBtn) {
       refreshBtn.hidden = false;
       refreshBtn.disabled = state.searching;
-      refreshBtn.textContent = s?.compare?.refresh || '🔄 Refresh';
+      refreshBtn.textContent = s?.compare?.refresh || 'Refresh';
     }
     if (note) note.textContent = s?.compare?.note || '';
   }

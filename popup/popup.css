@@ -50,7 +50,7 @@ body {
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #0f766e; flex: none; overflow: hidden; }
 .brand-name { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-.brand-accent { color: #ea580c; }
+.brand-accent { color: #c2410c; }
 .brand-sub { font-size: 10.5px; color: var(--muted-2); margin-top: 3px; }
 
 /* toggle */

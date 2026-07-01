@@ -95,6 +95,23 @@
     return target;
   }
 
+  // Small inline "AI spark" mark used on badges instead of an emoji — renders
+  // identically on every OS and reads as intentional product UI, not a hack.
+  function aiGlyph() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '11');
+    svg.setAttribute('height', '11');
+    svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.flex = '0 0 auto';
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', 'M12 2l1.7 5.9 5.9 1.7-5.9 1.7L12 17l-1.7-5.7L4.4 9.6l5.9-1.7L12 2z');
+    svg.appendChild(p);
+    return svg;
+  }
+
   function injectOverlay(card, result) {
     const { isAI, confidence } = result;
     // A card counts as flagged only if the model says AI *and* the confidence
@@ -128,10 +145,11 @@
     }
     const label = document.createElement('span');
     label.className = 'rmf-label';
-    label.textContent = (high ? '🤖 AI Generated' : '⚠️ Likely AI') + (result.preview ? ' ·preview' : '');
+    label.append(aiGlyph(), document.createTextNode(
+      (high ? 'AI Generated' : 'Likely AI') + (result.preview ? ' · preview' : '')));
     const compact = document.createElement('span');
     compact.className = 'rmf-compact-ico';
-    compact.textContent = high ? '🤖' : '⚠️';
+    compact.appendChild(aiGlyph());
     const score = document.createElement('span');
     score.className = 'rmf-score';
     score.textContent = `${Math.round(confidence)}%`;
@@ -566,7 +584,7 @@
           const anchor = card.querySelector('a') || card;
           anchor.insertAdjacentElement('afterbegin', tag);
         }
-        tag.textContent = aiPct >= 50 ? `⚠ ${aiPct}% AI` : `✓ ${100 - aiPct}% real`;
+        tag.textContent = aiPct >= 50 ? `${aiPct}% AI photos` : `${100 - aiPct}% real photos`;
         tag.title = `${seller}: ${cur.aiGenerated} AI, ${cur.likelyAi} likely, ${cur.normal} normal`;
       }
     } catch { /* ignore */ }
@@ -863,7 +881,15 @@
     // Observe the whole document: infinite-scroll frameworks (React/Next) often
     // replace the grid container node, which would detach a narrower observer.
     observer = new MutationObserver(() => scheduleScan());
-    observer.observe(document.body, { childList: true, subtree: true });
+    // childList catches inserted cards; attributeFilter catches lazy-loaded
+    // images whose `src`/`srcset` is swapped in on an <img> already in the DOM
+    // (an attribute mutation a childList observer never sees). Without this,
+    // above-the-fold images stay unscanned until the user scrolls — the root
+    // cause of the "must refresh the page for scanning to start" bug.
+    observer.observe(document.body, {
+      childList: true, subtree: true,
+      attributes: true, attributeFilter: ['src', 'srcset'],
+    });
 
     // Scroll also drives a rescan — this is what catches lazy-loaded images
     // whose `src` is swapped in AFTER the card is inserted (an attribute change
@@ -966,6 +992,11 @@
     clearStalePending();
     await scanAll();
     startObserver();
+    // Heavy SPAs (Flipkart/Myntra) often haven't painted the product grid — or
+    // haven't swapped in the real image `src`s — by document_idle. A few delayed
+    // rescans catch that late content without the user needing to scroll or
+    // refresh. Cheap: scanAll is viewport-gated and every image is cache-keyed.
+    [400, 1200, 2500].forEach((t) => setTimeout(scheduleScan, t));
   }
   startProductWatcher();
   Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);

@@ -3,7 +3,13 @@
 .rmf-badge.rmf-compact .rmf-label { display: none; }
 .rmf-badge.rmf-compact:hover .rmf-label,
 .rmf-badge.rmf-compact:focus-within .rmf-label { display: inline-flex; }
-.rmf-badge.rmf-compact .rmf-compact-ico { display: inline-flex; font-size: 12px; }
+.rmf-badge.rmf-compact .rmf-compact-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 6px; color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+.rmf-badge[data-conf="high"] .rmf-compact-ico { background: rgba(226, 75, 74, 0.94); color: #fff; }
+.rmf-badge[data-conf="med"] .rmf-compact-ico { background: rgba(239, 159, 39, 0.94); color: #2a1800; }
 .rmf-badge.rmf-compact:hover .rmf-compact-ico,
 .rmf-badge.rmf-compact:focus-within .rmf-compact-ico { display: none; }
 .rmf-pop-layers { font-size: 10.5px; color: #9aa3b2; margin-top: 6px; line-height: 1.4; }
@@ -32,6 +38,7 @@
 .rmf-label {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;

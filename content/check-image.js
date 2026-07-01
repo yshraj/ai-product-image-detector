@@ -37,8 +37,8 @@
     const high = result.confidence >= 90;
     const flagged = result.isAI && result.confidence >= 70;
     const text = flagged
-      ? `${high ? '🤖 AI Generated' : '⚠️ Likely AI'} · ${Math.round(result.confidence)}%`
-      : `✓ Normal · ${Math.round(result.confidence)}%`;
+      ? `${high ? 'AI Generated' : 'Likely AI'} · ${Math.round(result.confidence)}%`
+      : `Normal · ${Math.round(result.confidence)}%`;
     showBadge(text, flagged, high);
   } catch {
     showBadge('Image check failed — try again', false, false);
