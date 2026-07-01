@@ -158,6 +158,11 @@
                 <option value="umm-maybe/AI-image-detector"></option>
               </datalist>
               <p class="hint">All served on the free tier. Switching a model auto-clears the cache — just <b>Connect</b> and reload.</p>
+              <label class="check notify-check">
+                <input type="checkbox" id="hf-ensemble" />
+                <span>Higher-recall ensemble (runs a 2nd model)</span>
+              </label>
+              <p class="hint">Combines two detectors for the best accuracy — catches more AI with no extra false flags. Uses 2× API calls per image.</p>
             </div>
           </details>
         </div>

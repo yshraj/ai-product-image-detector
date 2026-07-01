@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if ($('serp-api-key')) $('serp-api-key').value = state.serpApiKey || '';
   if ($('notify-on-ai')) $('notify-on-ai').checked = state.notifyOnAI === true;
+  if ($('hf-ensemble')) $('hf-ensemble').checked = state.hfEnsemble === true;
 
   const ver = chrome.runtime.getManifest().version;
   $('version').textContent = `v${ver}`;
@@ -612,6 +613,25 @@ function setupSettings() {
         return;
       }
       toast(state.notifyOnAI ? 'Notifications enabled' : 'Notifications off');
+    });
+  }
+
+  const ensembleToggle = $('hf-ensemble');
+  if (ensembleToggle) {
+    ensembleToggle.addEventListener('change', async (e) => {
+      state.hfEnsemble = e.target.checked;
+      if (!await saveSync({ hfEnsemble: state.hfEnsemble })) {
+        e.target.checked = !state.hfEnsemble;
+        state.hfEnsemble = e.target.checked;
+        return;
+      }
+      // Verdicts change with the engine set — clear cached results so the
+      // next scan re-runs through the new model set.
+      try {
+        const all = await chrome.storage.local.get(null);
+        await chrome.storage.local.remove(Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX)));
+      } catch { /* noop */ }
+      toast(state.hfEnsemble ? 'Ensemble on — higher recall' : 'Ensemble off');
     });
   }
 }

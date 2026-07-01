@@ -33,6 +33,12 @@
     provider: 'heuristic',
     hfToken: '',
     hfModel: 'haywoodsloan/ai-image-detector-deploy',
+    // Optional second model for a max-score ensemble. haywoodsloan and umm-maybe
+    // both have 100% precision on our set but catch different AI images, so the
+    // max lifts recall 50%→67% with zero extra false positives. Costs 2 API
+    // calls/image, so it's opt-in (hfEnsemble).
+    hfModel2: 'umm-maybe/AI-image-detector',
+    hfEnsemble: false,
     hfVerified: false,
     hfUser: '',
     minConfidence: 70,

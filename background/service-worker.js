@@ -390,11 +390,10 @@ function parseHfResult(data) {
   return { isAI: confidence >= 50, confidence, source: 'huggingface' };
 }
 
-async function detectHuggingFace(url, token, model) {
-  const imgRes = await fetchImage(url);
-  const blob = await imgRes.blob();
+// POST one image blob to one model (with cold-start 503 retry). A Blob is
+// immutable and reusable, so the ensemble reuses a single blob across models.
+async function postHfBlob(blob, token, model) {
   const endpoint = HF_INFERENCE_BASE + model;
-  // The model may be cold — HF answers 503 with an ETA while it loads.
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -415,6 +414,43 @@ async function detectHuggingFace(url, token, model) {
   throw new Error('Model is warming up — retry in ~20s');
 }
 
+// Max-score ensemble: same image, N models, highest AI confidence wins.
+// Precision-preserving (both models rarely false-fire), recall-lifting.
+async function postHfEnsembleBlob(blob, token, models) {
+  const parts = [];
+  for (const m of models) {
+    const r = await postHfBlob(blob, token, m);
+    parts.push({ model: m, confidence: r.confidence });
+  }
+  const top = parts.reduce((a, b) => (b.confidence > a.confidence ? b : a));
+  return {
+    isAI: top.confidence >= 50,
+    confidence: top.confidence,
+    source: 'huggingface',
+    model: top.model,
+    ensemble: parts,
+  };
+}
+
+async function detectHuggingFace(url, token, model) {
+  const imgRes = await fetchImage(url);
+  return postHfBlob(await imgRes.blob(), token, model);
+}
+
+async function detectHfEnsemble(url, token, models) {
+  const imgRes = await fetchImage(url);
+  return postHfEnsembleBlob(await imgRes.blob(), token, models);
+}
+
+// Which models to run, given config. Returns [primary] or [primary, secondary].
+function hfModelsFor(cfg) {
+  const model = cfg.hfModel || DEFAULTS.hfModel;
+  if (cfg.hfEnsemble && cfg.hfModel2 && cfg.hfModel2 !== model) {
+    return [model, cfg.hfModel2];
+  }
+  return [model];
+}
+
 async function detectFromDataUrl(dataUrl) {
   if (!dataUrl || !String(dataUrl).startsWith('data:image/')) {
     return { error: 'Invalid image data' };
@@ -422,31 +458,14 @@ async function detectFromDataUrl(dataUrl) {
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   try {
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
-      const model = cfg.hfModel || DEFAULTS.hfModel;
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const endpoint = HF_INFERENCE_BASE + model;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const hfRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${cfg.hfToken}`, Accept: 'application/json' },
-          body: blob,
-        });
-        if (hfRes.status === 503) {
-          const j = await hfRes.json().catch(() => ({}));
-          await wait(Math.min(((j.estimated_time || 6) * 1000), 9000));
-          continue;
-        }
-        if (!hfRes.ok) {
-          const body = await hfRes.text().catch(() => '');
-          throw new Error(friendlyHfError(hfRes.status, body));
-        }
-        const r = parseHfResult(await hfRes.json());
-        r.model = model;
-        await recordOk('huggingface');
-        return { result: r };
-      }
-      throw new Error('Model is warming up — retry in ~20s');
+      const models = hfModelsFor(cfg);
+      const blob = await (await fetch(dataUrl)).blob();
+      const r = models.length > 1
+        ? await postHfEnsembleBlob(blob, cfg.hfToken, models)
+        : await postHfBlob(blob, cfg.hfToken, models[0]);
+      r.model = r.model || models[0];
+      await recordOk('huggingface');
+      return { result: r };
     }
   } catch (err) {
     await recordError(cfg.provider, err && err.message);
@@ -460,9 +479,11 @@ async function remoteDetect(url) {
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   try {
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
-      const model = cfg.hfModel || DEFAULTS.hfModel;
-      const r = await detectHuggingFace(url, cfg.hfToken, model);
-      r.model = model; // surfaced in the "why flagged?" popover
+      const models = hfModelsFor(cfg);
+      const r = models.length > 1
+        ? await detectHfEnsemble(url, cfg.hfToken, models)
+        : await detectHuggingFace(url, cfg.hfToken, models[0]);
+      r.model = r.model || models[0]; // surfaced in the "why flagged?" popover
       await recordOk('huggingface');
       return { result: r };
     }
