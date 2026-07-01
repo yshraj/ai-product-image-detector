@@ -26,6 +26,7 @@ try {
       '../compare/serp-search.js',
       '../compare/internal-apis.js',
       '../compare/score-config.js',
+      '../compare/attribute-parser.js',
       '../compare/similarity.js',
       '../compare/search.js',
       '../compare/tab-search.js',
@@ -57,6 +58,8 @@ const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
   serpApiKey: '',
   notifyOnAI: false,
   compareUseTabs: false,
+  compareUseClip: true,
+  compareDebugLog: false,
 };
 const HISTORY_KEY = RMFDefaults.HISTORY_KEY || 'rmf_history';
 const CACHE_PREFIX = RMFDefaults.CACHE_PREFIX || 'rmf_cache_';
@@ -619,12 +622,24 @@ async function handleCompareSearch(msg) {
     ? TabSearch.fetchSearchPageViaTab
     : null;
 
+  if (typeof self !== 'undefined') {
+    self.RMF_FetchImage = { fetchImageAsDataUrl, isAllowedHttpUrl };
+  }
+
+  const useClip = cfg.compareUseClip !== false && !!product?.image;
+  if (useClip && ClipBridge?.warmupClip) {
+    ClipBridge.warmupClip().catch((err) => {
+      console.warn('[RMF Compare] CLIP warmup:', err?.message || err);
+    });
+  }
+
   const data = await CompareSearch.searchAll(product, sites, {
     tabFetchFn,
     compareUseTabs: cfg.compareUseTabs === true,
     serpApiKey,
     clipBridge: ClipBridge,
-    useClip: cfg.compareUseClip === true && !!product?.image,
+    useClip,
+    debug: cfg.compareDebugLog === true,
   });
   return { ok: true, productFingerprint: fingerprint, ...data };
 }

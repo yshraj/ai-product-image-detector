@@ -37,6 +37,14 @@ for (const ref of refs) {
 }
 if (errors === 0) ok(`all ${refs.length} referenced files present`);
 
+// 2b. CLIP ONNX wasm bundle (required for offscreen CLIP in MV3)
+const onnxWasm = path.join(root, 'libs/onnx/ort-wasm-simd.wasm');
+if (!fs.existsSync(onnxWasm)) {
+  fail('missing CLIP wasm bundle — run: npm run refresh-onnx-wasm');
+} else {
+  ok('CLIP onnx wasm bundle present');
+}
+
 // 3. syntax-check project JS (skip libs/)
 function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

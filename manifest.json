@@ -30,6 +30,9 @@
     "https://*.flixcart.com/*",
     "https://images.meesho.com/*",
     "https://*.nykaa.com/*",
+    "https://*.media-amazon.com/*",
+    "https://*.ssl-images-amazon.com/*",
+    "https://*.amazon.in/*",
     "https://serpapi.com/*"
   ],
   "content_scripts": [
@@ -88,5 +91,13 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "libs/onnx/*.wasm"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

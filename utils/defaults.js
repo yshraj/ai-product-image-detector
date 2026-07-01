@@ -14,6 +14,8 @@
  * @property {string} serpApiKey
  * @property {boolean} notifyOnAI
  * @property {boolean} compareUseTabs
+ * @property {boolean} compareUseClip
+ * @property {boolean} compareDebugLog
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -39,6 +41,8 @@
     serpApiKey: '',
     notifyOnAI: false,
     compareUseTabs: false,
+    compareUseClip: true,
+    compareDebugLog: false,
   };
 
   const CONTENT_PREF_DEFAULTS = {
