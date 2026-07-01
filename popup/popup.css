@@ -216,7 +216,11 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .compare-manual summary::before { content: "▸ "; }
 .compare-manual[open] summary::before { content: "▾ "; }
 .compare-manual .action-list { margin-top: 8px; }
-#compare-search { margin-top: 4px; }
+.compare-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.compare-actions .primary { flex: 1 1 auto; min-width: 140px; }
+.compare-actions .ghost { flex: 0 0 auto; padding: 8px 12px; font-size: 12px; font-weight: 600; }
+.compare-stale-badge { font-size: 11.5px; color: #92400e; background: var(--amber-soft); border: 1px solid #f4dcb8; border-radius: var(--radius-sm); padding: 6px 10px; margin: 8px 0 0; font-weight: 600; }
+.compare-results.is-stale { opacity: 0.55; pointer-events: none; }
 .action-list { display: grid; gap: 8px; }
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .drop-zone {

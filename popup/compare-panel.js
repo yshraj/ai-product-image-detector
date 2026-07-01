@@ -1,8 +1,6 @@
 // popup/compare-panel.js — Compare tab UI (results, skeleton, filters, sort).
-// Sends RMF_COMPARE_SEARCH / RMF_COMPARE_CACHE to the service worker, which
-// runs compare/search.js (HTML scrape or SerpApi). This file only renders results.
+// Sends RMF_COMPARE_SEARCH to the service worker, which runs compare/search.js.
 (function () {
-  const COMPARE_CACHE_PREFIX = 'rmf_compare_';
   const ALL_SITES = window.RMF_Defaults.ALL_COMPARE_SITES;
   const parsePriceNum = window.RMF_Price.parsePriceForSort;
   const send = window.RMF_Runtime.sendMessage;
@@ -25,17 +23,51 @@
     sort: 'score',
     filterSites: new Set(ALL_SITES),
     searchSites: new Set(ALL_SITES),
+    resultsFingerprint: '',
+    stale: false,
+    compareVisible: false,
   };
 
   const $ = (id) => document.getElementById(id);
   const S = () => window.RMF_STRINGS;
   const MP = () => window.RMF_CompareConfig?.MARKETPLACES || {};
 
-  async function updateCacheCount() {
-    const all = await chrome.storage.local.get(null);
-    const n = Object.keys(all).filter((k) => k.startsWith(COMPARE_CACHE_PREFIX)).length;
-    const el = $('compare-cache-count');
-    if (el) el.textContent = String(n);
+  function productFp(product) {
+    if (!product) return '';
+    if (product.fingerprint) return product.fingerprint;
+    return window.RMF_ProductFingerprint?.productFingerprint?.(product) || '';
+  }
+
+  function clearCompareUI() {
+    state.data = null;
+    const resultsEl = $('compare-results');
+    if (resultsEl) {
+      resultsEl.textContent = '';
+      resultsEl.hidden = true;
+      resultsEl.classList.remove('is-stale');
+    }
+    $('compare-skeleton') && ($('compare-skeleton').hidden = true);
+    $('compare-toolbar') && ($('compare-toolbar').hidden = true);
+    $('compare-display-filters') && ($('compare-display-filters').hidden = true);
+    $('compare-site-status') && ($('compare-site-status').hidden = true);
+    $('compare-empty') && ($('compare-empty').hidden = true);
+    $('compare-manual') && ($('compare-manual').hidden = true);
+    const staleEl = $('compare-stale-badge');
+    if (staleEl) staleEl.hidden = true;
+  }
+
+  function showStaleBadge() {
+    let el = $('compare-stale-badge');
+    if (!el) {
+      el = document.createElement('p');
+      el.id = 'compare-stale-badge';
+      el.className = 'compare-stale-badge';
+      el.setAttribute('role', 'status');
+      $('compare-actions')?.insertAdjacentElement('afterend', el);
+    }
+    el.textContent = S()?.compare?.staleResults || 'Product changed — refresh to update';
+    el.hidden = false;
+    $('compare-results')?.classList.add('is-stale');
   }
 
   function siteStatusLine(results) {
@@ -287,7 +319,13 @@
   function applySearchResult(r) {
     const s = S();
     state.data = r;
+    state.stale = false;
+    state.resultsFingerprint = productFp(state.product);
     hideSkeleton();
+
+    const staleEl = $('compare-stale-badge');
+    if (staleEl) staleEl.hidden = true;
+    $('compare-results')?.classList.remove('is-stale');
 
     const statusEl = $('compare-site-status');
     const noteEl = $('compare-status');
@@ -302,8 +340,7 @@
     if (noteEl) {
       let text = '';
       let variant = '';
-      if (r.cached) { text = s?.compare?.cached || ''; variant = 'success'; }
-      else if (hasMatches && failed) {
+      if (hasMatches && failed) {
         text = s?.compare?.partialResults?.(
           r.failed.map((f) => MP()[f.site]?.name || f.site).join(', '),
         ) || '';
@@ -319,22 +356,29 @@
     if (toolbar) toolbar.hidden = !hasMatches;
     renderResults();
     renderManualLinks(state.product, failed || !hasMatches);
-    updateCacheCount();
   }
 
   async function runSearch(product) {
     if (state.searching) return;
     const s = S();
     const btn = $('compare-search');
+    const refreshBtn = $('compare-refresh');
+
+    clearCompareUI();
+    state.stale = false;
     state.searching = true;
     state.product = product;
     btn?.setAttribute('aria-busy', 'true');
     if (btn) btn.disabled = true;
+    if (refreshBtn) refreshBtn.disabled = true;
 
     $('compare-empty') && ($('compare-empty').hidden = true);
     $('compare-manual') && ($('compare-manual').hidden = true);
     const noteEl = $('compare-status');
-    if (noteEl) { noteEl.hidden = false; setCompareStatus(noteEl, s?.compare?.searching || 'Searching…', 'loading'); }
+    if (noteEl) {
+      noteEl.hidden = false;
+      setCompareStatus(noteEl, s?.compare?.searching || 'Searching…', 'loading');
+    }
     $('compare-site-status') && ($('compare-site-status').hidden = true);
     showSkeleton();
 
@@ -343,16 +387,22 @@
       state.searching = false;
       btn?.setAttribute('aria-busy', 'false');
       if (btn) btn.disabled = false;
+      if (refreshBtn) refreshBtn.disabled = false;
       hideSkeleton();
       setCompareStatus(noteEl, s?.compare?.noSitesSelected || 'Select at least one marketplace.', 'warn');
       return;
     }
 
-    const r = await sendCompare({ type: 'RMF_COMPARE_SEARCH', product, sites, cache: false });
+    const r = await sendCompare({
+      type: 'RMF_COMPARE_SEARCH',
+      product,
+      sites,
+    });
 
     state.searching = false;
     btn?.setAttribute('aria-busy', 'false');
     if (btn) btn.disabled = false;
+    if (refreshBtn) refreshBtn.disabled = false;
 
     if (!r?.ok) {
       hideSkeleton();
@@ -363,54 +413,28 @@
     applySearchResult(r);
   }
 
-  async function loadCached(product) {
-    const r = await send({ type: 'RMF_COMPARE_CACHE', product });
-    if (r?.ok && (r.matches?.length || r.results?.length)) {
-      state.data = r;
-      state.product = product;
-      applySearchResult(r);
-      return true;
-    }
-    return false;
+  function bindCompareActions(product) {
+    const btn = $('compare-search');
+    const refreshBtn = $('compare-refresh');
+    if (btn) btn.onclick = () => runSearch(product);
+    if (refreshBtn) refreshBtn.onclick = () => runSearch(product);
   }
 
-  async function render(getProduct) {
-    const s = S();
-    const p = await getProduct();
-    if (p?.title !== state.product?.title || p?.url !== state.product?.url) {
-      state.data = null;
-    }
-    state.product = p;
-
+  function updateProductHeader(p, s) {
     const titleEl = $('compare-title');
     const metaEl = $('compare-meta');
+    const actions = $('compare-actions');
     const btn = $('compare-search');
+    const refreshBtn = $('compare-refresh');
     const note = $('compare-note');
-    const emptyEl = $('compare-empty');
-
-    $('compare-results').hidden = true;
-    $('compare-skeleton').hidden = true;
-    $('compare-display-filters').hidden = true;
-    $('compare-site-status').hidden = true;
-    $('compare-status').hidden = true;
-    $('compare-manual').hidden = true;
-    if (emptyEl) emptyEl.hidden = true;
 
     if (!p?.title) {
       titleEl.textContent = s?.compare?.noProduct || 'Open a product page.';
       titleEl.classList.add('muted');
       if (metaEl) metaEl.hidden = true;
+      if (actions) actions.hidden = true;
       if (btn) btn.hidden = true;
-      if (emptyEl) {
-        buildEmptyState(
-          emptyEl,
-          s?.compare?.noProduct || 'Open a product page',
-          p?.isProductPage === false
-            ? (s?.compare?.listingPage || s?.compare?.emptyHint || '')
-            : (s?.compare?.emptyHint || ''),
-        );
-      }
-      if (note) note.textContent = '';
+      if (refreshBtn) refreshBtn.hidden = true;
       return;
     }
 
@@ -432,22 +456,108 @@
       if (p.price) metaEl.appendChild(document.createTextNode(p.price));
       metaEl.hidden = !(p.site || p.brand || p.price);
     }
+    if (actions) actions.hidden = false;
     if (btn) {
       btn.hidden = false;
       btn.disabled = state.searching;
       $('compare-search-label').textContent = s?.compare?.findSimilar || 'Find similar products';
-      btn.onclick = () => runSearch(p);
+    }
+    if (refreshBtn) {
+      refreshBtn.hidden = false;
+      refreshBtn.disabled = state.searching;
+      refreshBtn.textContent = s?.compare?.refresh || '🔄 Refresh';
     }
     if (note) note.textContent = s?.compare?.note || '';
+  }
+
+  async function handleProductChange(product) {
+    if (!product) return;
+    const fp = productFp(product);
+    if (fp && fp === state.resultsFingerprint && state.data && !state.stale) return;
+
+    state.product = product;
+    updateProductHeader(product, S());
+    bindCompareActions(product);
+
+    if (state.searching) return;
+
+    if (state.compareVisible) {
+      await runSearch(product);
+      return;
+    }
+
+    clearCompareUI();
+    state.stale = true;
+    state.resultsFingerprint = '';
+  }
+
+  function onCompareTabHidden() {
+    state.compareVisible = false;
+  }
+
+  async function render(getProduct) {
+    const s = S();
+    state.compareVisible = true;
+    const p = await getProduct();
+    const fp = productFp(p);
+    const productChanged = fp && state.resultsFingerprint && fp !== state.resultsFingerprint;
+
+    if (productChanged) {
+      clearCompareUI();
+      state.stale = true;
+    } else if (fp && state.product && productFp(state.product) !== fp) {
+      clearCompareUI();
+      state.stale = true;
+    }
+
+    state.product = p;
+
+    const emptyEl = $('compare-empty');
+    $('compare-status').hidden = true;
+
+    if (!p?.title) {
+      clearCompareUI();
+      if (emptyEl) {
+        buildEmptyState(
+          emptyEl,
+          s?.compare?.noProduct || 'Open a product page',
+          p?.isProductPage === false
+            ? (s?.compare?.listingPage || s?.compare?.emptyHint || '')
+            : (s?.compare?.emptyHint || ''),
+        );
+      }
+      updateProductHeader(p, s);
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    updateProductHeader(p, s);
+    bindCompareActions(p);
 
     const settingsSites = window.__compareSettingsSites || ALL_SITES;
     state.searchSites = new Set(settingsSites.filter((site) => site !== p.site));
     renderFilterChips(p);
     const filtersEl = $('compare-filters');
     if (filtersEl) filtersEl.hidden = false;
-    await updateCacheCount();
 
-    if (!state.searching && !state.data) await loadCached(p);
+    if (state.searching) return;
+
+    if (state.stale || productChanged) {
+      await runSearch(p);
+      return;
+    }
+
+    if (!state.data) {
+      await runSearch(p);
+      return;
+    }
+
+    const dataFp = state.resultsFingerprint || productFp(state.product);
+    if (dataFp && fp && dataFp === fp) {
+      applySearchResult(state.data);
+    } else {
+      await runSearch(p);
+    }
   }
 
   function setupSort() {
@@ -459,5 +569,12 @@
     });
   }
 
-  window.RMF_ComparePanel = { render, runSearch, updateCacheCount, setupSort };
+  window.RMF_ComparePanel = {
+    render,
+    runSearch,
+    setupSort,
+    handleProductChange,
+    onCompareTabHidden,
+    productFp,
+  };
 })();

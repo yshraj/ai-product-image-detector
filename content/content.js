@@ -734,11 +734,91 @@
 
     const extractColor = window.RMF_ProductQuery?.extractColorFromProduct;
     const color = extractColor ? extractColor({ title, brand }) : '';
-
-    return {
+    const fingerprintFn = window.RMF_ProductFingerprint?.productFingerprint;
+    const product = {
       site: SITE.name, title, brand, price, rating, seller, image, color,
       url: location.href, isProductPage: true,
     };
+    if (fingerprintFn) product.fingerprint = fingerprintFn(product);
+    return product;
+  }
+
+  // --- product change detection (SPA navigation) ---------------------------
+  let lastProductFingerprint = '';
+  let lastProductHref = location.href;
+  let productCheckTimer = null;
+
+  function scheduleProductCheck() {
+    if (productCheckTimer) return;
+    productCheckTimer = setTimeout(() => {
+      productCheckTimer = null;
+      checkProductChange();
+    }, 350);
+  }
+
+  function onLocationMaybeChanged() {
+    if (location.href === lastProductHref) return;
+    lastProductHref = location.href;
+    lastProductFingerprint = '';
+    scheduleProductCheck();
+  }
+
+  function checkProductChange() {
+    onLocationMaybeChanged();
+    const p = getProduct();
+    const fp = p.fingerprint || '';
+    if (!p.isProductPage) {
+      if (lastProductFingerprint) {
+        lastProductFingerprint = '';
+        try {
+          chrome.runtime.sendMessage({ type: 'RMF_PRODUCT_CHANGED', product: p, fingerprint: '' });
+        } catch { /* popup closed */ }
+      }
+      return;
+    }
+    if (!fp || fp === lastProductFingerprint) return;
+    const prev = lastProductFingerprint;
+    lastProductFingerprint = fp;
+    if (!prev) return;
+    try {
+      chrome.runtime.sendMessage({
+        type: 'RMF_PRODUCT_CHANGED',
+        product: p,
+        fingerprint: fp,
+        previousFingerprint: prev,
+      });
+    } catch { /* popup closed */ }
+  }
+
+  function startProductWatcher() {
+    lastProductFingerprint = getProduct().fingerprint || '';
+
+    const titleSelectors = [
+      'h1',
+      'meta[property="og:title"]',
+      'meta[property="og:image"]',
+      '[class*="pdp-"]',
+      '[class*="product-title"]',
+      '[class*="ProductDescription"]',
+    ];
+    const nodes = titleSelectors.flatMap((sel) => [...document.querySelectorAll(sel)]);
+
+    const obs = new MutationObserver(() => scheduleProductCheck());
+    for (const node of nodes) {
+      obs.observe(node, { childList: true, subtree: true, characterData: true, attributes: true });
+    }
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    const wrapHistory = (fn) => function (...args) {
+      const ret = fn.apply(this, args);
+      onLocationMaybeChanged();
+      scheduleProductCheck();
+      return ret;
+    };
+    history.pushState = wrapHistory(history.pushState);
+    history.replaceState = wrapHistory(history.replaceState);
+    window.addEventListener('popstate', () => { onLocationMaybeChanged(); scheduleProductCheck(); });
+    window.addEventListener('hashchange', () => { onLocationMaybeChanged(); scheduleProductCheck(); });
   }
 
   function clearStalePending() {
@@ -877,5 +957,6 @@
     await scanAll();
     startObserver();
   }
+  startProductWatcher();
   Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();

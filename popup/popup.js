@@ -221,7 +221,41 @@ function setupNav() {
   });
 }
 
+let comparePollId = null;
+let lastCompareFp = '';
+
+function stopCompareWatcher() {
+  if (comparePollId) clearInterval(comparePollId);
+  comparePollId = null;
+}
+
+function startCompareWatcher() {
+  stopCompareWatcher();
+  comparePollId = setInterval(async () => {
+    if ($('panel-compare').hidden) {
+      stopCompareWatcher();
+      return;
+    }
+    const p = await getActiveProduct();
+    const fp = window.RMF_ComparePanel?.productFp?.(p) || p?.fingerprint || '';
+    if (!fp || fp === lastCompareFp) return;
+    lastCompareFp = fp;
+    await window.RMF_ComparePanel?.handleProductChange?.(p);
+  }, 1200);
+}
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type !== 'RMF_PRODUCT_CHANGED') return;
+  lastCompareFp = msg.fingerprint || window.RMF_ComparePanel?.productFp?.(msg.product) || '';
+  window.RMF_ComparePanel?.handleProductChange?.(msg.product);
+});
+
 function selectTab(tab) {
+  const prev = document.querySelector('.nav-btn.active')?.dataset?.tab;
+  if (prev === 'compare' && tab !== 'compare') {
+    window.RMF_ComparePanel?.onCompareTabHidden?.();
+    stopCompareWatcher();
+  }
   TABS.forEach((t) => {
     const panel = $(`panel-${t}`);
     panel.hidden = t !== tab;
@@ -237,7 +271,13 @@ function selectTab(tab) {
   const panel = $(`panel-${tab}`);
   panel?.focus({ preventScroll: true });
   if (tab === 'scan') updateScan();
-  if (tab === 'compare') window.RMF_ComparePanel?.render?.(getActiveProduct);
+  if (tab === 'compare') {
+    window.RMF_ComparePanel?.render?.(getActiveProduct)?.then?.(async () => {
+      const p = await getActiveProduct();
+      lastCompareFp = window.RMF_ComparePanel?.productFp?.(p) || p?.fingerprint || '';
+      startCompareWatcher();
+    });
+  }
   if (tab === 'tools') renderTools();
 }
 
@@ -299,27 +339,45 @@ async function sendToActiveTab(message) {
   }
   return primary;
 }
-async function getActiveProduct() {
-  const active = await getActiveTab();
-  if (!active?.id) return null;
-
-  if (isAmazonUrl(active.url)) {
-    return { isProductPage: false, amazonLimited: true, title: '', url: active.url };
+  function productMatchesTabUrl(product, tabUrl) {
+    if (!product?.url || !tabUrl) return true;
+    try {
+      const tab = new URL(tabUrl);
+      const prod = new URL(product.url);
+      if (tab.origin !== prod.origin) return false;
+      if (tab.pathname === prod.pathname && tab.search === prod.search) return true;
+      const site = product.site || '';
+      const fpFn = window.RMF_ProductFingerprint?.productFingerprint;
+      if (!fpFn) return true;
+      const tabFp = fpFn({ site, url: tabUrl });
+      const prodFp = fpFn(product);
+      return !!(tabFp && prodFp && tabFp === prodFp);
+    } catch {
+      return true;
+    }
   }
 
-  const tryTab = async () => {
-    try { return await chrome.tabs.sendMessage(active.id, { type: 'GET_PRODUCT' }); } catch { return null; }
-  };
+  async function getActiveProduct() {
+    const active = await getActiveTab();
+    if (!active?.id) return null;
 
-  // Retry on the visible tab only — avoids picking a stale Flipkart tab in the background.
-  for (let i = 0; i < 10; i++) {
-    const p = await tryTab();
-    if (p?.title && p.isProductPage !== false) return p;
-    if (p?.isProductPage === false) return null;
-    await new Promise((r) => setTimeout(r, 250));
+    if (isAmazonUrl(active.url)) {
+      return { isProductPage: false, amazonLimited: true, title: '', url: active.url };
+    }
+
+    const tryTab = async () => {
+      try { return await chrome.tabs.sendMessage(active.id, { type: 'GET_PRODUCT' }); } catch { return null; }
+    };
+
+    // Retry on the visible tab — SPAs may update URL before title/meta refresh.
+    for (let i = 0; i < 16; i++) {
+      const p = await tryTab();
+      if (p?.isProductPage === false) return null;
+      if (p?.title && p.isProductPage !== false && productMatchesTabUrl(p, active.url)) return p;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return null;
   }
-  return null;
-}
 
 // ---- SCAN -----------------------------------------------------------------
 async function updateScan() {

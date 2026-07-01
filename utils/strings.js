@@ -122,6 +122,8 @@
       filterSites: 'Sites to search',
       sortBy: 'Sort results',
       cachedCount: (n) => `${n} cached comparison${n === 1 ? '' : 's'}`,
+      refresh: '🔄 Refresh',
+      staleResults: 'Product changed — rescanning…',
     },
 
     // tools tab

@@ -90,10 +90,13 @@
         <h2 class="card-h">Compare this product</h2>
         <p class="product-title" id="compare-title">—</p>
         <p class="compare-meta" id="compare-meta" hidden></p>
-        <button class="primary" id="compare-search" type="button" hidden>
-          <span class="btn-label" id="compare-search-label">Find similar products</span>
-          <span class="spinner" aria-hidden="true"></span>
-        </button>
+        <div class="compare-actions" id="compare-actions" hidden>
+          <button class="primary" id="compare-search" type="button">
+            <span class="btn-label" id="compare-search-label">Find similar products</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <button class="ghost" id="compare-refresh" type="button" title="Rescan for this product">🔄 Refresh</button>
+        </div>
         <div class="compare-filters" id="compare-filters" hidden></div>
         <p class="compare-status" id="compare-status" hidden role="status" aria-live="polite"></p>
         <p class="compare-site-status" id="compare-site-status" hidden aria-live="polite"></p>
@@ -114,9 +117,6 @@
           <div class="action-list" id="compare-list"></div>
         </details>
         <p class="note" id="compare-note"></p>
-      </div>
-      <div class="card cache-card">
-        <div class="mini-stat"><span id="compare-cache-count">0</span><small>Cached comparisons</small></div>
       </div>
     </section>
 
@@ -284,6 +284,7 @@
   <script src="../utils/defaults.js"></script>
   <script src="../utils/price.js"></script>
   <script src="../utils/marketplace-url.js"></script>
+  <script src="../utils/product-fingerprint.js"></script>
   <script src="../utils/chrome-runtime.js"></script>
   <script src="../utils/strings.js"></script>
   <script src="../compare/config.js"></script>
