@@ -15,8 +15,8 @@ All automated checks pass. The extension is vanilla JavaScript (no TypeScript, n
 | Check | Status | Notes |
 |-------|--------|-------|
 | `npm run validate` | ✅ PASS | Manifest parse, file refs, JS syntax, version sync, no `debugger` |
-| `npm run test:unit` | ✅ 37/37 | Compare, matcher, URLs, defaults, service-worker SSRF |
-| `npm test` (Playwright) | ✅ 78/78 | Extension, popup, a11y, permissions, workflow |
+| `npm run test:unit` | ✅ 41/41 | Compare (parallel), matcher (color), URLs, defaults, SSRF |
+| `npm test` (Playwright) | ✅ 90/90 | Extension, popup, regression, a11y, permissions, workflow |
 | `npm run build` (web-ext) | ✅ | Produces `dist/shopshield_shopping_assistant-1.7.0.zip` |
 | `npm run lint:firefox` (web-ext lint) | ⚠️ N/A | Chrome MV3 target; Firefox lint expects Gecko manifest |
 | TypeScript errors | ✅ N/A | Project is JavaScript; no `tsc` |

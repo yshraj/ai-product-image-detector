@@ -112,8 +112,8 @@ This runs `web-ext run --target chromium`, which opens Chrome with the extension
 
 ```bash
 npm run validate      # manifest, file refs, JS syntax, version sync
-npm run test:unit     # 37 Node unit tests
-npm test              # 78 Playwright E2E tests
+npm run test:unit     # 41 Node unit tests
+npm test              # 90 Playwright E2E tests
 ```
 
 4. Smoke-test on a real marketplace page with the unpacked extension.
@@ -199,7 +199,7 @@ Design rationale: **[docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md)**
 npm run validate        # manifest + file refs + JS syntax + version + no debugger
 npm run lint            # alias for validate
 npm run test:unit       # Node unit tests (compare, matcher, SSRF, strings, …)
-npm test                # all Playwright E2E tests (78 specs)
+npm test                # all Playwright E2E tests (90 specs)
 npm run test:e2e        # same as npm test
 npm run test:headed     # E2E with visible browser (HEADLESS=0)
 npm run test:report     # open HTML report after a failed run
@@ -209,8 +209,8 @@ npm run test:report     # open HTML report after a failed run
 
 | Suite | Count | Scope |
 |-------|-------|-------|
-| Unit | 37 | Compare search, product matcher, SSRF guard, HF parsing, defaults, URLs |
-| E2E | 78 | Extension load, popup (4 tabs), options, scanning, badges, HF (mocked), compare, a11y, workflow |
+| Unit | 41 | Compare search (parallel), product matcher (color), SSRF guard, HF parsing, defaults, URLs |
+| E2E | 90 | Extension load, popup, options, scanning, compare, regression, a11y, workflow |
 
 E2E tests load the **real unpacked extension** in Chromium. Marketplace pages and Hugging Face are **mocked offline** — no API keys or network required.
 
