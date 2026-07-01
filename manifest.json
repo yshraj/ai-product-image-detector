@@ -45,6 +45,7 @@
         "utils/defaults.js",
         "utils/marketplace-url.js",
         "utils/price.js",
+        "utils/product-fingerprint.js",
         "utils/product-query.js",
         "utils/strings.js",
         "utils/logger.js",
