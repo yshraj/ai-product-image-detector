@@ -14,7 +14,8 @@
     "scripting",
     "tabs",
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "offscreen"
   ],
   "host_permissions": [
     "https://www.myntra.com/*",
@@ -24,6 +25,7 @@
     "https://www.amazon.in/*",
     "https://router.huggingface.co/*",
     "https://huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
     "https://assets.myntassets.com/*",
     "https://*.flixcart.com/*",
     "https://images.meesho.com/*",
@@ -84,6 +86,6 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }

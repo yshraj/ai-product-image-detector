@@ -26,6 +26,9 @@ try {
       '../compare/internal-apis.js',
       '../compare/search.js',
       '../compare/tab-search.js',
+      '../compare/score-config.js',
+      '../compare/similarity.js',
+      '../compare/clip-bridge.js',
       '../utils/trust-storage.js',
     );
   }

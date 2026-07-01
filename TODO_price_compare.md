@@ -15,11 +15,11 @@
 - [x] Test each platform scraper independently before combining — `test/unit/tab-parser.test.cjs`, `test/unit/tab-search.test.cjs`, myntra/nykaa fixtures
 
 ## Phase 3 — Similarity Scoring
-- [ ] Integrate transformers.js CLIP model in offscreen document
-- [ ] Image similarity function (cosine sim between embeddings)
-- [ ] Text similarity function (TF-IDF or Jaccard, no external lib)
-- [ ] Combined weighted score using named constants (IMAGE_WEIGHT=0.55, TEXT_WEIGHT=0.45)
-- [ ] Dedup pass for near-identical candidates (similarity > 0.9)
+- [x] Integrate transformers.js CLIP model in offscreen document — `offscreen/offscreen.html`, `offscreen/offscreen.js`, `libs/transformers.min.js`, `compare/clip-bridge.js`
+- [x] Image similarity function (cosine sim between embeddings) — offscreen scoreBatch + `compare/similarity.js` cosineSimilarity
+- [x] Text similarity function (TF-IDF or Jaccard, no external lib) — `compare/similarity.js` textSimilarity
+- [x] Combined weighted score using named constants (IMAGE_WEIGHT=0.55, TEXT_WEIGHT=0.45) — `compare/score-config.js`
+- [x] Dedup pass for near-identical candidates (similarity > 0.9) — `compare/similarity.js` dedupCandidates
 
 ## Phase 4 — Ranking & Display
 - [ ] Merge + sort all platform candidates by finalScore, cross-platform (not grouped)
