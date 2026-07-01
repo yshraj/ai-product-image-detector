@@ -13,9 +13,24 @@
     'off', 'sale', 'new', 'latest', 'best', 'price', 'offer', 'deals',
     'men', 'women', 'boys', 'girls', 'unisex', 'pack', 'combo', 'set',
     'size', 'colour', 'color', 'with', 'for', 'and', 'the', 'a', 'an',
+    'of', 'in', 'at', 'by', 'from', 'to', 'or', 'on', 'is', 'it',
+    'seller', 'warranty', 'guarantee', 'genuine', 'original', 'authentic',
+    'bestseller', 'bestselling', 'prime', 'deal', 'today', 'limited',
+    'stock', 'only', 'left', 'pcs', 'piece', 'pieces', 'qty', 'quantity',
+    'approx', 'approximately', 'inches', 'inch', 'cm', 'mm', 'meter',
+    'year', 'years', 'edition', 'version', 'model', 'no', 'number',
   ]);
 
-  const SIZE_RE = /\b(xxs|xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|5xl|\d{2,3}\s*(cm|inch|inches|in|mm|ml|l|kg|g|gb|tb))\b/i;
+  const FILLER_PHRASES = [
+    /\bpack\s+of\s+\d+\b/gi,
+    /\b\d+\s*[-x×]\s*\d+\b/gi,
+    /\bbest\s+seller\b/gi,
+    /\bfree\s+shipping\b/gi,
+    /\b\d+\s*%\s*off\b/gi,
+    /\b(?:size|sz)\s*[:\-]?\s*\w+\b/gi,
+  ];
+
+  const SIZE_RE = /\b(xxs|xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|5xl|\d{2,3}\s*(cm|inch|inches|in|mm|ml|l|kg|g))\b/i;
 
   const COLOR_TOKENS = new Set([
     'black', 'white', 'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'pink',
@@ -52,7 +67,9 @@
 
   function normalizeTitle(title) {
     if (!title) return '';
-    return String(title)
+    let s = String(title);
+    for (const re of FILLER_PHRASES) s = s.replace(re, ' ');
+    return s
       .replace(PAREN_RE, ' ')
       .replace(/[|/\\–—]+/g, ' ')
       .replace(/\s+/g, ' ')
@@ -67,9 +84,16 @@
       .filter((w) => w.length > 1 && !NOISE.has(w));
   }
 
-  function buildSearchQuery(product) {
-    const title = normalizeTitle(product?.title || '');
-    const brand = (product?.brand || '').trim();
+  /**
+   * Build a short marketplace search query from a noisy product title + attributes.
+   * @param {string} title
+   * @param {{ brand?: string, color?: string, model?: string }} [attributes]
+   * @returns {string}
+   */
+  function cleanQueryFromProduct(title, attributes = {}) {
+    const brand = attributes.brand || '';
+    const color = attributes.color || extractColorFromProduct({ title, brand });
+    const model = (attributes.model || '').trim();
     let tokens = tokenize(title);
 
     if (brand) {
@@ -79,19 +103,30 @@
       tokens = [...brandWords, ...tokens];
     }
 
-    // Drop size/color tokens — they hurt cross-marketplace search.
+    if (model) {
+      const modelWords = tokenize(model).filter((t) => t.length > 1);
+      tokens = [...modelWords, ...tokens];
+    }
+
     const cleaned = tokens.filter((t) => !isSizeToken(t) && t.length > 1);
     const unique = [];
     const seen = new Set();
     for (const t of cleaned) {
       if (!seen.has(t)) { seen.add(t); unique.push(t); }
     }
-
-    const color = extractColorFromProduct(product);
     if (color && !seen.has(color)) unique.push(color);
 
     const query = unique.slice(0, 8).join(' ');
-    return query || title.slice(0, 80);
+    const fallback = normalizeTitle(title).slice(0, 80);
+    return query || fallback;
+  }
+
+  function buildSearchQuery(product) {
+    return cleanQueryFromProduct(product?.title || '', {
+      brand: product?.brand,
+      color: product?.color || extractColorFromProduct(product),
+      model: product?.model,
+    });
   }
 
   function parsePrice(text) {
@@ -99,7 +134,7 @@
   }
 
   return {
-    normalizeTitle, tokenize, buildSearchQuery, parsePrice, extractColorFromProduct,
-    isColorToken, NOISE,
+    normalizeTitle, tokenize, buildSearchQuery, cleanQueryFromProduct, parsePrice,
+    extractColorFromProduct, isColorToken, NOISE,
   };
 }));
