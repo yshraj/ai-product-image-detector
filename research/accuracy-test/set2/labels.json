@@ -1,0 +1,15 @@
+{
+  "note": "set2. Confident-AI positives (user-supplied + set1 agreed) vs set1 validated reals.",
+  "sources": {
+    "01": "user image.png (white shirt, tan bg) — probably AI (~75%)",
+    "02": "user image copy 3.png (navy, street) — confident AI",
+    "03": "user image copy 4.png (black check, cobblestone) — confident AI",
+    "04": "user image copy 5.png (black check, white pants) — confident AI",
+    "05": "set1 #01 (young model, tan) — AI (HF 97)",
+    "06": "set1 #04 (pole, sunglasses) — user says AI; reviewer unsure (~55%)",
+    "07-19": "set1 validated reals (user + HF + reviewer agreed)"
+  },
+  "ai":   ["01", "02", "03", "04", "05", "06"],
+  "real": ["07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"],
+  "unsure": []
+}
