@@ -733,7 +733,17 @@
     }
 
     const extractColor = window.RMF_ProductQuery?.extractColorFromProduct;
-    const color = extractColor ? extractColor({ title, brand }) : '';
+    let color = extractColor ? extractColor({ title, brand }) : '';
+    if (!color) {
+      const colourRow = [...document.querySelectorAll('li, tr, div, p, span')].find((el) => {
+        const t = (el.textContent || '').trim();
+        return /^(colour|color)\s*[:\-]/i.test(t) && t.length < 80;
+      });
+      if (colourRow) {
+        const m = colourRow.textContent.match(/(?:colour|color)\s*[:\-]\s*([a-z\s]+)/i);
+        if (m) color = m[1].trim().toLowerCase().split(/[,/|]/)[0].trim();
+      }
+    }
     const fingerprintFn = window.RMF_ProductFingerprint?.productFingerprint;
     const product = {
       site: SITE.name, title, brand, price, rating, seller, image, color,

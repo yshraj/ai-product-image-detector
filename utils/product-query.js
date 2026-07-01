@@ -161,6 +161,13 @@
   }
 
   function buildSearchQuery(product) {
+    const AP = (typeof self !== 'undefined' && self.RMF_AttributeParser)
+      || (typeof global !== 'undefined' && global.RMF_AttributeParser);
+    if (AP?.parseAttributes && AP?.attributeQueryTokens) {
+      const attrs = AP.parseAttributes(product);
+      const q = AP.attributeQueryTokens(attrs).join(' ');
+      if (q) return q;
+    }
     const brand = product?.brand || inferBrandFromTitle(product?.title || '');
     return cleanQueryFromProduct(product?.title || '', {
       brand,

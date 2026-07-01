@@ -31,15 +31,19 @@
   const { pickBest, brandMatch } = ProductMatcher;
   const { searchGoogleShopping } = SerpSearch || {};
   const { searchViaInternalApi } = InternalApis || {};
-  const { TOP_RANKED, MIN_FINAL_SCORE, MIN_FALLBACK_SCORE } = ScoreConfig || {
+  const {
+    TOP_RANKED, MIN_FINAL_SCORE, MIN_FALLBACK_SCORE,
+    MAX_CANDIDATES_PER_SITE, CLIP_TEXT_PREFILTER,
+  } = ScoreConfig || {
     TOP_RANKED: 10, MIN_FINAL_SCORE: 0.12, MIN_FALLBACK_SCORE: 0.06,
+    MAX_CANDIDATES_PER_SITE: 25, CLIP_TEXT_PREFILTER: 15,
   };
 
   const FETCH_TIMEOUT_MS = 12_000;
-  const CLIP_RANK_BUDGET_MS = 4_000;
+  const CLIP_RANK_BUDGET_MS = 45_000;
   const MIN_RESULTS = 1;
   const COMPARE_CONCURRENCY = 3;
-  const MAX_CANDIDATES_PER_SITE = 12;
+  const COMPARE_DEBUG = typeof process !== 'undefined' && process.env?.RMF_COMPARE_DEBUG === '1';
   /** Direct fetch is blocked (Akamai 403); hidden tabs required. */
   const TAB_REQUIRED_SITES = new Set(['nykaa']);
   const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -107,12 +111,18 @@
     return [];
   }
 
-  function scoreLabel(finalScore) {
-    const pct = Math.round((finalScore || 0) * 100);
-    let label = 'possible';
-    if (pct >= 90) label = 'same';
-    else if (pct >= 70) label = 'similar';
-    return { score: pct, label };
+  function compareLog(event, data) {
+    if (typeof console !== 'undefined') {
+      console.log('[RMF Compare]', event, data);
+    }
+  }
+
+  function isUsableCandidate(candidate) {
+    const title = String(candidate?.title || '').trim();
+    if (title.length < 12) return false;
+    const words = title.split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return false;
+    return true;
   }
 
   function flattenCandidates(siteResults) {
@@ -120,47 +130,109 @@
     for (const r of siteResults) {
       if (!r.ok || !r.candidates?.length) continue;
       for (const c of r.candidates) {
+        if (!isUsableCandidate(c)) continue;
         pool.push({ ...c, site: r.site });
       }
     }
     return pool;
   }
 
-  async function clipScoresByProductUrl(clipBridge, sourceImage, candidates) {
+  async function clipScoresByProductUrl(clipBridge, sourceImage, candidates, debug = false) {
     const withImg = candidates.filter((c) => c.image);
-    if (!clipBridge || !sourceImage || !withImg.length) return {};
+    if (!clipBridge || !sourceImage || !withImg.length) {
+      if (debug) compareLog('clip-skipped', { reason: 'no-bridge-or-images', sourceImage, count: withImg.length });
+      return {};
+    }
 
+    const started = Date.now();
     const task = (async () => {
       const uniqueImages = [...new Set(withImg.map((c) => c.image))];
-      const scoresByImage = await clipBridge.scoreImageBatch(sourceImage, uniqueImages);
+      const scoresByImage = await clipBridge.scoreImageBatch(sourceImage, uniqueImages, { debug });
       const byProductUrl = {};
       for (const c of withImg) {
-        if (scoresByImage[c.image] != null) byProductUrl[c.url] = scoresByImage[c.image];
+        const clipScore = scoresByImage[c.image];
+        if (clipScore != null) byProductUrl[c.url] = clipScore;
+        if (debug) {
+          compareLog('clip-candidate', {
+            sourceImage,
+            candidateImage: c.image,
+            clipScore: clipScore ?? null,
+            elapsed: Date.now() - started,
+          });
+        }
       }
       return byProductUrl;
     })();
 
     try {
-      return await Promise.race([
+      const result = await Promise.race([
         task,
-        new Promise((resolve) => { setTimeout(() => resolve({}), CLIP_RANK_BUDGET_MS); }),
+        new Promise((resolve) => { setTimeout(() => resolve({ __timeout: true }), CLIP_RANK_BUDGET_MS); }),
       ]);
-    } catch {
+      if (result?.__timeout) {
+        compareLog('clip-timeout', { elapsed: CLIP_RANK_BUDGET_MS, candidates: withImg.length });
+        return {};
+      }
+      if (debug) {
+        compareLog('clip-batch-done', {
+          sourceImage,
+          scored: Object.keys(result).length,
+          candidates: withImg.length,
+          elapsed: Date.now() - started,
+        });
+      }
+      return result;
+    } catch (err) {
+      compareLog('clip-error', { error: String(err?.message || err), elapsed: Date.now() - started });
       return {};
     }
   }
 
-  function scorePoolForRanking(product, queryStr, pool, imageScores, sim) {
-    const brand = product.brand || inferBrandFromTitle(product.title || '');
+  function scorePoolTextOnly(product, pool, sim) {
     return pool.map((c) => {
-      const textQ = sim.textSimilarity(queryStr, c.title || '');
-      const textT = product.title ? sim.textSimilarity(product.title, c.title || '') : 0;
-      const textScore = Math.max(textQ, textT);
+      const scored = sim.scoreCandidateMatch(product, c, 0);
+      return {
+        ...c,
+        imageScore: 0,
+        textScore: scored.titleScore,
+        finalScore: scored.finalScore,
+        breakdown: scored.breakdown,
+        sourceAttrs: scored.sourceAttrs,
+        candidateAttrs: scored.candidateAttrs,
+        _textOnlyScore: scored.finalScore,
+      };
+    });
+  }
+
+  function scorePoolForRanking(product, pool, imageScores, sim, debug = false) {
+    return pool.map((c) => {
       const imageScore = imageScores[c.url] ?? 0;
-      const brandFrac = brand ? brandMatch(brand, c.title) : 0;
-      const brandBoost = brandFrac * 0.12;
-      const finalScore = Math.min(1, sim.combinedScore(imageScore, textScore) + brandBoost);
-      return { ...c, imageScore, textScore, finalScore, brandBoost };
+      const scored = sim.scoreCandidateMatch(product, c, imageScore);
+      const match = sim.scoreLabel(scored.finalScore);
+      if (debug) {
+        compareLog('match-score', {
+          title: c.title,
+          url: c.url,
+          finalScore: scored.finalScore,
+          breakdown: scored.breakdown,
+          imageScore,
+        });
+      }
+      return {
+        ...c,
+        imageScore: scored.imageScore,
+        textScore: scored.titleScore,
+        finalScore: scored.finalScore,
+        breakdown: scored.breakdown,
+        sourceAttrs: scored.sourceAttrs,
+        candidateAttrs: scored.candidateAttrs,
+        match: {
+          ...match,
+          textScore: Math.round((scored.titleScore || 0) * 100),
+          imageScore: Math.round((scored.imageScore || 0) * 100),
+          breakdown: scored.breakdown,
+        },
+      };
     });
   }
 
@@ -171,14 +243,37 @@
     const pool = flattenCandidates(siteResults);
     if (!pool.length) return [];
 
-    const queryStr = buildSearchQuery(product);
-    const imageScores = await clipScoresByProductUrl(
-      options.clipBridge,
-      product.image,
-      pool,
-    );
+    const debug = options.debug === true || COMPARE_DEBUG;
+    const useClip = options.useClip !== false && options.clipBridge && product.image;
+    const clipPrefilter = options.clipPrefilter ?? CLIP_TEXT_PREFILTER;
 
-    let ranked = scorePoolForRanking(product, queryStr, pool, imageScores, sim);
+    let textRanked = scorePoolTextOnly(product, pool, sim);
+    textRanked.sort((a, b) => (b._textOnlyScore || 0) - (a._textOnlyScore || 0));
+
+    let imageScores = {};
+    if (useClip) {
+      if (options.clipBridge?.warmupClip) {
+        await options.clipBridge.warmupClip().catch(() => {});
+      }
+      const clipPool = textRanked
+        .filter((c) => c.image)
+        .slice(0, clipPrefilter);
+      imageScores = await clipScoresByProductUrl(
+        options.clipBridge,
+        product.image,
+        clipPool,
+        debug,
+      );
+      if (Object.keys(imageScores).length === 0) {
+        compareLog('clip-no-scores', {
+          sourceImage: product.image,
+          prefilterCount: clipPool.length,
+          hint: 'All CLIP scores 0/undefined — check offscreen document or image URLs',
+        });
+      }
+    }
+
+    let ranked = scorePoolForRanking(product, pool, imageScores, sim, debug);
     ranked = sim.dedupCandidates(ranked);
     const minScore = options.minFinalScore ?? MIN_FINAL_SCORE;
     const minFallback = options.minFallbackScore ?? MIN_FALLBACK_SCORE;
@@ -199,22 +294,15 @@
 
     return filtered
       .slice(0, topN)
-      .map((c) => {
-        const match = scoreLabel(c.finalScore);
-        return {
-          site: c.site,
-          title: c.title,
-          price: c.price,
-          url: c.url,
-          image: c.image || '',
-          match: {
-            ...match,
-            textScore: Math.round((c.textScore || 0) * 100),
-            imageScore: Math.round((c.imageScore || 0) * 100),
-          },
-          finalScore: c.finalScore,
-        };
-      });
+      .map((c) => ({
+        site: c.site,
+        title: c.title,
+        price: c.price,
+        url: c.url,
+        image: c.image || '',
+        match: c.match,
+        finalScore: c.finalScore,
+      }));
   }
 
   function matchesFromRanked(ranked) {
@@ -317,7 +405,12 @@
       try {
         const serpResults = await searchViaSerp(product, enabled, serpApiKey);
         const ranked = sim
-          ? await rankCrossPlatform(product, serpResults, { similarity: sim, clipBridge: useClip ? clipBridge : null })
+          ? await rankCrossPlatform(product, serpResults, {
+            similarity: sim,
+            clipBridge: useClip ? clipBridge : null,
+            useClip,
+            debug: options.debug,
+          })
           : [];
         return {
           ...buildResponse(product, sites, serpResults, 'serp', ranked),
@@ -334,7 +427,12 @@
       concurrency,
     );
     const ranked = sim
-      ? await rankCrossPlatform(product, results, { similarity: sim, clipBridge: useClip ? clipBridge : null })
+      ? await rankCrossPlatform(product, results, {
+        similarity: sim,
+        clipBridge: useClip ? clipBridge : null,
+        useClip,
+        debug: options.debug,
+      })
       : [];
     return { ...buildResponse(product, sites, results, 'direct', ranked), serpFailed };
   }

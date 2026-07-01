@@ -39,16 +39,36 @@
     return out;
   }
 
+  function extractImageFromBlock(block, base) {
+    const imgM = block.match(/<img[^>]+(?:src|data-src|srcset)="([^"]+)"/i);
+    if (!imgM) return '';
+    let src = decodeHtml(imgM[1]).split(/\s+/)[0].trim();
+    if (src.startsWith('//')) src = `https:${src}`;
+    return absUrl(src, base);
+  }
+
+  function isUsableCandidateTitle(title, brand) {
+    const t = String(title || '').trim();
+    if (t.length < 12) return false;
+    if (brand && t.toLowerCase() === String(brand).toLowerCase()) return false;
+    if (/^[A-Z0-9\s&'.-]{2,20}$/.test(t) && !/\s{2,}/.test(t) && t.split(/\s+/).length <= 2) return false;
+    return true;
+  }
+
   function parseAmazon(html, base) {
     const items = [];
-    const re = /data-asin="([A-Z0-9]{10})"[^>]*>[\s\S]*?<h2[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi;
-    let m;
-    while ((m = re.exec(html)) !== null && items.length < 12) {
-      const asin = m[1];
+    const asinRe = /data-asin="([A-Z0-9]{10})"/g;
+    let am;
+    while ((am = asinRe.exec(html)) !== null && items.length < 25) {
+      const asin = am[1];
       if (asin === '0000000000') continue;
-      const title = stripTags(m[2]);
-      if (!title || title.length < 5) continue;
-      const block = html.slice(m.index, m.index + 4000);
+      const block = html.slice(am.index, am.index + 6000);
+      const titleCandidates = [
+        ...block.matchAll(/<span[^>]*class="[^"]*a-text-normal[^"]*"[^>]*>([\s\S]*?)<\/span>/gi),
+        ...block.matchAll(/<h2[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi),
+      ].map((m) => stripTags(m[1])).filter((t) => t.length >= 12);
+      const title = titleCandidates.sort((a, b) => b.length - a.length)[0] || '';
+      if (!title || !isUsableCandidateTitle(title)) continue;
       const priceM = block.match(/class="a-price-whole"[^>]*>([\d,]+)/i)
         || block.match(/₹\s*([\d,]+)/);
       const price = priceM ? `₹${priceM[1]}` : '';
@@ -56,7 +76,7 @@
         title,
         price,
         url: `https://www.amazon.in/dp/${asin}`,
-        image: '',
+        image: extractImageFromBlock(block, base),
       });
     }
     return uniqueBy(items, (i) => i.url);
@@ -68,13 +88,13 @@
     const jsonRe = /"titles"\s*:\s*\{[^}]*"title"\s*:\s*"([^"]+)"/g;
     let jm;
     const titles = [];
-    while ((jm = jsonRe.exec(html)) !== null && titles.length < 12) {
+    while ((jm = jsonRe.exec(html)) !== null && titles.length < 25) {
       titles.push(decodeHtml(jm[1]));
     }
     const linkRe = /href="(\/[^"]*\/p\/[^"]+)"/g;
     const links = [];
     let lm;
-    while ((lm = linkRe.exec(html)) !== null && links.length < 12) {
+    while ((lm = linkRe.exec(html)) !== null && links.length < 25) {
       links.push(absUrl(lm[1], base));
     }
     const priceRe = /₹\s*([\d,]+)/g;
@@ -83,19 +103,27 @@
     while ((pm = priceRe.exec(html)) !== null && prices.length < 12) {
       prices.push(`₹${pm[1]}`);
     }
-    const n = Math.min(titles.length, links.length, 12);
+    const n = Math.min(titles.length, links.length, 25);
     for (let i = 0; i < n; i++) {
-      items.push({ title: titles[i], price: prices[i] || '', url: links[i], image: '' });
+      const blockStart = html.indexOf(links[i]);
+      const block = blockStart >= 0 ? html.slice(blockStart, blockStart + 2500) : '';
+      items.push({
+        title: titles[i],
+        price: prices[i] || '',
+        url: links[i],
+        image: extractImageFromBlock(block, base),
+      });
     }
     if (!items.length) {
       const cardRe = /<a[^>]+href="([^"]*\/p\/[^"]+)"[^>]*>[\s\S]*?<div[^>]*>([^<]{10,120})<\/div>/gi;
       let cm;
-      while ((cm = cardRe.exec(html)) !== null && items.length < 8) {
+      while ((cm = cardRe.exec(html)) !== null && items.length < 25) {
+        const block = html.slice(cm.index, cm.index + 2500);
         items.push({
           title: stripTags(cm[2]),
           price: '',
           url: absUrl(cm[1], base),
-          image: '',
+          image: extractImageFromBlock(block, base),
         });
       }
     }
@@ -106,7 +134,7 @@
     const items = [];
     const re = /href="(\/[^"]+\/buy)"[^>]*>[\s\S]*?product-brand[^>]*>([^<]+)<[\s\S]*?product-product[^>]*>([^<]+)</gi;
     let m;
-    while ((m = re.exec(html)) !== null && items.length < 12) {
+    while ((m = re.exec(html)) !== null && items.length < 25) {
       const brand = stripTags(m[2]);
       const name = stripTags(m[3]);
       const block = html.slice(m.index, m.index + 2000);
@@ -115,7 +143,7 @@
         title: brand ? `${brand} ${name}` : name,
         price: priceM ? `₹${priceM[1]}` : '',
         url: absUrl(m[1], base),
-        image: '',
+        image: extractImageFromBlock(block, base),
       });
     }
     if (!items.length) {

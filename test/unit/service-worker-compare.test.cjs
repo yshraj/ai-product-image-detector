@@ -8,9 +8,11 @@ const SW = fs.readFileSync(path.join(__dirname, '../../background/service-worker
 
 test('service worker loads similarity modules before compare search', () => {
   const scoreIdx = SW.indexOf("'../compare/score-config.js'");
+  const attrIdx = SW.indexOf("'../compare/attribute-parser.js'");
   const simIdx = SW.indexOf("'../compare/similarity.js'");
   const searchIdx = SW.indexOf("'../compare/search.js'");
-  assert.ok(scoreIdx > 0 && simIdx > 0 && searchIdx > 0, 'expected compare imports in service worker');
+  assert.ok(scoreIdx > 0 && attrIdx > 0 && simIdx > 0 && searchIdx > 0, 'expected compare imports in service worker');
   assert.ok(scoreIdx < searchIdx, 'score-config must load before search.js');
+  assert.ok(attrIdx < simIdx, 'attribute-parser must load before similarity.js');
   assert.ok(simIdx < searchIdx, 'similarity must load before search.js');
 });

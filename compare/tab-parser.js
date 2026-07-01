@@ -39,9 +39,11 @@
     document.querySelectorAll('[data-asin]').forEach((el) => {
       const asin = el.getAttribute('data-asin');
       if (!asin || asin.length !== 10 || asin === '0000000000') return;
-      const titleEl = el.querySelector('h2 a span, h2 span, .a-text-normal');
-      const title = text(titleEl);
-      if (!title || title.length < 5) return;
+      const spans = [...el.querySelectorAll('h2 span, h2 a span, .a-text-normal')]
+        .map((n) => text(n))
+        .filter((t) => t.length >= 12);
+      const title = spans.sort((a, b) => b.length - a.length)[0] || '';
+      if (!title || title.length < 12) return;
       const priceEl = el.querySelector('.a-price-whole, .a-offscreen');
       const priceRaw = text(priceEl);
       const price = priceRaw.match(/₹|(\d)/) ? (priceRaw.startsWith('₹') ? priceRaw : `₹${priceRaw}`) : '';
@@ -52,7 +54,7 @@
         image: el.querySelector('img')?.src || '',
       });
     });
-    return items.slice(0, 12);
+    return items.slice(0, 25);
   }
 
   function parseFlipkart() {
