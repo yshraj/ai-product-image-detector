@@ -19,6 +19,7 @@ try {
       '../utils/price.js',
       '../utils/storage-local.js',
       '../utils/product-query.js',
+      '../utils/product-fingerprint.js',
       '../utils/product-matcher.js',
       '../compare/config.js',
       '../compare/parsers.js',
@@ -38,6 +39,7 @@ try {
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
 const TabSearch = (typeof self !== 'undefined' && self.RMF_TabSearch) || null;
+const ProductFingerprint = (typeof self !== 'undefined' && self.RMF_ProductFingerprint) || null;
 
 const RMFDefaults = (typeof self !== 'undefined' && self.RMF_Defaults) || {};
 const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
@@ -80,7 +82,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
       }
     }
     setupContextMenu();
+    await clearCompareCache();
   });
+}
+
+async function clearCompareCache() {
+  try {
+    const all = await chrome.storage.local.get(null);
+    const keys = Object.keys(all).filter((k) => k.startsWith('rmf_compare_'));
+    if (keys.length) await chrome.storage.local.remove(keys);
+  } catch { /* ignore */ }
 }
 
 const DETECT_SCRIPTS = [
@@ -562,12 +573,6 @@ function registerMessageRouter() {
       .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
     return true;
   }
-  if (msg?.type === 'RMF_COMPARE_CACHE' && msg.product) {
-    handleCompareCache(msg.product)
-      .then((r) => sendResponse(r))
-      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
-    return true;
-  }
   if (msg?.type === 'RMF_GET_SELLERS') {
     const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
     (Trust ? Trust.getSellerList() : Promise.resolve([]))
@@ -595,56 +600,29 @@ function registerMessageRouter() {
 registerMessageRouter();
 
 // ---- cross-marketplace product search -------------------------------------
-const COMPARE_CACHE_TTL_MS = 15 * 60 * 1000;
 
 async function handleCompareSearch(msg) {
   if (!CompareSearch) {
     return { ok: false, error: 'Compare module failed to load — reload the extension' };
   }
   const product = msg.product;
+  const fingerprint = product?.fingerprint
+    || (ProductFingerprint?.productFingerprint ? ProductFingerprint.productFingerprint(product) : '');
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   const sites = Array.isArray(msg.sites) && msg.sites.length
     ? msg.sites
     : (cfg.compareSites || DEFAULTS.compareSites);
-  const useCache = msg.cache !== false;
-  const key = CompareSearch.cacheKey(product);
 
-  if (useCache) {
-    try {
-      const cached = await chrome.storage.local.get(key);
-      const entry = cached[key];
-      if (entry && (Date.now() - entry.timestamp) < COMPARE_CACHE_TTL_MS) {
-        return { ok: true, cached: true, ...entry.data };
-      }
-    } catch { /* ignore */ }
-  }
-
-  const tabFetchFn = (cfg.compareUseTabs === true && TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
+  const tabFetchFn = (TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
     ? TabSearch.fetchSearchPageViaTab
     : null;
 
   const data = await CompareSearch.searchAll(product, sites, {
     tabFetchFn,
+    compareUseTabs: cfg.compareUseTabs === true,
     serpApiKey: cfg.serpApiKey || '',
   });
-  try {
-    await chrome.storage.local.set({ [key]: { timestamp: Date.now(), data } });
-  } catch { /* ignore */ }
-
-  return { ok: true, cached: false, ...data };
-}
-
-async function handleCompareCache(product) {
-  if (!CompareSearch) return { ok: false, error: 'compare module unavailable' };
-  const key = CompareSearch.cacheKey(product);
-  try {
-    const cached = await chrome.storage.local.get(key);
-    const entry = cached[key];
-    if (entry && (Date.now() - entry.timestamp) < COMPARE_CACHE_TTL_MS) {
-      return { ok: true, cached: true, ...entry.data };
-    }
-  } catch { /* ignore */ }
-  return { ok: false, error: 'no cache' };
+  return { ok: true, productFingerprint: fingerprint, ...data };
 }
 
 // Exposed for unit tests when this file is required under Node. In the service

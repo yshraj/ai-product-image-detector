@@ -39,7 +39,7 @@ test.describe('Compare search (mocked SerpApi)', () => {
     await productTab.close();
   });
 
-  test('caches compare results in local storage on repeat search', async ({ extensionContext }) => {
+  test('always runs a fresh compare search (no storage cache)', async ({ extensionContext }) => {
     await setSyncStorage(extensionContext, {
       serpApiKey: 'test_serp_key',
       compareSites: ['amazon', 'flipkart'],
@@ -59,19 +59,16 @@ test.describe('Compare search (mocked SerpApi)', () => {
       type: 'RMF_COMPARE_SEARCH',
       product,
       sites: ['amazon', 'flipkart'],
-      cache: false,
     });
     expect(first.ok).toBe(true);
-    expect(first.cached).toBe(false);
 
     const second = await sendRuntimeMessage(extensionContext, {
       type: 'RMF_COMPARE_SEARCH',
       product,
       sites: ['amazon', 'flipkart'],
-      cache: true,
     });
     expect(second.ok).toBe(true);
-    expect(second.cached).toBe(true);
+    expect(second.cached).toBeUndefined();
     await productTab.close();
   });
 });
