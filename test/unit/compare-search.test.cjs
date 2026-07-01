@@ -45,3 +45,42 @@ test('searchAll ranks matches using mocked fetch', async () => {
   assert.ok(result.matches.length >= 1);
   assert.ok(result.matches[0].best.match.score >= 50);
 });
+
+test('searchAll runs marketplace fetches in parallel', async () => {
+  const amazonHtml = fs.readFileSync(path.join(FIXTURES, 'amazon-search.html'), 'utf8');
+  const flipkartHtml = fs.readFileSync(path.join(FIXTURES, 'flipkart-search.html'), 'utf8');
+  let concurrent = 0;
+  let maxConcurrent = 0;
+
+  const mockFetch = async (url) => {
+    concurrent++;
+    maxConcurrent = Math.max(maxConcurrent, concurrent);
+    await new Promise((r) => setTimeout(r, 40));
+    concurrent--;
+    if (url.includes('amazon.in')) return amazonHtml;
+    if (url.includes('flipkart.com')) return flipkartHtml;
+    return '<html></html>';
+  };
+
+  const product = {
+    site: 'myntra',
+    title: 'Roadster Men Blue Cotton T-Shirt',
+    brand: 'Roadster',
+    price: '₹499',
+    color: 'blue',
+  };
+
+  const result = await searchAll(product, ['amazon', 'flipkart', 'nykaa'], { fetchFn: mockFetch });
+  assert.equal(result.ok, true);
+  assert.ok(maxConcurrent >= 2, `expected parallel fetches, got maxConcurrent=${maxConcurrent}`);
+});
+
+test('buildSearchQuery includes color for color-aware compare', async () => {
+  const { buildSearchQuery } = require('../../utils/product-query.js');
+  const q = buildSearchQuery({
+    title: 'Roadster Men Blue Cotton T-Shirt',
+    brand: 'Roadster',
+    color: 'blue',
+  });
+  assert.match(q, /blue/i);
+});

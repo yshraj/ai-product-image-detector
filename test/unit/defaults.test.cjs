@@ -8,6 +8,7 @@ test('SYNC_DEFAULTS includes compare and notification keys', () => {
   assert.equal(defaults.SYNC_DEFAULTS.minConfidence, 70);
   assert.deepEqual(defaults.SYNC_DEFAULTS.compareSites, defaults.ALL_COMPARE_SITES);
   assert.equal(defaults.SYNC_DEFAULTS.notifyOnAI, false);
+  assert.equal(defaults.SYNC_DEFAULTS.compareUseTabs, false);
 });
 
 test('CONTENT_PREF_DEFAULTS is a subset of sync settings', () => {

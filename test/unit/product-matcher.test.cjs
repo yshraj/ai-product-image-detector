@@ -40,3 +40,15 @@ test('pickBest returns null when all candidates below threshold', () => {
   ], 40);
   assert.equal(best, null);
 });
+
+test('colorMatch prefers same-color variant over different color', () => {
+  const mismatch = scoreMatch(
+    { title: 'Nike Air Max White', brand: 'Nike', price: '₹4,999', color: 'white' },
+    { title: 'Nike Air Max Black Running Shoes', price: '₹4,999' },
+  );
+  const match = scoreMatch(
+    { title: 'Nike Air Max White', brand: 'Nike', price: '₹4,999', color: 'white' },
+    { title: 'Nike Air Max White Running Shoes', price: '₹4,999' },
+  );
+  assert.ok(match.score > mismatch.score);
+});

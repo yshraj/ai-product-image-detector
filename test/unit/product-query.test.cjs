@@ -1,7 +1,7 @@
 // test/unit/product-query.test.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildSearchQuery, normalizeTitle, tokenize, parsePrice } =
+const { buildSearchQuery, normalizeTitle, tokenize, parsePrice, extractColorFromProduct } =
   require('../../utils/product-query.js');
 
 test('normalizeTitle strips parens and extra whitespace', () => {
@@ -14,7 +14,14 @@ test('buildSearchQuery prioritizes brand and drops noise', () => {
     brand: 'Roadster',
   });
   assert.match(q, /roadster/i);
+  assert.match(q, /blue/i);
   assert.doesNotMatch(q, /\bmen\b/i);
+});
+
+test('extractColorFromProduct reads color from title and parentheses', () => {
+  assert.equal(extractColorFromProduct({ title: 'Nike Shoes (Blue)' }), 'blue');
+  assert.equal(extractColorFromProduct({ title: 'Roadster Men Black Cotton T-Shirt' }), 'black');
+  assert.equal(extractColorFromProduct({ title: 'Generic Product', color: 'navy' }), 'navy');
 });
 
 test('parsePrice extracts INR amounts', () => {
