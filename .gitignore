@@ -6,3 +6,6 @@ test-results/
 playwright-report/
 .last-run.json
 .agents/*
+
+# exported detector models (hundreds of MB) — regenerate via export_onnx.py
+research/accuracy-test/onnx/
