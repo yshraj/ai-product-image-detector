@@ -5,7 +5,13 @@ const { MYNTRA_LISTING_URL } = require('./constants.cjs');
 async function closeMarketplaceTabs(context) {
   return inServiceWorker(context, async () => {
     const tabs = await chrome.tabs.query({
-      url: ['https://www.myntra.com/*', 'https://www.flipkart.com/*', 'https://www.meesho.com/*', 'https://www.nykaa.com/*'],
+      url: [
+        'https://www.myntra.com/*',
+        'https://www.flipkart.com/*',
+        'https://www.meesho.com/*',
+        'https://www.nykaa.com/*',
+        'https://www.amazon.in/*',
+      ],
     });
     await Promise.all(tabs.map((t) => chrome.tabs.remove(t.id)));
   });

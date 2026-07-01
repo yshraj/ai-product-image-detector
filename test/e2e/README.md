@@ -11,6 +11,7 @@ npm run validate       # manifest + syntax (fast sanity check)
 npm run test:unit      # Node unit tests
 npm test               # Playwright E2E specs (offline mocks)
 npm run test:compare-real  # Live marketplace compare suite (network)
+npm run test:compare-regression  # Attribute-matching regression on 5 live pages (network)
 npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 
@@ -47,6 +48,16 @@ node scripts/generate-compare-real-report.cjs   # markdown tables from evidence 
 ```
 
 Evidence is written to `test-results/compare-real-products/` (per-brand JSON, screenshots, tier summaries). See [TODO_price_compare.md](../../TODO_price_compare.md) for latest run notes.
+
+### Compare regression (`compare-regression.spec.cjs`)
+
+Exercises five live pages covering exact-match, brand/pattern discrimination, search pages, and listing pages:
+
+```bash
+npm run test:compare-regression
+```
+
+Evidence: `test-results/compare-regression/` (per-case JSON, screenshots, HTML failure tables, `summary.json`). Uses the real extension fixture with `compareUseTabs` and attribute-based scoring debug output.
 
 ## Writing tests
 

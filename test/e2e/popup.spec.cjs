@@ -5,7 +5,7 @@ const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
 
 const shot = (name) => path.resolve(__dirname, '../../test-results', name);
 
-test('bottom nav switches between the four sections', async ({ extensionContext, popupUrl }) => {
+test('bottom nav switches between the three sections', async ({ extensionContext, popupUrl }) => {
   const page = await extensionContext.newPage();
   await page.goto(popupUrl, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#panel-scan')).toBeVisible();
@@ -15,11 +15,9 @@ test('bottom nav switches between the four sections', async ({ extensionContext,
   await expect(page.locator('#panel-compare')).toBeVisible();
   await expect(page.locator('#panel-scan')).toBeHidden();
 
-  await page.locator('#nav-tools').click();
-  await expect(page.locator('#panel-tools')).toBeVisible();
-
   await page.locator('#nav-settings').click();
   await expect(page.locator('#panel-settings')).toBeVisible();
+  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(3);
   await page.close();
 });
 

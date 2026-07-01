@@ -45,11 +45,8 @@ async function main() {
   await popup.waitForSelector('.compare-results .result-card', { timeout: 30_000 });
   await shot(popup, '04-popup-compare-results-success');
 
-  await popup.locator('#nav-tools').click();
-  await shot(popup, '05-popup-tools-tab');
-
   await popup.locator('#nav-settings').click();
-  await shot(popup, '06-popup-settings-tab');
+  await shot(popup, '05-popup-settings-tab');
 
   const listing = await ctx.newPage();
   await listing.setViewportSize({ width: 1280, height: 1400 });

@@ -14,7 +14,7 @@ const { activateMarketplaceTab, closeMarketplaceTabs } = require('./helpers/tab-
 const { MYNTRA_LISTING_URL, MYNTRA_PRODUCT_URL, MANIFEST } = require('./helpers/constants.cjs');
 
 test.describe('Regression — extension surfaces', () => {
-  test('all four popup tabs render without page errors', async ({ extensionContext, popupUrl }) => {
+  test('all three popup tabs render without page errors', async ({ extensionContext, popupUrl }) => {
     const page = await extensionContext.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -22,7 +22,7 @@ test.describe('Regression — extension surfaces', () => {
     const popup = new PopupPage(page);
     await popup.goto(popupUrl);
 
-    for (const tab of ['scan', 'compare', 'tools', 'settings']) {
+    for (const tab of ['scan', 'compare', 'settings']) {
       await popup.selectTab(tab);
       await expect(popup.page.locator(`#panel-${tab}`)).toBeVisible();
     }
@@ -115,7 +115,7 @@ test.describe('Regression — user workflows', () => {
     await other.close();
   });
 
-  test('full journey: scan listing → compare on product → tools links', async ({
+  test('full journey: scan listing → similar products on product page', async ({
     extensionContext, popupUrl, contentPage,
   }) => {
     await contentPage.setViewportAllVisible();
@@ -144,10 +144,8 @@ test.describe('Regression — user workflows', () => {
     await popup.locator('#compare-search').click();
     await expect.poll(() => popup.locator('.compare-results .result-card').count(), { timeout: 25_000 }).toBeGreaterThan(0);
 
-    await popupPage.selectTab('tools');
-    await expect(popup.locator('#reverse-list a[href*="lens.google.com"]')).toBeVisible();
-    await expect(popup.locator('#reverse-list a[href*="bing.com"]')).toBeVisible();
-    await expect(popup.locator('#tools-list button').first()).toBeVisible();
+    await popupPage.selectTab('settings');
+    await expect(popup.locator('#compare-sites')).toBeVisible();
 
     await popup.close();
     await productTab.close();

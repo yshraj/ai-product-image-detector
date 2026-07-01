@@ -1,15 +1,15 @@
-// Shopping assistant UI: Compare + Tools tabs (regression).
+// Shopping assistant UI: Similar products tab (regression).
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
 const { closeMarketplaceTabs, activateMarketplaceTab } = require('./helpers/tab-utils.cjs');
 const { MYNTRA_PRODUCT_URL } = require('./helpers/constants.cjs');
 
-test.describe('Shopping assistant — Compare & Tools', () => {
+test.describe('Shopping assistant — Similar products', () => {
   test.beforeEach(async ({ extensionContext }) => {
     await closeMarketplaceTabs(extensionContext);
   });
 
-  test('Compare tab shows auto-search and marketplace filter chips', async ({ extensionContext, popupUrl }) => {
+  test('Similar products tab shows auto-search and marketplace filter chips', async ({ extensionContext, popupUrl }) => {
     const productTab = await extensionContext.newPage();
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
     const { getProduct } = require('./helpers/chrome-messaging.cjs');
@@ -32,7 +32,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     await productTab.close();
   });
 
-  test('Compare search returns results with mocked SerpApi', async ({ extensionContext, popupUrl }) => {
+  test('Similar products search returns results with mocked SerpApi', async ({ extensionContext, popupUrl }) => {
     await setSyncStorage(extensionContext, { serpApiKey: 'test_serp_key', compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'] });
 
     const productTab = await extensionContext.newPage();
@@ -55,7 +55,7 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     await productTab.close();
   });
 
-  test('Compare respects marketplace toggles in Settings', async ({ extensionContext, popupUrl }) => {
+  test('Similar products respects marketplace toggles in Settings', async ({ extensionContext, popupUrl }) => {
     await setSyncStorage(extensionContext, { compareSites: ['amazon'] });
 
     const productTab = await extensionContext.newPage();
@@ -76,19 +76,6 @@ test.describe('Shopping assistant — Compare & Tools', () => {
     await productTab.close();
   });
 
-  test('Tools tab offers reverse image search and copy actions', async ({ extensionContext, popupUrl }) => {
-    const productTab = await extensionContext.newPage();
-    await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
-
-    const popup = await extensionContext.newPage();
-    await popup.goto(popupUrl, { waitUntil: 'domcontentloaded' });
-    await popup.locator('.onboarding .onboarding-skip, .onboarding button.primary').first().click().catch(() => {});
-    await popup.locator('#nav-tools').click();
-    await expect.poll(() => popup.locator('#reverse-list a').count(), { timeout: 10_000 }).toBeGreaterThan(0);
-    await expect.poll(() => popup.locator('#tools-list button').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(5);
-    await popup.close();
-    await productTab.close();
-  });
 
   test('Scan tab shows confidence threshold hint on a listing page', async ({ extensionContext, popupUrl, contentPage }) => {
     await contentPage.setViewportAllVisible();
