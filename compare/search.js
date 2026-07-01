@@ -28,7 +28,24 @@
 
   const FETCH_TIMEOUT_MS = 12_000;
   const MIN_RESULTS = 1;
+  const COMPARE_CONCURRENCY = 3;
   const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+  /** Run async tasks with a concurrency cap (order preserved in results). */
+  async function mapConcurrent(items, fn, limit = COMPARE_CONCURRENCY) {
+    const results = new Array(items.length);
+    let next = 0;
+    async function worker() {
+      while (next < items.length) {
+        const i = next++;
+        results[i] = await fn(items[i], i);
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+    );
+    return results;
+  }
 
   async function fetchSearchPage(url) {
     const ctrl = new AbortController();
@@ -56,12 +73,17 @@
       const internalItems = await searchViaInternalApi(site, queryStr);
       if (internalItems.length) return internalItems;
     }
+    // Direct fetch first — no visible background tabs.
+    try {
+      const html = await fetchFn(searchUrl);
+      const parsed = parseSearchResults(site, html, searchUrl);
+      if (parsed.length) return parsed;
+    } catch { /* fall through to optional tab scrape */ }
     if (tabFetchFn) {
       const items = await tabFetchFn(searchUrl, site);
       if (items.length) return items;
     }
-    const html = await fetchFn(searchUrl);
-    return parseSearchResults(site, html, searchUrl);
+    return [];
   }
 
   async function searchMarketplace(site, product, fetchFn = fetchSearchPage, tabFetchFn = null) {
@@ -124,7 +146,12 @@
   }
 
   async function searchAll(product, sites, options = {}) {
-    const { fetchFn = fetchSearchPage, tabFetchFn = null, serpApiKey = '' } = options;
+    const {
+      fetchFn = fetchSearchPage,
+      tabFetchFn = null,
+      serpApiKey = '',
+      concurrency = COMPARE_CONCURRENCY,
+    } = options;
     const enabled = (sites || []).filter((s) => s !== product.site && MARKETPLACES[s]);
     let serpFailed = false;
 
@@ -142,10 +169,11 @@
       }
     }
 
-    const results = [];
-    for (const site of enabled) {
-      results.push(await searchMarketplace(site, product, fetchFn, tabFetchFn));
-    }
+    const results = await mapConcurrent(
+      enabled,
+      (site) => searchMarketplace(site, product, fetchFn, tabFetchFn),
+      concurrency,
+    );
     const resp = buildResponse(product, sites, results, 'direct');
     return { ...resp, serpFailed };
   }
@@ -155,5 +183,8 @@
     return `rmf_compare_${product.site || 'x'}_${q.slice(0, 60)}`;
   }
 
-  return { searchMarketplace, searchAll, buildSearchQuery, cacheKey, FETCH_TIMEOUT_MS };
+  return {
+    searchMarketplace, searchAll, buildSearchQuery, cacheKey, FETCH_TIMEOUT_MS,
+    mapConcurrent, COMPARE_CONCURRENCY,
+  };
 }));

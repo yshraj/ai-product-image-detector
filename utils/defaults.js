@@ -13,6 +13,7 @@
  * @property {string[]} compareSites
  * @property {string} serpApiKey
  * @property {boolean} notifyOnAI
+ * @property {boolean} compareUseTabs
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -37,6 +38,7 @@
     compareSites: [...ALL_COMPARE_SITES],
     serpApiKey: '',
     notifyOnAI: false,
+    compareUseTabs: false,
   };
 
   const CONTENT_PREF_DEFAULTS = {

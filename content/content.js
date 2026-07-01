@@ -732,7 +732,13 @@
       if (m) seller = m[1].trim();
     }
 
-    return { site: SITE.name, title, brand, price, rating, seller, image, url: location.href, isProductPage: true };
+    const extractColor = window.RMF_ProductQuery?.extractColorFromProduct;
+    const color = extractColor ? extractColor({ title, brand }) : '';
+
+    return {
+      site: SITE.name, title, brand, price, rating, seller, image, color,
+      url: location.href, isProductPage: true,
+    };
   }
 
   function clearStalePending() {

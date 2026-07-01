@@ -17,8 +17,36 @@
 
   const SIZE_RE = /\b(xxs|xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|5xl|\d{2,3}\s*(cm|inch|inches|in|mm|ml|l|kg|g|gb|tb))\b/i;
 
+  const COLOR_TOKENS = new Set([
+    'black', 'white', 'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'pink',
+    'grey', 'gray', 'brown', 'navy', 'maroon', 'beige', 'cream', 'gold', 'silver',
+    'olive', 'teal', 'coral', 'burgundy', 'charcoal', 'ivory', 'khaki', 'multicolor',
+    'mustard', 'lavender', 'magenta', 'cyan', 'tan', 'wine', 'peach', 'mint',
+  ]);
+
   function isSizeToken(t) {
     return SIZE_RE.test(t);
+  }
+
+  function isColorToken(word) {
+    const w = String(word).toLowerCase().replace(/[^a-z]/g, '');
+    return w.length > 1 && COLOR_TOKENS.has(w);
+  }
+
+  /** @param {{ title?: string, brand?: string, color?: string }} product */
+  function extractColorFromProduct(product) {
+    if (product?.color) return String(product.color).toLowerCase().trim();
+    const title = product?.title || '';
+    const paren = title.match(/\(([^)]+)\)/);
+    if (paren) {
+      const first = paren[1].toLowerCase().trim().split(/[\s,/]+/)[0];
+      if (isColorToken(first)) return first;
+    }
+    const words = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/);
+    for (const w of words) {
+      if (isColorToken(w)) return w;
+    }
+    return '';
   }
   const PAREN_RE = /\([^)]*\)|\[[^\]]*\]/g;
 
@@ -59,6 +87,9 @@
       if (!seen.has(t)) { seen.add(t); unique.push(t); }
     }
 
+    const color = extractColorFromProduct(product);
+    if (color && !seen.has(color)) unique.push(color);
+
     const query = unique.slice(0, 8).join(' ');
     return query || title.slice(0, 80);
   }
@@ -67,5 +98,8 @@
     return priceMod.parsePrice(text);
   }
 
-  return { normalizeTitle, tokenize, buildSearchQuery, parsePrice, NOISE };
+  return {
+    normalizeTitle, tokenize, buildSearchQuery, parsePrice, extractColorFromProduct,
+    isColorToken, NOISE,
+  };
 }));

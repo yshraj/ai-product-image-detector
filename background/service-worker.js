@@ -50,6 +50,7 @@ const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
   compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
   serpApiKey: '',
   notifyOnAI: false,
+  compareUseTabs: false,
 };
 const HISTORY_KEY = RMFDefaults.HISTORY_KEY || 'rmf_history';
 const CACHE_PREFIX = RMFDefaults.CACHE_PREFIX || 'rmf_cache_';
@@ -615,7 +616,7 @@ async function handleCompareSearch(msg) {
     } catch { /* ignore */ }
   }
 
-  const tabFetchFn = (TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
+  const tabFetchFn = (cfg.compareUseTabs === true && TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
     ? TabSearch.fetchSearchPageViaTab
     : null;
 

@@ -8,7 +8,7 @@
     root.RMF_ProductMatcher = factory(query);
   }
 }(typeof self !== 'undefined' ? self : this, function (ProductQuery) {
-  const { tokenize, parsePrice } = ProductQuery;
+  const { tokenize, parsePrice, extractColorFromProduct } = ProductQuery;
 
   function jaccard(a, b) {
     const setA = new Set(a);
@@ -38,6 +38,11 @@
     return 0.1;
   }
 
+  function colorMatch(sourceColor, candidateTitle) {
+    if (!sourceColor) return 0.5;
+    return (candidateTitle || '').toLowerCase().includes(sourceColor) ? 1 : 0;
+  }
+
   const MIN_MATCH_SCORE = 40;
 
   function scoreMatch(source, candidate) {
@@ -56,8 +61,9 @@
     const srcPrice = parsePrice(source.price);
     const candPrice = parsePrice(candidate.price);
     const price = priceScore(srcPrice, candPrice);
+    const color = colorMatch(extractColorFromProduct(source), candidate.title);
 
-    const raw = (titleSim * 0.60) + (brand * 0.20) + (price * 0.20) + containBonus;
+    const raw = (titleSim * 0.52) + (brand * 0.18) + (price * 0.18) + (color * 0.12) + containBonus;
     const score = Math.min(100, Math.round(raw * 100));
 
     let label = 'low';
@@ -65,7 +71,7 @@
     else if (score >= 70) label = 'similar';
     else if (score >= MIN_MATCH_SCORE) label = 'possible';
 
-    return { score, label, titleSim, brand, price };
+    return { score, label, titleSim, brand, price, color };
   }
 
   function rankResults(source, candidates, limit = 3) {
@@ -81,5 +87,8 @@
     return ranked[0] || null;
   }
 
-  return { scoreMatch, rankResults, pickBest, jaccard, brandMatch, priceScore, MIN_MATCH_SCORE };
+  return {
+    scoreMatch, rankResults, pickBest, jaccard, brandMatch, priceScore, colorMatch,
+    MIN_MATCH_SCORE,
+  };
 }));
