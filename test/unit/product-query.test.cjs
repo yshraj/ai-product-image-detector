@@ -1,7 +1,7 @@
 // test/unit/product-query.test.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildSearchQuery, normalizeTitle, tokenize, parsePrice, extractColorFromProduct } =
+const { buildSearchQuery, normalizeTitle, tokenize, parsePrice, extractColorFromProduct, inferBrandFromTitle } =
   require('../../utils/product-query.js');
 
 test('normalizeTitle strips parens and extra whitespace', () => {
@@ -28,6 +28,17 @@ test('parsePrice extracts INR amounts', () => {
   assert.equal(parsePrice('₹1,299'), 1299);
   assert.equal(parsePrice('Rs. 499'), 499);
   assert.equal(parsePrice('no price'), null);
+});
+
+test('inferBrandFromTitle reads leading brand tokens before category words', () => {
+  assert.equal(inferBrandFromTitle("Allen Solly Men's Solid Polo T-Shirt"), 'Allen Solly');
+  assert.equal(inferBrandFromTitle('Van Heusen Men Regular Fit Shirt'), 'Van Heusen');
+});
+
+test('buildSearchQuery infers brand when metadata missing', () => {
+  const q = buildSearchQuery({ title: "Allen Solly Men's Blue Polo T-Shirt" });
+  assert.match(q, /allen/i);
+  assert.match(q, /solly/i);
 });
 
 test('tokenize removes stop words', () => {

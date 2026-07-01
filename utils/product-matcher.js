@@ -8,7 +8,7 @@
     root.RMF_ProductMatcher = factory(query);
   }
 }(typeof self !== 'undefined' ? self : this, function (ProductQuery) {
-  const { tokenize, parsePrice, extractColorFromProduct } = ProductQuery;
+  const { tokenize, parsePrice, extractColorFromProduct, inferBrandFromTitle } = ProductQuery;
 
   function jaccard(a, b) {
     const setA = new Set(a);
@@ -57,7 +57,8 @@
       if (candJoined.includes(srcJoined) || srcJoined.includes(candJoined)) containBonus = 0.1;
     }
 
-    const brand = brandMatch(source.brand, candidate.title);
+    const effectiveBrand = source.brand || inferBrandFromTitle(source.title);
+    const brand = brandMatch(effectiveBrand, candidate.title);
     const srcPrice = parsePrice(source.price);
     const candPrice = parsePrice(candidate.price);
     const price = priceScore(srcPrice, candPrice);

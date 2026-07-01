@@ -225,7 +225,7 @@ content.js GET_PRODUCT          popup compare-panel.js
 
 1. **Product identity** — `content/content.js` extracts title, brand, price, image from the active product page. `utils/product-fingerprint.js` builds a stable ID from URL (`pid` on Flipkart, `/p/123` on Nykaa, etc.) or title+image hash. `startProductWatcher()` detects SPA navigation and emits `RMF_PRODUCT_CHANGED`.
 
-2. **Query extraction** — `utils/product-query.js` `cleanQueryFromProduct()` strips marketplace filler (“pack of 2”, “best seller”) and builds a short search string.
+2. **Query extraction** — `utils/product-query.js` `cleanQueryFromProduct()` strips marketplace filler (“pack of 2”, “best seller”) and builds a short search string. When `brand` is missing from the page, `inferBrandFromTitle()` takes leading title tokens before gender/category words.
 
 3. **Per-site candidate fetch** — `compare/search.js` searches each enabled marketplace except the source site, up to 3 sites in parallel (`COMPARE_CONCURRENCY`).
 

@@ -17,6 +17,7 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 - **Nykaa compare** — always uses hidden background tabs (direct `fetch` blocked by Akamai).
 
 ### Fixed
+- **Compare match scoring without brand** — infer leading brand tokens from product title when marketplace metadata omits `brand` (common on Amazon); used by `pickBest` and search query building.
 - **Stale compare results** — popup waits until product URL matches active tab; invalidates UI on `RMF_PRODUCT_CHANGED`.
 - **Nykaa tab parser** — resolves relative product URLs via site host fallback; improved `/p/` link parsing.
 

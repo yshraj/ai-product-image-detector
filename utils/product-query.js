@@ -65,6 +65,45 @@
   }
   const PAREN_RE = /\([^)]*\)|\[[^\]]*\]/g;
 
+  /** Words that typically follow the brand prefix in marketplace titles. */
+  const BRAND_STOP = new Set([
+    'men', 'women', 'boys', 'girls', 'unisex', 'kid', 'kids', 'baby', 'infant',
+    'regular', 'slim', 'fit', 'relaxed', 'loose', 'skinny', 'straight', 'tapered',
+    'cotton', 'polyester', 'linen', 'silk', 'wool', 'nylon', 'denim', 'leather',
+    'solid', 'printed', 'striped', 'checked', 'graphic', 'embroidered',
+    'pack', 'combo', 'set', 'pair', 'multipack', 'multicolor',
+    'new', 'latest', 'premium', 'classic', 'casual', 'formal', 'sports', 'running',
+    'wireless', 'bluetooth', 'smart', 'digital', 'automatic', 'manual',
+    'with', 'for', 'and', 'the',
+  ]);
+
+  function wordStem(w) {
+    return String(w).toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  function isBrandStop(stem) {
+    if (BRAND_STOP.has(stem)) return true;
+    if (stem.length > 2 && stem.endsWith('s') && BRAND_STOP.has(stem.slice(0, -1))) return true;
+    return false;
+  }
+
+  /** Infer leading brand tokens when `brand` metadata is missing (common on Amazon PDPs). */
+  function inferBrandFromTitle(title) {
+    if (!title) return '';
+    const words = normalizeTitle(title).split(/\s+/).filter(Boolean);
+    const brandWords = [];
+    for (const w of words) {
+      const stem = wordStem(w);
+      if (!stem || stem.length < 2) continue;
+      if (isBrandStop(stem)) break;
+      if (isSizeToken(stem)) break;
+      if (isColorToken(stem)) break;
+      brandWords.push(w);
+      if (brandWords.length >= 3) break;
+    }
+    return brandWords.join(' ');
+  }
+
   function normalizeTitle(title) {
     if (!title) return '';
     let s = String(title);
@@ -122,8 +161,9 @@
   }
 
   function buildSearchQuery(product) {
+    const brand = product?.brand || inferBrandFromTitle(product?.title || '');
     return cleanQueryFromProduct(product?.title || '', {
-      brand: product?.brand,
+      brand,
       color: product?.color || extractColorFromProduct(product),
       model: product?.model,
     });
@@ -135,6 +175,6 @@
 
   return {
     normalizeTitle, tokenize, buildSearchQuery, cleanQueryFromProduct, parsePrice,
-    extractColorFromProduct, isColorToken, NOISE,
+    extractColorFromProduct, inferBrandFromTitle, isColorToken, NOISE,
   };
 }));

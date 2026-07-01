@@ -41,6 +41,16 @@ test('pickBest returns null when all candidates below threshold', () => {
   assert.equal(best, null);
 });
 
+test('pickBest infers brand from title when source brand is missing', () => {
+  const src = { title: "Allen Solly Men's Solid Polo T-Shirt", price: '₹799' };
+  const best = pickBest(src, [
+    { title: 'Generic Cotton Polo Shirt', price: '₹399' },
+    { title: 'Allen Solly Men Solid Polo T-Shirt', price: '₹849' },
+  ]);
+  assert.ok(best);
+  assert.match(best.title, /Allen Solly/i);
+});
+
 test('colorMatch prefers same-color variant over different color', () => {
   const mismatch = scoreMatch(
     { title: 'Nike Air Max White', brand: 'Nike', price: '₹4,999', color: 'white' },
