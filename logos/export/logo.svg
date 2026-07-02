@@ -1,13 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <rect width="128" height="128" rx="28" fill="#0C1222"/>
-  <g id="icon">
-    <rect x="32" y="38" width="64" height="48" rx="10" fill="#F8FAFC"/>
-    <circle cx="64" cy="58" r="14" fill="#E2E8F0"/>
-    <circle cx="64" cy="58" r="8" fill="#94A3B8"/>
-    <rect x="44" y="78" width="40" height="6" rx="3" fill="#CBD5E1"/>
-  </g>
-  <g id="verify">
-    <circle cx="88" cy="84" r="18" fill="#10B981"/>
-    <path d="M80 84 L86 90 L97 77" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TrueKart">
+  <rect width="512" height="512" rx="112" fill="#0C1222"/>
+  <path d="M298 298 L406 406" fill="none" stroke="#F8FAFC" stroke-width="60" stroke-linecap="round"/>
+  <circle cx="212" cy="212" r="130" fill="#F8FAFC"/>
+  <path d="M154 216 L198 260 L282 158" fill="none" stroke="#047857" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

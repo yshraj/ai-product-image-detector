@@ -3,40 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrueKart Logo Preview</title>
+<title>TrueKart Logo Preview — Concepts</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 2rem; background: #f5f5f5; color: #333; }
-  h1 { margin-bottom: 0.5rem; }
-  p { margin-bottom: 2rem; color: #666; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 2rem;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  body.light { background: #f5f5f5; color: #333; }
+  body.dark { background: #0c0e12; color: #eee; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  h1 { font-size: 1.5rem; font-weight: 600; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin: 2.5rem 0 1rem; }
+  .toggle {
+    padding: 0.5rem 1rem; border: 1px solid currentColor; border-radius: 6px;
+    background: transparent; color: inherit; cursor: pointer; font-size: 0.875rem;
+  }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-  .card { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; background: #fff; }
-  .card-img { display: flex; align-items: center; justify-content: center; padding: 2rem; min-height: 200px; background: #fff; }
-  .card-label { padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 600; border-top: 1px solid #eee; }
-  .sizes { display: flex; gap: 1rem; align-items: end; padding: 1rem 2rem 2rem; flex-wrap: wrap; }
-  .size { text-align: center; font-size: 0.75rem; color: #666; }
+  .card { border: 1px solid rgba(128, 128, 128, 0.3); border-radius: 12px; overflow: hidden; }
+  .card-img { display: flex; align-items: center; justify-content: center; padding: 2rem; min-height: 240px; }
+  body.light .card-img { background: #fff; }
+  body.dark .card-img { background: #17181d; }
+  .card-img img { max-width: 100%; max-height: 200px; }
+  .card-label { padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500; border-top: 1px solid rgba(128, 128, 128, 0.3); }
+  body.light .card-label { background: #fafafa; }
+  body.dark .card-label { background: #202127; }
+  .sizes { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-end; }
+  .sizeblk { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .sizeblk .name { font-size: 0.8rem; font-weight: 600; }
+  .sizerow { display: flex; gap: 1rem; align-items: flex-end; }
+  .sizerow div { text-align: center; }
+  .sizerow span { display: block; font-size: 0.7rem; opacity: 0.6; margin-top: 4px; }
 </style>
 </head>
-<body>
-  <h1>TrueKart — Logo concepts</h1>
-  <p>Skill 1: logo-designer · Open this file in a browser to compare concepts at favicon sizes.</p>
+<body class="light">
+  <div class="header">
+    <h1>TrueKart Logo Preview — Concepts</h1>
+    <button class="toggle" onclick="document.body.classList.toggle('dark'); document.body.classList.toggle('light'); this.textContent = document.body.classList.contains('dark') ? '\u2600\ufe0f Light' : '\ud83c\udf19 Dark';">🌙 Dark</button>
+  </div>
   <div class="grid">
-    <div class="card">
-      <div class="card-img"><img src="concepts/concept-1.svg" alt="concept-1" width="128"></div>
-      <div class="card-label">1 — Photo + verify (recommended)</div>
-      <div class="sizes">
-        <div class="size"><img src="concepts/concept-1.svg" width="48"><br>48px</div>
-        <div class="size"><img src="concepts/concept-1.svg" width="32"><br>32px</div>
-        <div class="size"><img src="concepts/concept-1.svg" width="16"><br>16px</div>
+    <div class="card"><div class="card-img"><img src="concepts/concept-1.svg" alt="concept-1"></div><div class="card-label">concept-1 — verified photo card + check</div></div>
+    <div class="card"><div class="card-img"><img src="concepts/concept-2.svg" alt="concept-2"></div><div class="card-label">concept-2 — inspect &amp; verify (magnifier) (SELECTED)</div></div>
+    <div class="card"><div class="card-img"><img src="concepts/concept-3.svg" alt="concept-3"></div><div class="card-label">concept-3 — camera + check</div></div>
+  </div>
+
+  <h2>Favicon Size Check</h2>
+  <div class="sizes">
+    <div class="sizeblk">
+      <div class="name">concept-1</div>
+      <div class="sizerow">
+        <div><img src="concepts/concept-1.svg" width="64" height="64"><span>64px</span></div>
+        <div><img src="concepts/concept-1.svg" width="32" height="32"><span>32px</span></div>
+        <div><img src="concepts/concept-1.svg" width="16" height="16"><span>16px</span></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-img"><img src="concepts/concept-2.svg" alt="concept-2" width="128"></div>
-      <div class="card-label">2 — Bag + verify badge</div>
+    <div class="sizeblk">
+      <div class="name">concept-2</div>
+      <div class="sizerow">
+        <div><img src="concepts/concept-2.svg" width="64" height="64"><span>64px</span></div>
+        <div><img src="concepts/concept-2.svg" width="32" height="32"><span>32px</span></div>
+        <div><img src="concepts/concept-2.svg" width="16" height="16"><span>16px</span></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-img"><img src="concepts/concept-3.svg" alt="concept-3" width="128"></div>
-      <div class="card-label">3 — TK monogram</div>
+    <div class="sizeblk">
+      <div class="name">concept-3</div>
+      <div class="sizerow">
+        <div><img src="concepts/concept-3.svg" width="64" height="64"><span>64px</span></div>
+        <div><img src="concepts/concept-3.svg" width="32" height="32"><span>32px</span></div>
+        <div><img src="concepts/concept-3.svg" width="16" height="16"><span>16px</span></div>
+      </div>
     </div>
   </div>
 </body>

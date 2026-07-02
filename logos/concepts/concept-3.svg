@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <rect width="128" height="128" rx="28" fill="#0C1222"/>
-  <g id="wordmark">
-    <text x="64" y="72" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#F8FAFC">TK</text>
-    <rect x="36" y="84" width="56" height="6" rx="3" fill="#10B981"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TrueKart — camera check mark">
+  <rect width="512" height="512" rx="112" fill="#0C1222"/>
+  <rect x="150" y="132" width="132" height="52" rx="20" fill="#F8FAFC"/>
+  <rect x="88" y="168" width="336" height="228" rx="48" fill="#F8FAFC"/>
+  <circle cx="256" cy="286" r="86" fill="#0C1222"/>
+  <path d="M212 288 L246 322 L308 244" fill="none" stroke="#34D399" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
