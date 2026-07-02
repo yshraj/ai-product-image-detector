@@ -87,6 +87,8 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .status-title { font-size: 12.5px; font-weight: 700; }
 .status-sub { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status-card[data-state="error"] .status-sub { color: var(--red); }
+.compare-heading-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.beta-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 20px; background: #fdf4e6; color: #b45309; border: 1px solid #f4dcb8; vertical-align: middle; }
 .status-chip { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 9px; border-radius: 20px; background: #e8f6ee; color: #15803d; border: 1px solid #bfe6cd; flex: none; }
 .status-card[data-state="warn"] .status-chip { background: #fdf2e3; color: var(--amber); border-color: #f4dcb8; }
 .status-card[data-state="off"] .status-chip { background: #eef0f3; color: var(--muted); border-color: var(--line-2); }
