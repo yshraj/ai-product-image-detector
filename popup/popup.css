@@ -28,6 +28,10 @@
 }
 
 * { box-sizing: border-box; }
+/* The `hidden` attribute must always win — a class with an explicit `display`
+   (e.g. .export-row, .scan-all-btn) otherwise overrides the UA [hidden] rule
+   and the element stays visible after el.hidden = true. */
+[hidden] { display: none !important; }
 
 body {
   width: 360px; height: 540px; margin: 0;
