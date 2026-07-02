@@ -206,6 +206,38 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .scan-history li { font-size: 11.5px; padding: 8px 10px; background: var(--bg-2); border-radius: 8px; border: 1px solid var(--line); line-height: 1.4; }
 .scan-history .sh-site { font-weight: 800; text-transform: capitalize; }
 .scan-history .sh-meta { color: var(--muted-2); font-size: 10.5px; margin-top: 2px; }
+
+/* Recent-scans skeleton — a premium, GPU-accelerated shimmer shown on first
+   load while the history reads from storage. The skeleton <li>s reuse the real
+   `.scan-history li` box (same padding / border / radius), so the placeholder
+   lines up pixel-for-pixel with the loaded rows. Only `transform` is animated
+   (stays on the compositor); the global prefers-reduced-motion rule freezes the
+   sweep off-screen, leaving static placeholder bars. */
+.sh-skel { pointer-events: none; }
+.sh-skel-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--line);
+}
+.sh-skel-site { width: 44%; height: 12px; background: var(--line-2); }
+.sh-skel-meta { width: 76%; height: 9px; margin-top: 9px; }
+.sh-skel-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
+  animation: sh-sweep 1.4s var(--ease) infinite;
+  will-change: transform;
+}
+/* Gentle top-down cascade so the rows don't shimmer in lockstep. */
+.sh-skel:nth-child(2) .sh-skel-bar::after { animation-delay: 0.12s; }
+.sh-skel:nth-child(3) .sh-skel-bar::after { animation-delay: 0.24s; }
+@keyframes sh-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
 .onboarding { position: fixed; inset: 0; background: rgba(17,24,39,0.45); z-index: 200; display: grid; place-items: end center; padding: 12px; pointer-events: none; }
 .onboarding-card { pointer-events: auto; background: #fff; border-radius: var(--radius); padding: 14px; max-width: 320px; width: 100%; box-shadow: var(--shadow); }
 .onboarding-card p { margin: 0 0 10px; font-size: 12.5px; line-height: 1.45; }
@@ -559,6 +591,7 @@ button.ghost:hover { color: var(--text); border-color: var(--accent); }
   .scan-progress-fill { box-shadow: 0 0 14px rgba(52, 211, 153, 0.25); }
   .filter-chip.active { background: var(--accent-soft); }
   .result-card, .skeleton-card { background: var(--panel); }
+  .sh-skel-bar::after { background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%); }
   .drop-zone:hover, .drop-zone:focus-visible, .drop-zone.drag { background: var(--accent-soft); }
   .empty-state, .empty-hint { background: #12151c; }
   .empty-state-ico, .drop-icon { background: var(--accent-soft); }

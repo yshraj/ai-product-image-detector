@@ -27,6 +27,9 @@ async function getCacheKeys() {
 
 let state = { ...DEFAULTS };
 let health = null;
+// Whether the Recent-scans list has painted real rows at least once. Gates the
+// skeleton loader so it shows on first open only — not on every 400ms poll.
+let scanHistoryPainted = false;
 
 const ACTIVE_TAB_ONLY = new Set([
   'GET_STATS', 'GET_PAGE_REPORT', 'RESCAN', 'HIGHLIGHT_FILTER',
@@ -86,6 +89,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupScanPanel();
   setupSupport();
   maybeShowOnboarding();
+  // Paint the Recent-scans skeleton up front so the card shows structured
+  // loading during the initial stats round-trip, not an empty gap.
+  const shList = $('scan-history');
+  const shCard = $('scan-history-card');
+  if (shList && shCard) {
+    shCard.hidden = false;
+    renderScanHistorySkeleton(shList);
+  }
   updateScan();
 });
 
@@ -225,11 +236,38 @@ async function maybeShowOnboarding() {
   overlay.querySelector('#onboard-next').focus();
 }
 
+// Fill the Recent-scans list with shimmer placeholders that mirror the real
+// row layout (site line + meta line). Marked aria-hidden and aria-busy so
+// screen readers announce "busy" rather than reading the fake rows.
+function renderScanHistorySkeleton(list, count = 3) {
+  list.textContent = '';
+  list.setAttribute('aria-busy', 'true');
+  for (let i = 0; i < count; i++) {
+    const li = document.createElement('li');
+    li.className = 'sh-skel';
+    li.setAttribute('aria-hidden', 'true');
+    const site = document.createElement('div');
+    site.className = 'sh-skel-bar sh-skel-site';
+    const meta = document.createElement('div');
+    meta.className = 'sh-skel-bar sh-skel-meta';
+    li.append(site, meta);
+    list.appendChild(li);
+  }
+}
+
 async function renderScanHistory() {
   const card = $('scan-history-card');
   const list = $('scan-history');
   const empty = $('scan-history-empty');
   if (!card || !list) return;
+  // First paint: reveal the card with a skeleton while the storage read
+  // resolves, so the popup shows structured loading instead of an empty gap.
+  // Poll-driven refreshes keep the loaded rows in place (no skeleton flash).
+  if (!scanHistoryPainted) {
+    card.hidden = false;
+    empty.hidden = true;
+    renderScanHistorySkeleton(list);
+  }
   const data = await chrome.storage.local.get({ rmf_scan_history: [] });
   const raw = data.rmf_scan_history || [];
   const hist = raw.slice(0, 5);
@@ -237,6 +275,8 @@ async function renderScanHistory() {
     chrome.storage.local.set({ rmf_scan_history: hist }).catch(() => {});
   }
   list.textContent = '';
+  list.removeAttribute('aria-busy');
+  scanHistoryPainted = true;
   if (!hist.length) {
     card.hidden = false;
     empty.hidden = false;
