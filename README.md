@@ -33,7 +33,7 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 
 | Tab | Purpose |
 |-----|---------|
-| **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, export |
+| **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, **scan whole page**, export |
 | **Settings** | AI engine (Hugging Face / Preview), display mode, notifications, links to full settings |
 
 > Right-click any image on a supported page and choose **Check this image** for a one-off AI verdict (context menu).

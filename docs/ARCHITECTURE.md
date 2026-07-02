@@ -133,6 +133,7 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 | `GET_PRODUCT` | Extract title, price, brand, image from product page |
 | `GET_PAGE_REPORT` | Exportable scan report for current page |
 | `RESCAN` | Clear badges and re-run detection (uses cache) |
+| `SCAN_PAGE` | Scan the whole page — scrolls to load lazy images and force-scans off-screen cards past the viewport gate |
 | `SET_MODE` | `all` / `badge` / `hide` display mode |
 | `SET_ENABLED` | Toggle scanning on/off |
 | `SET_MIN_CONFIDENCE` | User confidence floor |
