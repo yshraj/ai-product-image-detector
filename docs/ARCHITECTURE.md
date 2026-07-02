@@ -18,9 +18,8 @@ This document explains how the pieces fit together. For onboarding commands, see
 │  (user UI)      │  (page injection)     │  (service worker)             │
 │                 │                       │                               │
 │  Scan           │  Scan product grids   │  HF API calls (CORS bypass)   │
-│  Similar        │  Inject badges        │  Image fetch (SSRF guard)     │
-│  products       │  Extract product info │  Compare search orchestration │
-│  Settings       │  Popup messaging      │  Badge, history, notifications│
+│  Settings       │  Inject badges        │  Image fetch (SSRF guard)     │
+│                 │  Extract product info │  Badge, history, notifications│
 └────────┬────────┴───────────┬───────────┴───────────────┬───────────────┘
          │                    │                           │
          │    chrome.runtime.sendMessage / onMessage      │
@@ -44,13 +43,13 @@ This document explains how the pieces fit together. For onboarding commands, see
 | Path | Role |
 |------|------|
 | `manifest.json` | MV3 entry point — permissions, content scripts, CSP |
-| `background/service-worker.js` | Central message hub, HF detection, compare, badge, history |
+| `background/service-worker.js` | Central message hub, HF detection, badge, history |
 | `content/content.js` | Main page orchestrator — scan, badges, observer, popup messages |
 | `content/sites/*.js` | Per-marketplace DOM selectors (`window.RMF_SITE`) |
 | `content/check-image.js` | Context-menu image check (injected on demand) |
 | `detection/` | Detection pipeline modules (remote, EXIF, heuristic) |
-| `compare/` | Cross-marketplace price compare (runs in service worker) |
-| `popup/` | Three-tab shopping assistant UI |
+| `compare/` | *(optional / dev-only)* Cross-marketplace search — not wired in shipped MV3 build |
+| `popup/` | Two-tab UI (Scan + Settings) |
 | `options/` | Full settings page (history, import/export, legal) |
 | `utils/` | Shared helpers (defaults, cache, strings, price, URLs) |
 | `libs/exifr.min.js` | Vendored EXIF parser (lite UMD build) |
@@ -66,19 +65,18 @@ This document explains how the pieces fit together. For onboarding commands, see
 
 ### Popup (`popup/`)
 
-Loaded when the user clicks the toolbar icon. Three tabs via bottom navigation:
+Loaded when the user clicks the toolbar icon. Two tabs via bottom navigation:
 
 | Tab | Primary files | Responsibility |
 |-----|---------------|----------------|
 | Scan | `popup.js` | Stats, rescan, export, HF connect, threshold |
-| Similar products | `compare-panel.js` | Cross-site search UI, sort/filter results |
 | Settings | `popup.js` | Quick prefs; links to full options page |
 
-Scripts load in order defined by `popup.html`: shared utils → compare config → `compare-panel.js` → `popup.js`.
+Scripts load in order defined by `popup.html`: shared utils → `popup.js`.
 
 Popup talks to:
 - **Content script** — `GET_STATS`, `GET_PRODUCT`, `RESCAN`, `SET_MODE`, etc. (routed to **active tab only** for tab-specific actions).
-- **Service worker** — `RMF_VALIDATE`, `RMF_COMPARE_SEARCH`, `RMF_ENGINE_HEALTH`, `RMF_DETECT_DATA` (context-menu image check).
+- **Service worker** — `RMF_VALIDATE`, `RMF_ENGINE_HEALTH`, `RMF_DETECT_DATA` (context-menu image check).
 
 ### Content script (`content/`)
 
@@ -107,16 +105,17 @@ When a marketplace changes its DOM, update the matching file under `content/site
 
 ### Service worker (`background/service-worker.js`)
 
-Long-lived (with MV3 sleep/wake). Uses `importScripts()` to load compare modules and shared utils — compare **must** run here because it performs cross-origin `fetch()` to marketplace search pages.
+Long-lived (with MV3 sleep/wake). Uses `importScripts()` for shared utils (`defaults`, `trust-storage`, etc.).
 
 Responsibilities:
 - Install/update defaults in `chrome.storage.sync`
 - `RMF_FETCH_IMAGE` — fetch image bytes with SSRF guard
-- `RMF_REMOTE_DETECT` / `RMF_DETECT_DATA` — Hugging Face inference
+- `RMF_REMOTE_DETECT` / `RMF_DETECT_DATA` — Hugging Face inference (payload size capped)
 - `RMF_VALIDATE` — live HF token check via `whoami`
-- `RMF_COMPARE_SEARCH` — orchestrate multi-site compare
 - Toolbar badge, activity history, opt-in notifications
 - Context menu → inject `check-image.js` on any page
+
+> **Note:** The `compare/` subsystem remains in the repo for optional dev/live tests (`RUN_LIVE_COMPARE=1`) but is **not** wired into the shipped service worker or popup.
 
 ### Options page (`options/`)
 
@@ -151,10 +150,10 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 | `RMF_BADGE` | Update toolbar badge count |
 | `RMF_HISTORY_ADD` | Append flagged item to local history |
 | `RMF_NOTIFY` | Trigger opt-in OS notification |
-| `RMF_COMPARE_SEARCH` | Search product across marketplaces (always fresh; no storage cache) |
-| `RMF_PRODUCT_CHANGED` | Content script → popup when SPA navigation changes product |
 | `RMF_GET_SELLERS` / `RMF_GET_CORRECTIONS` | Trust/correction data |
 | `RMF_TOGGLE_ENABLED` | Keyboard shortcut handler |
+
+All worker handlers reject messages where `sender.id !== chrome.runtime.id`.
 
 Prefix `RMF_` is historical (RealModel Filter). New code should keep the prefix for consistency.
 

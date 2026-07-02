@@ -1,8 +1,8 @@
 # TrueKart — Chrome Extension
 
-> **Real photos. Best prices. Shop India.**
+> **Real photos. Shop smarter in India.**
 
-TrueKart is a **shopping assistant** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). Spot AI product photos, compare prices, and shop with confidence.
+TrueKart is a **Chrome extension** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). Spot AI-generated product photos while you browse.
 
 Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · _formerly RealModel Filter_.
 
@@ -34,8 +34,7 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 | Tab | Purpose |
 |-----|---------|
 | **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, export |
-| **Similar products** | Live search for the current product on Amazon, Flipkart, Myntra, Meesho, Nykaa (hidden-tab scrape where fetch is blocked) |
-| **Settings** | AI engine, display mode, compare toggles, links to full settings |
+| **Settings** | AI engine (Hugging Face / Preview), display mode, notifications, links to full settings |
 
 > Right-click any image on a supported page and choose **Check this image** for a one-off AI verdict (context menu).
 
@@ -54,7 +53,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 1. Install from the Chrome Web Store _(when published)_ **or** load unpacked (developers — see below).
 2. Pin the extension in the toolbar.
 3. Visit a category or product page on [myntra.com](https://www.myntra.com), [flipkart.com](https://www.flipkart.com), [meesho.com](https://www.meesho.com), or [nykaa.com](https://www.nykaa.com).
-4. Open the popup — use **Scan**, **Similar products**, or **Settings** as needed.
+4. Open the popup — use **Scan** or **Settings** as needed.
 
 **Connect Hugging Face (recommended for accurate detection):** Settings tab → paste a free Read token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Connect.
 
@@ -160,7 +159,7 @@ icons/                        16 / 48 / 128 px icons
 scripts/validate.js           Manifest + syntax validation
 test/unit/                    Node unit tests
 test/e2e/                     Playwright extension tests
-web-ext-config.cjs            Files excluded from store zip
+web-ext-config.mjs            Files excluded from store zip
 ```
 
 ---
@@ -248,7 +247,7 @@ npm run build
 
 Output: `dist/truekart_ai_photo_check_price_compare-1.7.0.zip` (~11 MB). The size is dominated by the bundled ONNX Runtime WASM used for CLIP image-similarity scoring in Similar products; see [docs/ROADMAP.md](docs/ROADMAP.md) for the planned lazy-load that trims this before public launch.
 
-`web-ext-config.cjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
+`web-ext-config.mjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
 
 ### Pre-release checklist
 
