@@ -9,6 +9,11 @@ Chrome extension for Indian marketplaces (Myntra, Flipkart, Meesho, Nykaa; Amazo
 | **Scan** | Flags product images as AI-generated / likely AI / normal. Threshold slider, rescan, **Scan whole page**, export JSON/CSV. |
 | **Settings** | HF token, display mode, confidence, notifications. |
 
+A persistent **Buy me a coffee** support footer sits above the bottom nav on
+every open (all tabs/states). The target is provider-agnostic — set
+`SUPPORT.url` in `utils/defaults.js` (Buy Me a Coffee / GitHub Sponsors / Ko-fi
+/ Stripe / Lemon Squeezy / Polar / Patreon / custom); no popup change needed.
+
 ## Scan
 
 1. Content script finds product cards + images on supported sites.

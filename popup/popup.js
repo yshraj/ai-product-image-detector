@@ -84,9 +84,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNav();
   setupSettings();
   setupScanPanel();
+  setupSupport();
   maybeShowOnboarding();
   updateScan();
 });
+
+// Persistent "support the developer" footer. Provider-agnostic: the target
+// comes from RMF_Defaults.SUPPORT so switching to GitHub Sponsors / Ko-fi /
+// Stripe etc. needs no popup changes. Opened via chrome.tabs.create for
+// deterministic behaviour from an extension popup (and a future click hook).
+function setupSupport() {
+  const link = $('support-link');
+  if (!link) return;
+  const support = window.RMF_Defaults?.SUPPORT || {};
+  const url = support.url || '';
+  const s = S();
+  if (s?.support) {
+    $('support-title').textContent = s.support.title;
+    $('support-sub').textContent = s.support.subtitle;
+    link.setAttribute('aria-label', s.support.aria);
+  }
+  if (url) link.href = url;
+  link.addEventListener('click', (e) => {
+    if (!url) { e.preventDefault(); return; }
+    e.preventDefault();
+    try { chrome.tabs.create({ url }); } catch { window.open(url, '_blank', 'noopener'); }
+  });
+}
 
 function setupScanPanel() {
   const scanSlider = $('scan-confidence');

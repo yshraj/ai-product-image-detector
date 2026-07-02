@@ -139,6 +139,13 @@
       staleResults: 'Product changed — rescanning…',
     },
 
+    // "support the developer" footer (persistent, bottom of popup)
+    support: {
+      title: 'Buy me a coffee',
+      subtitle: 'Support independent development',
+      aria: 'Buy me a coffee — support independent development (opens in a new tab)',
+    },
+
     settings: {
       aiDetection: 'AI detection',
       compareSites: 'Similar products marketplaces',

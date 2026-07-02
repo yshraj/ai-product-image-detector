@@ -64,6 +64,14 @@
   const AI_THRESHOLD = 90;
   const CONTENT_SITES = ['myntra', 'flipkart', 'meesho', 'nykaa'];
 
+  // "Support the developer" target. Provider-agnostic on purpose: swapping to
+  // GitHub Sponsors / Ko-fi / Stripe / Lemon Squeezy / Polar / Patreon or a
+  // custom endpoint is a one-line change here — the popup reads `url` only.
+  const SUPPORT = {
+    provider: 'buymeacoffee', // buymeacoffee | github | kofi | stripe | lemonsqueezy | polar | patreon | custom
+    url: 'https://www.buymeacoffee.com/truekart',
+  };
+
   return {
     ALL_COMPARE_SITES,
     SYNC_DEFAULTS,
@@ -72,5 +80,6 @@
     HISTORY_KEY,
     AI_THRESHOLD,
     CONTENT_SITES,
+    SUPPORT,
   };
 }));
