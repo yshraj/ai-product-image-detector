@@ -1,13 +1,11 @@
-// popup/popup.js — TrueKart popup (Scan / Similar products / Settings).
-// Tab-specific messages (GET_STATS, GET_PRODUCT, RESCAN, …) are sent to the
-// active tab only — see ACTIVE_TAB_ONLY. Settings persist via chrome.storage.sync.
-const { SYNC_DEFAULTS, ALL_COMPARE_SITES, CACHE_PREFIX } = window.RMF_Defaults;
+// popup/popup.js — TrueKart popup (Scan / Settings).
+const { SYNC_DEFAULTS, CACHE_PREFIX } = window.RMF_Defaults;
 const DEFAULTS = SYNC_DEFAULTS;
 const { isMarketplaceProductUrl, MARKETPLACE_TAB_URLS: MARKETPLACE_TABS } = window.RMF_MarketplaceUrl;
 const send = window.RMF_Runtime.sendMessage;
 const PROVIDERS = ['huggingface', 'heuristic'];
 const MODES = ['all', 'badge', 'hide'];
-const TABS = ['scan', 'compare', 'settings'];
+const TABS = ['scan', 'settings'];
 
 const $ = (id) => document.getElementById(id);
 const S = () => window.RMF_STRINGS;
@@ -25,11 +23,7 @@ function isAmazonUrl(url) {
 }
 
 function isSupportedMarketplaceUrl(url) {
-  if (!url) return false;
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return ['myntra.com', 'flipkart.com', 'meesho.com', 'nykaa.com'].some((h) => host === h || host.endsWith('.' + h));
-  } catch { return false; }
+  return window.RMF_MarketplaceUrl?.isSupportedMarketplaceUrl?.(url) === true;
 }
 
 async function saveSync(patch) {
@@ -50,10 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state = { ...DEFAULTS };
     toast(S()?.options?.saveFailed || 'Could not load settings — using defaults', true);
   }
-  if (!Array.isArray(state.compareSites) || !state.compareSites.length) {
-    state.compareSites = [...ALL_COMPARE_SITES];
-  }
-  window.__compareSettingsSites = state.compareSites;
+  if (!Array.isArray(state.disabledSites)) state.disabledSites = [];
 
   $('toggle-enabled').checked = state.enabled;
   $('hf-token').value = state.hfToken || '';
@@ -64,7 +55,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('scan-confidence').value = state.minConfidence;
     $('scan-confidence-val').textContent = `${state.minConfidence}%`;
   }
-  if ($('serp-api-key')) $('serp-api-key').value = state.serpApiKey || '';
   if ($('notify-on-ai')) $('notify-on-ai').checked = state.notifyOnAI === true;
   if ($('hf-ensemble')) $('hf-ensemble').checked = state.hfEnsemble === true;
 
@@ -78,8 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderStatus();
   setupNav();
   setupSettings();
-  setupCompareSites();
-  window.RMF_ComparePanel?.setupSort?.();
   setupScanPanel();
   maybeShowOnboarding();
   updateScan();
@@ -184,7 +172,11 @@ async function renderScanHistory() {
   const empty = $('scan-history-empty');
   if (!card || !list) return;
   const data = await chrome.storage.local.get({ rmf_scan_history: [] });
-  const hist = data.rmf_scan_history || [];
+  const raw = data.rmf_scan_history || [];
+  const hist = raw.slice(0, 5);
+  if (raw.length > 5) {
+    chrome.storage.local.set({ rmf_scan_history: hist }).catch(() => {});
+  }
   list.textContent = '';
   if (!hist.length) {
     card.hidden = false;
@@ -195,7 +187,7 @@ async function renderScanHistory() {
   }
   card.hidden = false;
   empty.hidden = true;
-  hist.slice(0, 8).forEach((h) => {
+  hist.forEach((h) => {
     const li = document.createElement('li');
     const d = new Date(h.at);
     const site = document.createElement('div');
@@ -225,41 +217,27 @@ function setupNav() {
   });
 }
 
-let comparePollId = null;
-let lastCompareFp = '';
+let scanPollId = null;
 
-function stopCompareWatcher() {
-  if (comparePollId) clearInterval(comparePollId);
-  comparePollId = null;
+function stopScanWatcher() {
+  if (scanPollId) clearInterval(scanPollId);
+  scanPollId = null;
 }
 
-function startCompareWatcher() {
-  stopCompareWatcher();
-  comparePollId = setInterval(async () => {
-    if ($('panel-compare').hidden) {
-      stopCompareWatcher();
+function startScanWatcher() {
+  if (scanPollId) return;
+  scanPollId = setInterval(async () => {
+    if ($('panel-scan')?.hidden) {
+      stopScanWatcher();
       return;
     }
-    const p = await getActiveProduct();
-    const fp = window.RMF_ComparePanel?.productFp?.(p) || p?.fingerprint || '';
-    if (!fp || fp === lastCompareFp) return;
-    lastCompareFp = fp;
-    await window.RMF_ComparePanel?.handleProductChange?.(p);
-  }, 1200);
+    await updateScan();
+  }, 400);
 }
-
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type !== 'RMF_PRODUCT_CHANGED') return;
-  lastCompareFp = msg.fingerprint || window.RMF_ComparePanel?.productFp?.(msg.product) || '';
-  window.RMF_ComparePanel?.handleProductChange?.(msg.product);
-});
 
 function selectTab(tab) {
   const prev = document.querySelector('.nav-btn.active')?.dataset?.tab;
-  if (prev === 'compare' && tab !== 'compare') {
-    window.RMF_ComparePanel?.onCompareTabHidden?.();
-    stopCompareWatcher();
-  }
+  if (prev === 'scan' && tab !== 'scan') stopScanWatcher();
   TABS.forEach((t) => {
     const panel = $(`panel-${t}`);
     panel.hidden = t !== tab;
@@ -275,13 +253,6 @@ function selectTab(tab) {
   const panel = $(`panel-${tab}`);
   panel?.focus({ preventScroll: true });
   if (tab === 'scan') updateScan();
-  if (tab === 'compare') {
-    window.RMF_ComparePanel?.render?.(getActiveProduct)?.then?.(async () => {
-      const p = await getActiveProduct();
-      lastCompareFp = window.RMF_ComparePanel?.productFp?.(p) || p?.fingerprint || '';
-      startCompareWatcher();
-    });
-  }
 }
 
 function updateNavBadge(live) {
@@ -328,64 +299,45 @@ async function sendToActiveTab(message) {
   }
 
   const primary = await tryTab(active);
-  if (primary && (message.type !== 'GET_PRODUCT' || primary.title)) return primary;
-
-  // For product lookup, stick to the tab the user is viewing — never another tab.
-  if (message.type === 'GET_PRODUCT' && isMarketplaceProductUrl(active?.url)) return primary;
+  if (primary) return primary;
 
   const candidates = await chrome.tabs.query({ currentWindow: true, url: MARKETPLACE_TABS });
   const productish = candidates.filter((t) => isMarketplaceProductUrl(t.url));
   const pool = [...(productish.length ? productish : candidates)].reverse();
   for (const tab of pool) {
     const r = await tryTab(tab);
-    if (r && (message.type !== 'GET_PRODUCT' || r.title)) return r;
+    if (r) return r;
   }
   return primary;
 }
-  function productMatchesTabUrl(product, tabUrl) {
-    if (!product?.url || !tabUrl) return true;
-    try {
-      const tab = new URL(tabUrl);
-      const prod = new URL(product.url);
-      if (tab.origin !== prod.origin) return false;
-      if (tab.pathname === prod.pathname && tab.search === prod.search) return true;
-      const site = product.site || '';
-      const fpFn = window.RMF_ProductFingerprint?.productFingerprint;
-      if (!fpFn) return true;
-      const tabFp = fpFn({ site, url: tabUrl });
-      const prodFp = fpFn(product);
-      return !!(tabFp && prodFp && tabFp === prodFp);
-    } catch {
-      return true;
-    }
-  }
-
-  async function getActiveProduct() {
-    const active = await getActiveTab();
-    if (!active?.id) return null;
-
-    if (isAmazonUrl(active.url)) {
-      return { isProductPage: false, amazonLimited: true, title: '', url: active.url };
-    }
-
-    const tryTab = async () => {
-      try { return await chrome.tabs.sendMessage(active.id, { type: 'GET_PRODUCT' }); } catch { return null; }
-    };
-
-    // Retry on the visible tab — SPAs may update URL before title/meta refresh.
-    for (let i = 0; i < 16; i++) {
-      const p = await tryTab();
-      // A definitive "not a product page" is returned as-is (not null) so the
-      // Compare panel can show its empty state immediately rather than polling
-      // out the full timeout. Matches the Amazon branch above.
-      if (p?.isProductPage === false) return p;
-      if (p?.title && p.isProductPage !== false && productMatchesTabUrl(p, active.url)) return p;
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    return null;
-  }
 
 // ---- SCAN -----------------------------------------------------------------
+function setScanProgress(done, total, pending, show) {
+  const wrap = $('scan-progress');
+  const label = $('scan-progress-label');
+  const pctEl = $('scan-progress-pct');
+  const fill = $('scan-progress-fill');
+  const track = $('scan-progress-track');
+  if (!wrap) return;
+
+  if (!show) {
+    wrap.hidden = true;
+    stopScanWatcher();
+    return;
+  }
+
+  const denom = total || done + pending || 1;
+  const pct = Math.min(100, Math.max(0, Math.round((done / denom) * 100)));
+  const s = S();
+
+  wrap.hidden = false;
+  if (label) label.textContent = s ? s.scan.scanning(done, total || done + pending) : `Scanning ${done} / ${total || '…'}`;
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (fill) fill.style.width = `${pct}%`;
+  if (track) track.setAttribute('aria-valuenow', String(pct));
+  startScanWatcher();
+}
+
 async function updateScan() {
   const s = S();
   const all = await chrome.storage.local.get(null);
@@ -403,14 +355,10 @@ async function updateScan() {
   $('bd-ok').textContent = normal;
   updateNavBadge(live);
 
-  const progress = $('scan-progress');
   const total = live.total || live.scanned || 0;
   const done = live.scanned || 0;
   const pending = live.pending || 0;
-  if (progress && scanReady && state.enabled && (pending > 0 || (total > done))) {
-    progress.hidden = false;
-    progress.textContent = s ? s.scan.scanning(done, total || done + pending) : `Scanning ${done} / ${total || '…'}`;
-  } else if (progress) progress.hidden = true;
+  setScanProgress(done, total, pending, scanReady && state.enabled && (pending > 0 || (total > done)));
 
   const hint = $('scan-hint');
   const tip = $('scan-tip');
@@ -460,8 +408,6 @@ async function updateScan() {
   await renderScanHistory();
 }
 
-// ---- COMPARE (delegated to compare-panel.js) ------------------------------
-
 function applyPopupStrings(s) {
   if (!s) return;
   const nav = s.nav || {};
@@ -471,39 +417,7 @@ function applyPopupStrings(s) {
     if (label && text) label.textContent = text;
   };
   setNavLabel('nav-scan', nav.scan);
-  setNavLabel('nav-compare', nav.compare);
   setNavLabel('nav-settings', nav.settings);
-  if (s.compare?.heading) {
-    const h = $('compare-heading');
-    if (h) h.textContent = s.compare.heading;
-  }
-  if (s.settings?.compareSites) {
-    const el = $('compare-sites-label');
-    if (el) el.textContent = s.settings.compareSites;
-  }
-  if (s.settings?.compareSitesHint) {
-    const el = $('compare-sites-hint');
-    if (el) el.textContent = s.settings.compareSitesHint;
-  }
-}
-
-// ---- compare marketplace toggles ------------------------------------------
-function setupCompareSites() {
-  const box = $('compare-sites');
-  const enabled = new Set(state.compareSites || ALL_COMPARE_SITES);
-  box.querySelectorAll('input[data-site]').forEach((input) => {
-    input.checked = enabled.has(input.dataset.site);
-    input.addEventListener('change', async () => {
-      const sites = Array.from(box.querySelectorAll('input[data-site]:checked')).map((el) => el.dataset.site);
-      state.compareSites = sites.length ? sites : [...ALL_COMPARE_SITES];
-      window.__compareSettingsSites = state.compareSites;
-      if (await saveSync({ compareSites: state.compareSites })) {
-        if (!$('panel-compare').hidden) window.RMF_ComparePanel?.render?.(getActiveProduct);
-      }
-    });
-  });
-  const s = S();
-  if (s?.settings?.compareSitesHint) $('compare-sites-hint').textContent = s.settings.compareSitesHint;
 }
 
 // ---- SETTINGS (engine connect, modes, confidence, links) ------------------
@@ -601,19 +515,6 @@ function setupSettings() {
     updateScan();
   });
 
-  const serpKey = $('serp-api-key');
-  if (serpKey) {
-    const saveSerp = async () => {
-      state.serpApiKey = serpKey.value.trim();
-      if (await saveSync({ serpApiKey: state.serpApiKey })) {
-        toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
-      }
-    };
-    $('serp-save')?.addEventListener('click', saveSerp);
-    // Enter-to-submit, matching the Hugging Face token field.
-    serpKey.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveSerp(); });
-  }
-
   const notifyToggle = $('notify-on-ai');
   if (notifyToggle) {
     notifyToggle.addEventListener('change', async (e) => {
@@ -664,18 +565,19 @@ async function connectHuggingFace() {
     return toast((r && r.error) || 'Connection failed', true);
   }
   const modelChanged = model !== (state.hfModel || '');
+  const wasPreview = state.provider !== 'huggingface' || !state.hfToken;
   state = { ...state, provider: 'huggingface', hfToken: token, hfModel: model, hfVerified: true, hfUser: r.user || '' };
   await chrome.storage.sync.set({ provider: 'huggingface', hfToken: token, hfModel: model, hfVerified: true, hfUser: r.user || '' });
   health = null;
-  if (modelChanged) {
-    const all = await chrome.storage.local.get(null);
-    const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
-    if (keys.length) await chrome.storage.local.remove(keys);
-    updateScan();
-  }
+  // Always clear cached verdicts when connecting HF — old preview/heuristic
+  // results would otherwise stick for 7 days and look like HF scores.
+  const all = await chrome.storage.local.get(null);
+  const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+  if (keys.length) await chrome.storage.local.remove(keys);
+  if (modelChanged || wasPreview) updateScan();
   feedback('ok', r.user ? `Connected as ${r.user}` : 'Token verified — you’re connected');
   renderStatus();
-  toast(modelChanged ? 'Connected · cache cleared — reload the page' : 'Hugging Face connected', false, true);
+  toast(keys.length ? 'Connected · cache cleared — rescan the page' : 'Hugging Face connected', false, true);
 }
 
 function showPanel(provider) { PROVIDERS.forEach((p) => { $(`panel-${p}`).hidden = p !== provider; }); }

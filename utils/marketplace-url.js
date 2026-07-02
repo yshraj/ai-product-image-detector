@@ -68,5 +68,26 @@
     return false;
   }
 
-  return { isMarketplaceProductUrl, isSafeCompareUrl, MARKETPLACE_TAB_URLS };
+  const SUPPORTED_HOSTS = ['myntra.com', 'flipkart.com', 'meesho.com', 'nykaa.com'];
+
+  /**
+   * True when the URL is on a supported marketplace host (listing or product).
+   * @param {string|null|undefined} url
+   * @returns {boolean}
+   */
+  function isSupportedMarketplaceUrl(url) {
+    if (!url) return false;
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      return SUPPORTED_HOSTS.some((h) => host === h || host.endsWith('.' + h));
+    } catch { /* invalid URL */ }
+    return false;
+  }
+
+  return {
+    isMarketplaceProductUrl,
+    isSafeCompareUrl,
+    isSupportedMarketplaceUrl,
+    MARKETPLACE_TAB_URLS,
+  };
 }));

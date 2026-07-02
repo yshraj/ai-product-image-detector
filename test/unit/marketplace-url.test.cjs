@@ -1,7 +1,7 @@
 // test/unit/marketplace-url.test.cjs — listing vs product URL guards.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { isMarketplaceProductUrl, isSafeCompareUrl } = require('../../utils/marketplace-url.js');
+const { isMarketplaceProductUrl, isSafeCompareUrl, isSupportedMarketplaceUrl } = require('../../utils/marketplace-url.js');
 
 test('isMarketplaceProductUrl rejects category/listing pages', () => {
   assert.equal(isMarketplaceProductUrl('https://www.myntra.com/men-shirts'), false);
@@ -28,4 +28,11 @@ test('isSafeCompareUrl blocks javascript and non-marketplace hosts', () => {
 test('isSafeCompareUrl allows CDN image hosts when images=true', () => {
   assert.equal(isSafeCompareUrl('https://assets.myntassets.com/h.jpg', { images: true }), true);
   assert.equal(isSafeCompareUrl('https://assets.myntassets.com/h.jpg'), false);
+});
+
+test('isSupportedMarketplaceUrl accepts supported hosts', () => {
+  assert.equal(isSupportedMarketplaceUrl('https://www.myntra.com/men-shirts'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.flipkart.com/search?q=x'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.amazon.in/dp/B123'), false);
+  assert.equal(isSupportedMarketplaceUrl('https://example.com/'), false);
 });
