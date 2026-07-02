@@ -39,8 +39,9 @@ compare, utilities, and trust signals are the long-term wedge.
 - [ ] Confidence heatmap on flagged images (à la Illuminarty).
 - [ ] "Which generator?" labelling (needs Hive-class engine).
 - [ ] More marketplaces (Ajio, Tata Cliq).
-- [ ] Optional hosted proxy for zero-key free tier.
 - [ ] Review summary, price history, wishlist export (Tools tab).
+
+**Not planned:** TrueKart-hosted backend, accounts, or inference proxy. Optional features stay BYOK (user's HF / SerpApi keys) or on-device.
 
 ---
 
@@ -58,7 +59,7 @@ compare, utilities, and trust signals are the long-term wedge.
 
 1. **Store launch:** soft launch (unpacked) vs Chrome Web Store submission.
 2. **Default HF model:** keep `haywoodsloan/ai-image-detector-deploy` or A/B alternatives.
-3. **Zero-key tier:** bring-your-own HF token only vs hosted proxy (post-launch infra).
+3. **BYOK only:** Hugging Face and SerpApi keys are user-provided; no TrueKart-hosted proxy. *(Resolved 2026-07-02.)*
 
 ---
 

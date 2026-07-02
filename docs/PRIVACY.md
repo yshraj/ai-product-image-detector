@@ -17,10 +17,11 @@ advertising, or tracking of any kind.
 - **Activity history** (flagged items) is stored locally in `chrome.storage.local` and
   never leaves your device unless you export it yourself.
 - **Your Hugging Face access token and SerpApi key** (if you provide them) are stored
-  with `chrome.storage.sync`, the same as your other preferences. This means they sync
-  only across your own signed-in Chrome profile — encrypted by Google, and never sent to
-  us. They are used only to authenticate your requests to Hugging Face and SerpApi, are
-  never bundled in the extension, and are excluded from exported settings.
+  in the extension (currently `chrome.storage.sync` with your other preferences). They
+  sync only across your own signed-in Chrome profile on Google's infrastructure — we
+  never receive them. They are used only when **you** enable those features, sent
+  **directly** from your browser to Hugging Face or SerpApi, never through a TrueKart
+  server. Keys are excluded from exported settings.
 
 ## What leaves your device
 

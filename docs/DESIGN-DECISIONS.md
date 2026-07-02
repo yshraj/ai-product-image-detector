@@ -132,9 +132,21 @@ Popup only renders results; it never scrapes HTML directly.
 
 ## No telemetry or backend
 
-**Decision:** Zero analytics, accounts, or TrueKart-hosted API.
+**Decision:** Zero analytics, accounts, TrueKart-hosted API, or subscription infrastructure. Extension-only product.
 
-**Why:** Privacy positioning and Chrome Web Store trust. Outbound network: Hugging Face (optional), marketplace CDNs, SerpApi (optional user key), compare search pages.
+**Why:** Privacy positioning and Chrome Web Store trust. Users should not depend on us staying online.
+
+**Network (all user-initiated, direct from browser):**
+
+| Destination | When | Required? |
+|-------------|------|-----------|
+| Marketplace pages/CDNs | Scan, compare scrape | Yes (core feature) |
+| Hugging Face | AI detect (BYOK token) or one-time CLIP model download | No — preview heuristic works offline |
+| SerpApi | Compare via Google Shopping | No — direct scrape fallback |
+
+**BYOK:** `hfToken` and `serpApiKey` are optional user-provided credentials stored in the extension (not sent to TrueKart). Prefer `chrome.storage.local` for secrets over sync.
+
+**Explicitly out of scope:** hosted inference proxy, accounts, Clerk/Stripe, entitlement API, telemetry pipeline.
 
 ---
 

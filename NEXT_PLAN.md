@@ -144,7 +144,9 @@ Single planning doc for current state, gaps, and what to build next. See [FEATUR
 
 ### P3 — Future
 
-Price history · hosted HF proxy · Ajio/Tata Cliq · generator labeling · mobile browsers
+Price history · Ajio/Tata Cliq · generator labeling · mobile browsers · move BYOK secrets to `chrome.storage.local`
+
+**Not planned:** TrueKart backend, hosted HF/Serp proxy, accounts, or subscriptions.
 
 ---
 
@@ -212,7 +214,7 @@ npm run build             # → dist/truekart_*.zip (~11 MB)
 | [README.md](README.md) | Dev setup (needs sync) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map (needs sync) |
 | [docs/EDGE-CASES.md](docs/EDGE-CASES.md) | Failure scenarios |
-| [docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md) | Release checklist (needs sync) |
+| [docs/EXTENSION-PLAYBOOK.md](docs/EXTENSION-PLAYBOOK.md) | Extension-only roadmap (no backend) |
 | [TODO_price_compare.md](TODO_price_compare.md) | Compare phase checklist (complete) |
 
 ---

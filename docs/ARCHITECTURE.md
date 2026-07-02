@@ -2,6 +2,8 @@
 
 TrueKart is a **Manifest V3 Chrome extension** written in **vanilla JavaScript**. There is no bundler, transpiler, or runtime npm dependency — the repository root is the extension source tree.
 
+**Architectural invariant:** No TrueKart backend. All logic runs in the user's browser. Optional BYOK (Hugging Face, SerpApi) sends traffic directly from the extension to those third parties.
+
 This document explains how the pieces fit together. For onboarding commands, see [README.md](../README.md). For rationale behind major choices, see [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md).
 
 ---
