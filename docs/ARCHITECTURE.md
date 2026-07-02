@@ -16,8 +16,8 @@ This document explains how the pieces fit together. For onboarding commands, see
 │  (user UI)      │  (page injection)     │  (service worker)             │
 │                 │                       │                               │
 │  Scan           │  Scan product grids   │  HF API calls (CORS bypass)   │
-│  Compare        │  Inject badges        │  Image fetch (SSRF guard)     │
-│  Tools          │  Extract product info │  Compare search orchestration │
+│  Similar        │  Inject badges        │  Image fetch (SSRF guard)     │
+│  products       │  Extract product info │  Compare search orchestration │
 │  Settings       │  Popup messaging      │  Badge, history, notifications│
 └────────┬────────┴───────────┬───────────┴───────────────┬───────────────┘
          │                    │                           │
@@ -48,7 +48,7 @@ This document explains how the pieces fit together. For onboarding commands, see
 | `content/check-image.js` | Context-menu image check (injected on demand) |
 | `detection/` | Detection pipeline modules (remote, EXIF, heuristic) |
 | `compare/` | Cross-marketplace price compare (runs in service worker) |
-| `popup/` | Four-tab shopping assistant UI |
+| `popup/` | Three-tab shopping assistant UI |
 | `options/` | Full settings page (history, import/export, legal) |
 | `utils/` | Shared helpers (defaults, cache, strings, price, URLs) |
 | `libs/exifr.min.js` | Vendored EXIF parser (lite UMD build) |
@@ -64,20 +64,19 @@ This document explains how the pieces fit together. For onboarding commands, see
 
 ### Popup (`popup/`)
 
-Loaded when the user clicks the toolbar icon. Four tabs via bottom navigation:
+Loaded when the user clicks the toolbar icon. Three tabs via bottom navigation:
 
 | Tab | Primary files | Responsibility |
 |-----|---------------|----------------|
 | Scan | `popup.js` | Stats, rescan, export, HF connect, threshold |
-| Compare | `compare-panel.js` | Cross-site search UI, sort/filter results |
-| Tools | `popup.js` | Lens/Bing, copy details, share |
+| Similar products | `compare-panel.js` | Cross-site search UI, sort/filter results |
 | Settings | `popup.js` | Quick prefs; links to full options page |
 
 Scripts load in order defined by `popup.html`: shared utils → compare config → `compare-panel.js` → `popup.js`.
 
 Popup talks to:
 - **Content script** — `GET_STATS`, `GET_PRODUCT`, `RESCAN`, `SET_MODE`, etc. (routed to **active tab only** for tab-specific actions).
-- **Service worker** — `RMF_VALIDATE`, `RMF_COMPARE_SEARCH`, `RMF_ENGINE_HEALTH`, `RMF_DETECT_DATA` (Tools drop zone).
+- **Service worker** — `RMF_VALIDATE`, `RMF_COMPARE_SEARCH`, `RMF_ENGINE_HEALTH`, `RMF_DETECT_DATA` (context-menu image check).
 
 ### Content script (`content/`)
 
@@ -144,7 +143,7 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 |------|---------|
 | `RMF_FETCH_IMAGE` | Fetch image URL → data URL (SSRF guarded) |
 | `RMF_REMOTE_DETECT` | Run HF model on image URL |
-| `RMF_DETECT_DATA` | Run HF on pasted/dropped data URL (Tools tab) |
+| `RMF_DETECT_DATA` | Run HF on a data URL (context-menu image check) |
 | `RMF_VALIDATE` | Validate HF token |
 | `RMF_ENGINE_HEALTH` | Provider status for popup UI |
 | `RMF_BADGE` | Update toolbar badge count |

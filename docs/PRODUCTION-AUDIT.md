@@ -15,9 +15,9 @@ All automated checks pass. Compare pipeline hardened: cross-platform `ranked` sc
 | Check | Status | Notes |
 |-------|--------|-------|
 | `npm run validate` | ✅ PASS | Manifest parse, file refs, JS syntax, version sync, no `debugger` |
-| `npm run test:unit` | ✅ 80/80 | Compare ranking, matcher brand inference, SW import order guard |
+| `npm run test:unit` | ✅ 89/89 | Compare ranking, matcher brand inference, SW import order guard |
 | `npm test` (Playwright) | ✅ 93+ | Extension, compare-hardening, shopping-assistant, regression |
-| `npm run build` (web-ext) | ✅ | Produces `dist/truekart_shopping_assistant-1.7.0.zip` |
+| `npm run build` (web-ext) | ✅ | Produces `dist/truekart_ai_photo_check_price_compare-1.7.0.zip` |
 | `npm run lint:firefox` (web-ext lint) | ⚠️ N/A | Chrome MV3 target; Firefox lint expects Gecko manifest |
 | TypeScript errors | ✅ N/A | Project is JavaScript; no `tsc` |
 | ESLint errors | ✅ N/A | No ESLint config; validate + tests substitute |
@@ -62,9 +62,11 @@ All automated checks pass. Compare pipeline hardened: cross-platform `ranked` sc
 
 | Asset | Size (approx) | Notes |
 |-------|---------------|-------|
-| `libs/exifr.min.js` | ~45 KB | Only vendored lib; lite UMD build |
+| `libs/exifr.min.js` | ~45 KB | Vendored EXIF parser, lite UMD build |
+| `libs/transformers.min.js` | ~880 KB | Transformers.js runtime for CLIP embeddings |
+| `libs/onnx/*.wasm` | ~37 MB | ONNX Runtime WASM (CLIP image similarity) — bundle driver |
 | `detection/tfjs-detector.js` | ~5 KB | Heuristic canvas analysis, not full TF.js |
-| Packaged zip (web-ext) | **110 KB** | `dist/truekart_shopping_assistant-1.7.0.zip`, 54 files |
+| Packaged zip (web-ext) | **~11 MB** | `dist/truekart_ai_photo_check_price_compare-1.7.0.zip` — dominated by ONNX WASM; lazy-load planned (ROADMAP) to trim before public launch |
 | No npm runtime deps | ✅ | DevDeps only: Playwright, web-ext, axe |
 
 ### Dependencies
@@ -127,10 +129,10 @@ No unused npm dependencies identified.
 
 ## Known limitations (documented, not blockers)
 
-1. **Preview/heuristic image drop** — Tools tab drop-check needs Hugging Face connected in worker.
+1. **Context-menu image check** — the right-click "Check this image" verdict needs Hugging Face connected in the worker; the on-device preview heuristic is not wired into that path.
 2. **Amazon** — Compare host permission only; no content script on amazon.in.
 3. **SerpApi** — Optional; user-provided key for reliable cross-site compare.
-4. **No Chrome Web Store listing assets** in repo (screenshots, promo copy) — prepare separately for publish.
+4. **No Chrome Web Store listing assets** in repo (promo copy). ⚠️ The `qa-screenshots/` are stale — they show the pre-rebrand **ShopShield** name, the old indigo theme, and a removed 4-tab layout. Capture fresh screenshots of the current teal, 3-tab TrueKart build before publishing.
 
 ---
 
@@ -141,7 +143,7 @@ npm ci
 npm run validate
 npm run test:unit
 npm test
-npm run build          # → dist/truekart_shopping_assistant-1.7.0.zip (~110 KB)
+npm run build          # → dist/truekart_ai_photo_check_price_compare-1.7.0.zip (~11 MB)
 # npm run lint:firefox  # optional; Chrome-only — Firefox lint not applicable
 ```
 

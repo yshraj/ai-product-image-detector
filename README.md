@@ -34,9 +34,10 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 | Tab | Purpose |
 |-----|---------|
 | **Scan** | Scan product images, show AI / Likely AI breakdown, confidence threshold, rescan, export |
-| **Compare** | Live search for the current product on Amazon, Flipkart, Myntra, Meesho, Nykaa (hidden-tab scrape where fetch is blocked) |
-| **Tools** | Google Lens & Bing visual search, copy title/details/URL, download image, share |
+| **Similar products** | Live search for the current product on Amazon, Flipkart, Myntra, Meesho, Nykaa (hidden-tab scrape where fetch is blocked) |
 | **Settings** | AI engine, display mode, compare toggles, links to full settings |
+
+> Right-click any image on a supported page and choose **Check this image** for a one-off AI verdict (context menu).
 
 ### AI detection highlights
 
@@ -53,7 +54,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 1. Install from the Chrome Web Store _(when published)_ **or** load unpacked (developers — see below).
 2. Pin the extension in the toolbar.
 3. Visit a category or product page on [myntra.com](https://www.myntra.com), [flipkart.com](https://www.flipkart.com), [meesho.com](https://www.meesho.com), or [nykaa.com](https://www.nykaa.com).
-4. Open the popup — use **Scan**, **Compare**, or **Tools** as needed.
+4. Open the popup — use **Scan**, **Similar products**, or **Settings** as needed.
 
 **Connect Hugging Face (recommended for accurate detection):** Settings tab → paste a free Read token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Connect.
 
@@ -151,7 +152,7 @@ content/
   check-image.js              Context-menu image check
 detection/                    Pipeline: remote → EXIF → heuristic
 compare/                      Cross-marketplace search (loaded in service worker)
-popup/                        Four-tab UI (Scan / Compare / Tools / Settings)
+popup/                        Three-tab UI (Scan / Similar products / Settings)
 options/                      Full settings page
 utils/                        Shared modules (defaults, cache, strings, price, …)
 libs/exifr.min.js             Vendored EXIF parser
@@ -167,7 +168,7 @@ web-ext-config.cjs            Files excluded from store zip
 ## Architecture
 
 ```
-popup (4 tabs) ──messages──▶ service worker ──fetch──▶ Hugging Face
+popup (3 tabs) ──messages──▶ service worker ──fetch──▶ Hugging Face
    │ GET_PRODUCT / GET_STATS     │  (CORS bypass, SSRF guard)
    ▼                               ▼
 content script ──scan grid, badges, product extraction
@@ -245,7 +246,7 @@ npm ci → validate → test:unit → playwright install → test:e2e
 npm run build
 ```
 
-Output: `dist/truekart-1.7.0.zip` (~110 KB, 54 files).
+Output: `dist/truekart_ai_photo_check_price_compare-1.7.0.zip` (~11 MB). The size is dominated by the bundled ONNX Runtime WASM used for CLIP image-similarity scoring in Similar products; see [docs/ROADMAP.md](docs/ROADMAP.md) for the planned lazy-load that trims this before public launch.
 
 `web-ext-config.cjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
 
@@ -284,7 +285,7 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 | Symptom | Fix |
 |---------|-----|
 | No badges on a site | Site DOM changed — update `content/sites/<site>.js` |
-| Compare/Tools empty | Open a **product page**, not a category listing |
+| Similar products empty | Open a **product page**, not a category listing |
 | Popup shows "unsupported" | Switch to a supported marketplace tab first |
 | HF "warming up" | Wait ~20s and rescan (model cold start) |
 | Token rejected | Create a new **Read** token at huggingface.co/settings/tokens |
