@@ -38,7 +38,9 @@ async function getSessionStorage(context, keys) {
 
 /** Reset sync + local detection artifacts to a known baseline. */
 async function resetExtensionStorage(context, overrides = {}) {
-  await setSyncStorage(context, { ...DEFAULT_SYNC, ...overrides });
+  // CLIP offscreen load is slow and flaky under parallel CI workers; mocked compare E2E
+  // tests exercise text/SerpApi ranking only. Live compare suites opt in via overrides.
+  await setSyncStorage(context, { ...DEFAULT_SYNC, compareUseClip: false, ...overrides });
   await setLocalStorage(context, { rmf_onboarding_done: true });
   await clearDetectionCache(context);
   await clearHistory(context);

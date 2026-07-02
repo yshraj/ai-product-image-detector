@@ -29,6 +29,8 @@ async function openCompareWithProduct(extensionContext, popupUrl, productUrl) {
 }
 
 test.describe('Compare hardening', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ extensionContext }) => {
     await closeMarketplaceTabs(extensionContext);
     await setSyncStorage(extensionContext, {

@@ -300,6 +300,8 @@ Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
 
 | Document | Description |
 |----------|-------------|
+| [FEATURES.md](FEATURES.md) | Short reference for current popup tabs and logic |
+| [NEXT_PLAN.md](NEXT_PLAN.md) | Status, priorities, backlog, and sprint plan |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, message protocol, detection pipeline, storage |
 | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) | Why vanilla JS, HF in worker, preview fallback, etc. |
 | [docs/EDGE-CASES.md](docs/EDGE-CASES.md) | Invalid inputs, network failures, extension reloads |
