@@ -16,13 +16,17 @@
   const COLOR_MISMATCH_PENALTY = 0.20;
   const PATTERN_MISMATCH_PENALTY = 0.15;
   const FIT_MISMATCH_PENALTY = 0.10;
-  const BRAND_MISMATCH_CAP = 0.45;
+  const CATEGORY_MISMATCH_PENALTY = 0.30;
+  const GENDER_MISMATCH_PENALTY = 0.25;
+  const BRAND_MISMATCH_CAP = 0.38;
 
   const DEDUP_THRESHOLD = 0.9;
   const CLIP_MODEL = 'Xenova/clip-vit-base-patch32';
   const TOP_RANKED = 10;
-  const MIN_FINAL_SCORE = 0.12;
-  const MIN_FALLBACK_SCORE = 0.06;
+  const MIN_FINAL_SCORE = 0.32;
+  const MIN_FALLBACK_SCORE = 0.22;
+  /** Max ranked results kept per marketplace site. */
+  const MAX_PER_SITE = 2;
 
   const MAX_CANDIDATES_PER_SITE = 25;
   /** Run CLIP only on the top text-scored candidates after pre-ranking. */
@@ -43,8 +47,11 @@
     COLOR_MISMATCH_PENALTY,
     PATTERN_MISMATCH_PENALTY,
     FIT_MISMATCH_PENALTY,
+    CATEGORY_MISMATCH_PENALTY,
+    GENDER_MISMATCH_PENALTY,
     BRAND_MISMATCH_CAP,
     DEDUP_THRESHOLD,
+    MAX_PER_SITE,
     CLIP_MODEL,
     TOP_RANKED,
     MIN_FINAL_SCORE,

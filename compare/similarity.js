@@ -4,21 +4,24 @@
     const scoreConfig = require('./score-config.js');
     const attrParser = require('./attribute-parser.js');
     const query = require('../utils/product-query.js');
-    const priceMod = require('../utils/price.js');
-    module.exports = factory(scoreConfig, attrParser, query, priceMod);
+    const fingerprint = require('../utils/product-fingerprint.js');
+    module.exports = factory(scoreConfig, attrParser, query, fingerprint);
   } else {
     root.RMF_CompareSimilarity = factory(
       root.RMF_ScoreConfig,
       root.RMF_AttributeParser,
       root.RMF_ProductQuery,
-      root.RMF_Price,
+      root.RMF_ProductFingerprint,
     );
   }
-}(typeof self !== 'undefined' ? self : this, function (scoreConfig, AttributeParser, ProductQuery, priceMod) {
+}(typeof self !== 'undefined' ? self : this, function (scoreConfig, AttributeParser, ProductQuery, ProductFingerprint) {
   const {
     BRAND_WEIGHT, TITLE_WEIGHT, ATTRIBUTES_WEIGHT, COLOR_WEIGHT, PATTERN_WEIGHT, IMAGE_WEIGHT,
-    COLOR_MISMATCH_PENALTY, PATTERN_MISMATCH_PENALTY, FIT_MISMATCH_PENALTY, BRAND_MISMATCH_CAP, DEDUP_THRESHOLD,
+    COLOR_MISMATCH_PENALTY, PATTERN_MISMATCH_PENALTY, FIT_MISMATCH_PENALTY,
+    CATEGORY_MISMATCH_PENALTY, GENDER_MISMATCH_PENALTY, BRAND_MISMATCH_CAP, DEDUP_THRESHOLD,
   } = scoreConfig;
+
+  const { extractProductId } = ProductFingerprint || { extractProductId: () => '' };
 
   const { parseAttributes, normalizeColor, colorsMatch, brandInText, brandTokens } = AttributeParser;
   const { tokenize } = ProductQuery;
@@ -97,7 +100,7 @@
 
   function scoreBrandFeature(srcAttrs, candAttrs, candidateTitle) {
     const brand = srcAttrs.brand;
-    if (!brand) return 0.5;
+    if (!brand) return 0.25;
     const inTitle = brandInText(brand, candidateTitle || candAttrs.rawTitle || '');
     const candBrand = candAttrs.brand;
     if (candBrand && brandInText(brand, candBrand)) return 1;
@@ -164,6 +167,31 @@
     return ok === false;
   }
 
+  function categoryMatchOk(srcAttrs, candAttrs) {
+    const sc = srcAttrs.category;
+    const cc = candAttrs.category;
+    if (!sc || !cc) return null;
+    return sc === cc;
+  }
+
+  function categoryMismatch(srcAttrs, candAttrs) {
+    const ok = categoryMatchOk(srcAttrs, candAttrs);
+    return ok === false;
+  }
+
+  function genderMatchOk(srcAttrs, candAttrs) {
+    const sg = srcAttrs.gender;
+    const cg = candAttrs.gender;
+    if (!sg || !cg) return null;
+    if (sg === 'unisex' || cg === 'unisex') return true;
+    return sg === cg;
+  }
+
+  function genderMismatch(srcAttrs, candAttrs) {
+    const ok = genderMatchOk(srcAttrs, candAttrs);
+    return ok === false;
+  }
+
   const ATTR_FIELDS = ['gender', 'category', 'fit', 'sleeve', 'collar', 'fabric', 'size', 'model'];
 
   function scoreAttributeFields(srcAttrs, candAttrs) {
@@ -172,22 +200,11 @@
       const sv = srcAttrs[field];
       const cv = candAttrs[field];
       if (!sv) continue;
-      if (!cv) scores.push(0.35);
+      if (!cv) scores.push(field === 'category' ? 0.12 : 0.30);
       else scores.push(sv === cv ? 1 : 0);
     }
     if (!scores.length) return 0.5;
     return scores.reduce((a, b) => a + b, 0) / scores.length;
-  }
-
-  function priceSimilarityLabel(sourcePrice, candidatePrice) {
-    const sp = priceMod.parsePriceForSort?.(sourcePrice) ?? priceMod.parsePrice?.(sourcePrice);
-    const cp = priceMod.parsePriceForSort?.(candidatePrice) ?? priceMod.parsePrice?.(candidatePrice);
-    if (!sp || !cp) return 'unknown';
-    const ratio = Math.min(sp, cp) / Math.max(sp, cp);
-    if (ratio >= 0.95) return 'same';
-    if (ratio >= 0.8) return 'similar';
-    if (ratio >= 0.6) return 'different';
-    return 'very-different';
   }
 
   function cosineSimilarity(a, b) {
@@ -217,12 +234,19 @@
       color: candidate.color,
     });
 
-    const img = Math.max(0, Math.min(1, Number(imageScore) || 0));
+    const imgRaw = Math.max(0, Math.min(1, Number(imageScore) || 0));
+    let img = imgRaw;
     const brandScore = scoreBrandFeature(sourceAttrs, candidateAttrs, candidate.title);
     const titleScore = normalizedTitleSimilarity(sourceAttrs, candidateAttrs);
     const attributesScore = scoreAttributeFields(sourceAttrs, candidateAttrs);
     const colorScore = scoreColorFeature(sourceAttrs, candidateAttrs);
     const patternScore = scorePatternFeature(sourceAttrs, candidateAttrs);
+
+    if (categoryMismatch(sourceAttrs, candidateAttrs) || genderMismatch(sourceAttrs, candidateAttrs)) {
+      img = Math.min(img, 0.2);
+    } else if (brandMismatch(sourceAttrs, candidateAttrs, candidate.title) && img > 0.55) {
+      img *= 0.5;
+    }
 
     let raw =
       (BRAND_WEIGHT * brandScore) +
@@ -245,6 +269,14 @@
       raw -= FIT_MISMATCH_PENALTY;
       penalties.push({ type: 'fit', amount: FIT_MISMATCH_PENALTY });
     }
+    if (categoryMismatch(sourceAttrs, candidateAttrs)) {
+      raw -= CATEGORY_MISMATCH_PENALTY;
+      penalties.push({ type: 'category', amount: CATEGORY_MISMATCH_PENALTY });
+    }
+    if (genderMismatch(sourceAttrs, candidateAttrs)) {
+      raw -= GENDER_MISMATCH_PENALTY;
+      penalties.push({ type: 'gender', amount: GENDER_MISMATCH_PENALTY });
+    }
 
     let finalScore = Math.max(0, Math.min(1, raw));
     let brandCapApplied = false;
@@ -255,8 +287,6 @@
       }
     }
 
-    const priceLabel = priceSimilarityLabel(source.price, candidate.price);
-
     const breakdown = {
       brand: { ok: brandScore >= 0.5, score: brandScore },
       title: { score: titleScore },
@@ -264,8 +294,9 @@
       color: { ok: colorMatchOk(sourceAttrs, candidateAttrs), score: colorScore },
       pattern: { ok: patternMatchOk(sourceAttrs, candidateAttrs), score: patternScore },
       fit: { ok: fitMatchOk(sourceAttrs, candidateAttrs), value: candidateAttrs.fit || '' },
-      image: { score: img },
-      price: { label: priceLabel },
+      category: { ok: categoryMatchOk(sourceAttrs, candidateAttrs), value: candidateAttrs.category || '' },
+      gender: { ok: genderMatchOk(sourceAttrs, candidateAttrs), value: candidateAttrs.gender || '' },
+      image: { score: img, raw: imgRaw },
       brandCapApplied,
       penalties,
     };
@@ -306,16 +337,45 @@
     return scored.finalScore;
   }
 
+  function candidateDedupKey(c) {
+    const site = c.site || '';
+    const pid = extractProductId(c.url || '', site);
+    if (pid && String(pid).length > 2) return `${site}:${pid}`;
+    if (c.image) return `${site}:img:${c.image.split('?')[0]}`;
+    return c.url || c.title || '';
+  }
+
   function dedupCandidates(candidates, threshold = DEDUP_THRESHOLD) {
     const sorted = [...candidates].sort(
       (a, b) => (b.finalScore || 0) - (a.finalScore || 0),
     );
     const kept = [];
+    const seenKeys = new Set();
     for (const cand of sorted) {
+      const key = candidateDedupKey(cand);
+      if (key && seenKeys.has(key)) continue;
       const dup = kept.some((k) => candidatePairSimilarity(k, cand) >= threshold);
-      if (!dup) kept.push(cand);
+      if (!dup) {
+        kept.push(cand);
+        if (key) seenKeys.add(key);
+      }
     }
     return kept;
+  }
+
+  /**
+   * Hard reject obvious mismatches before ranking output.
+   */
+  function isCompatibleCandidate(source, candidate, scored) {
+    const srcAttrs = scored?.sourceAttrs || parseAttributes(source);
+    const candAttrs = scored?.candidateAttrs || parseAttributes({
+      title: candidate.title,
+      brand: candidate.brand,
+      color: candidate.color,
+    });
+    if (genderMismatch(srcAttrs, candAttrs)) return false;
+    if (categoryMismatch(srcAttrs, candAttrs)) return false;
+    return true;
   }
 
   function rankCandidates(source, candidates, imageScoresByUrl = {}) {
@@ -359,6 +419,10 @@
     colorMismatch,
     patternMismatch,
     fitMismatch,
+    categoryMismatch,
+    genderMismatch,
+    isCompatibleCandidate,
+    candidateDedupKey,
     candidatePairSimilarity,
     dedupCandidates,
     rankCandidates,

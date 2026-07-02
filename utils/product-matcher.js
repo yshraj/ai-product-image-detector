@@ -8,7 +8,7 @@
     root.RMF_ProductMatcher = factory(query);
   }
 }(typeof self !== 'undefined' ? self : this, function (ProductQuery) {
-  const { tokenize, parsePrice, extractColorFromProduct, inferBrandFromTitle } = ProductQuery;
+  const { tokenize, extractColorFromProduct, inferBrandFromTitle } = ProductQuery;
 
   function jaccard(a, b) {
     const setA = new Set(a);
@@ -27,15 +27,6 @@
     const titleLower = (candidateTitle || '').toLowerCase();
     const hits = brandTokens.filter((t) => titleLower.includes(t)).length;
     return hits / brandTokens.length;
-  }
-
-  function priceScore(sourcePrice, candidatePrice) {
-    if (!sourcePrice || !candidatePrice) return 0.5;
-    const ratio = Math.min(sourcePrice, candidatePrice) / Math.max(sourcePrice, candidatePrice);
-    if (ratio >= 0.95) return 1;
-    if (ratio >= 0.8) return 0.7;
-    if (ratio >= 0.6) return 0.4;
-    return 0.1;
   }
 
   function colorMatch(sourceColor, candidateTitle) {
@@ -59,12 +50,9 @@
 
     const effectiveBrand = source.brand || inferBrandFromTitle(source.title);
     const brand = brandMatch(effectiveBrand, candidate.title);
-    const srcPrice = parsePrice(source.price);
-    const candPrice = parsePrice(candidate.price);
-    const price = priceScore(srcPrice, candPrice);
     const color = colorMatch(extractColorFromProduct(source), candidate.title);
 
-    const raw = (titleSim * 0.52) + (brand * 0.18) + (price * 0.18) + (color * 0.12) + containBonus;
+    const raw = (titleSim * 0.58) + (brand * 0.22) + (color * 0.20) + containBonus;
     const score = Math.min(100, Math.round(raw * 100));
 
     let label = 'low';
@@ -72,7 +60,7 @@
     else if (score >= 70) label = 'similar';
     else if (score >= MIN_MATCH_SCORE) label = 'possible';
 
-    return { score, label, titleSim, brand, price, color };
+    return { score, label, titleSim, brand, color };
   }
 
   function rankResults(source, candidates, limit = 3) {
@@ -89,7 +77,7 @@
   }
 
   return {
-    scoreMatch, rankResults, pickBest, jaccard, brandMatch, priceScore, colorMatch,
+    scoreMatch, rankResults, pickBest, jaccard, brandMatch, colorMatch,
     MIN_MATCH_SCORE,
   };
 }));

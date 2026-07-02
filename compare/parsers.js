@@ -220,7 +220,10 @@
         });
       }
     }
-    return uniqueBy(items, (i) => i.url);
+    return uniqueBy(items, (i) => {
+      const pid = String(i.url || '').match(/\/p\/(\d+)/i);
+      return pid ? `nykaa:${pid[1]}` : i.url;
+    });
   }
 
   const PARSERS = {

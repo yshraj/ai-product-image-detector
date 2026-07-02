@@ -88,17 +88,23 @@
 
   const CATEGORY_PHRASES = [
     ['t-shirt', 't-shirt'], ['t shirt', 't-shirt'], ['tshirt', 't-shirt'], ['tee', 't-shirt'],
+    ['lounge t-shirt', 't-shirt'], ['lounge tshirt', 't-shirt'], ['lounge tee', 't-shirt'],
     ['polo shirt', 'polo'], ['polo t-shirt', 'polo'], ['polo', 'polo'],
     ['formal shirt', 'shirt'], ['casual shirt', 'shirt'], ['dress shirt', 'shirt'], ['shirt', 'shirt'],
     ['jeans', 'jeans'], ['trousers', 'trousers'], ['pants', 'trousers'], ['chinos', 'trousers'],
+    ['pajama', 'pajama'], ['pyjama', 'pajama'], ['pajamas', 'pajama'], ['pyjamas', 'pajama'],
+    ['night suit', 'nightwear'], ['nightwear', 'nightwear'], ['night wear', 'nightwear'],
+    ['lounge pant', 'lounge-pant'], ['lounge pants', 'lounge-pant'],
     ['shorts', 'shorts'], ['joggers', 'joggers'], ['track pants', 'track-pants'],
     ['jacket', 'jacket'], ['blazer', 'blazer'], ['hoodie', 'hoodie'], ['sweatshirt', 'sweatshirt'],
     ['sweater', 'sweater'], ['cardigan', 'cardigan'], ['kurta', 'kurta'], ['kurti', 'kurti'],
     ['saree', 'saree'], ['dress', 'dress'], ['skirt', 'skirt'], ['leggings', 'leggings'],
+    ['coord set', 'coord-set'], ['co-ord set', 'coord-set'], ['shirt with pant', 'coord-set'],
     ['sneakers', 'sneakers'], ['shoes', 'shoes'], ['sandals', 'sandals'], ['boots', 'boots'],
     ['watch', 'watch'], ['handbag', 'handbag'], ['backpack', 'backpack'],
     ['lipstick', 'lipstick'], ['foundation', 'foundation'], ['perfume', 'perfume'],
-    ['moisturizer', 'moisturizer'], ['serum', 'serum'],
+    ['moisturizer', 'moisturizer'], ['serum', 'serum'], ['hair mask', 'hair-mask'],
+    ['hair spa', 'hair-mask'], ['shampoo', 'shampoo'], ['conditioner', 'conditioner'],
   ];
 
   const MARKETING_NOISE = new Set([
@@ -211,6 +217,7 @@
   function attributeQueryTokens(attrs) {
     const parts = [];
     if (attrs.brand) parts.push(...brandTokens(attrs.brand));
+    if (attrs.gender && attrs.gender !== 'unisex') parts.push(attrs.gender);
     if (attrs.color) parts.push(attrs.color);
     if (attrs.pattern) parts.push(attrs.pattern);
     if (attrs.fit) parts.push(attrs.fit);

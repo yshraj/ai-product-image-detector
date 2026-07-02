@@ -9,7 +9,7 @@ test('score config exposes attribute-based weight constants', () => {
   assert.equal(ScoreConfig.TITLE_WEIGHT, 0.20);
   assert.equal(ScoreConfig.COLOR_WEIGHT, 0.15);
   assert.equal(ScoreConfig.IMAGE_WEIGHT, 0.10);
-  assert.equal(ScoreConfig.BRAND_MISMATCH_CAP, 0.45);
+  assert.equal(ScoreConfig.BRAND_MISMATCH_CAP, 0.38);
   assert.equal(ScoreConfig.COLOR_MISMATCH_PENALTY, 0.20);
 });
 
@@ -78,6 +78,31 @@ test('breakdown color is unknown when source has no color', () => {
   const candidate = { title: 'Snitch Men Solid White Shirt', price: '₹499' };
   const scored = Similarity.scoreCandidateMatch(source, candidate, 0);
   assert.equal(scored.breakdown.color.ok, null);
+});
+
+test('scoreCandidateMatch rejects kurta vs pajama category mismatch', () => {
+  const source = { title: 'FRELURO Men Printed Self Design Straight Kurta', brand: 'FRELURO' };
+  const kurta = { title: 'FRELURO Men Printed Self Design Straight Kurta', price: '₹319' };
+  const pajama = { title: 'Kanvin Womens Printed Self Design Knitted Straight Fit Pajama', price: '₹1399' };
+  const hair = { title: 'BBlunt Intense Moisture Heat Hair Spa Mask With Jojoba Oil', price: '₹349' };
+  const good = Similarity.scoreCandidateMatch(source, kurta, 0.9);
+  const badPajama = Similarity.scoreCandidateMatch(source, pajama, 0.9);
+  const badHair = Similarity.scoreCandidateMatch(source, hair, 0.9);
+  assert.ok(good.finalScore > badPajama.finalScore);
+  assert.ok(good.finalScore > badHair.finalScore);
+  assert.equal(Similarity.isCompatibleCandidate(source, pajama, badPajama), false);
+  assert.equal(Similarity.isCompatibleCandidate(source, hair, badHair), false);
+});
+
+test('dedupCandidates merges same Nykaa product id with different URLs', () => {
+  const candidates = [
+    { site: 'nykaa', title: 'Kanvin Pajama Set', url: 'https://www.nykaa.com/kanvin/p/12345', image: 'https://img/a', finalScore: 0.5 },
+    { site: 'nykaa', title: 'Kanvin Pajama Set Pack', url: 'https://www.nykaa.com/other-slug/p/12345', image: 'https://img/b', finalScore: 0.48 },
+    { site: 'amazon', title: 'Men Kurta', url: 'https://amazon.in/dp/B001', image: '', finalScore: 0.4 },
+  ];
+  const deduped = Similarity.dedupCandidates(candidates, 0.9);
+  assert.equal(deduped.length, 2);
+  assert.equal(deduped[0].url, 'https://www.nykaa.com/kanvin/p/12345');
 });
 
 test('rankCandidates assigns breakdown and finalScore', () => {

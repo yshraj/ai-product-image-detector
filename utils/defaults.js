@@ -38,7 +38,7 @@
     // max lifts recall 50%→67% with zero extra false positives. Costs 2 API
     // calls/image, so it's opt-in (hfEnsemble).
     hfModel2: 'umm-maybe/AI-image-detector',
-    hfEnsemble: false,
+    hfEnsemble: true,
     hfVerified: false,
     hfUser: '',
     minConfidence: 70,

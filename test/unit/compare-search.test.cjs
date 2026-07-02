@@ -162,6 +162,23 @@ test('parseSearchResults extracts Nykaa products from fixture HTML', () => {
   assert.match(items[0].url, /\/p\/\d+/);
 });
 
+test('rankCrossPlatform limits results per site', async () => {
+  const Similarity = require('../../compare/similarity.js');
+  const { rankCrossPlatform } = require('../../compare/search.js');
+  const product = { title: 'Roadster Men Blue Cotton T-Shirt', brand: 'Roadster' };
+  const siteResults = [{
+    site: 'nykaa',
+    ok: true,
+    candidates: [
+      { title: 'Roadster Men Blue Cotton T-Shirt', price: '₹499', url: 'https://nykaa.com/a/p/1', image: '' },
+      { title: 'Roadster Men Blue Cotton T-Shirt Regular', price: '₹519', url: 'https://nykaa.com/b/p/2', image: '' },
+      { title: 'Roadster Men Blue Cotton T-Shirt Slim', price: '₹529', url: 'https://nykaa.com/c/p/3', image: '' },
+    ],
+  }];
+  const ranked = await rankCrossPlatform(product, siteResults, { similarity: Similarity, maxPerSite: 2 });
+  assert.ok(ranked.length <= 2);
+});
+
 test('buildSearchQuery includes color for color-aware compare', async () => {
   const { buildSearchQuery } = require('../../utils/product-query.js');
   const q = buildSearchQuery({

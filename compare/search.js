@@ -33,10 +33,10 @@
   const { searchViaInternalApi } = InternalApis || {};
   const {
     TOP_RANKED, MIN_FINAL_SCORE, MIN_FALLBACK_SCORE,
-    MAX_CANDIDATES_PER_SITE, CLIP_TEXT_PREFILTER,
+    MAX_CANDIDATES_PER_SITE, CLIP_TEXT_PREFILTER, MAX_PER_SITE,
   } = ScoreConfig || {
-    TOP_RANKED: 10, MIN_FINAL_SCORE: 0.12, MIN_FALLBACK_SCORE: 0.06,
-    MAX_CANDIDATES_PER_SITE: 25, CLIP_TEXT_PREFILTER: 15,
+    TOP_RANKED: 10, MIN_FINAL_SCORE: 0.32, MIN_FALLBACK_SCORE: 0.22,
+    MAX_CANDIDATES_PER_SITE: 25, CLIP_TEXT_PREFILTER: 15, MAX_PER_SITE: 2,
   };
 
   const FETCH_TIMEOUT_MS = 12_000;
@@ -236,6 +236,19 @@
     });
   }
 
+  function limitPerSite(ranked, maxPerSite = MAX_PER_SITE) {
+    const counts = new Map();
+    const out = [];
+    for (const c of ranked) {
+      const site = c.site || '';
+      const n = counts.get(site) || 0;
+      if (n >= maxPerSite) continue;
+      counts.set(site, n + 1);
+      out.push(c);
+    }
+    return out;
+  }
+
   async function rankCrossPlatform(product, siteResults, options = {}) {
     const sim = options.similarity || Similarity;
     if (!sim) return [];
@@ -274,10 +287,12 @@
     }
 
     let ranked = scorePoolForRanking(product, pool, imageScores, sim, debug);
+    ranked = ranked.filter((c) => sim.isCompatibleCandidate?.(product, c, c) !== false);
     ranked = sim.dedupCandidates(ranked);
     const minScore = options.minFinalScore ?? MIN_FINAL_SCORE;
     const minFallback = options.minFallbackScore ?? MIN_FALLBACK_SCORE;
     const topN = options.topN ?? TOP_RANKED;
+    const maxPerSite = options.maxPerSite ?? MAX_PER_SITE;
 
     let filtered = ranked
       .filter((c) => (c.finalScore || 0) >= minScore)
@@ -292,7 +307,7 @@
       }
     }
 
-    return filtered
+    return limitPerSite(filtered, maxPerSite)
       .slice(0, topN)
       .map((c) => ({
         site: c.site,

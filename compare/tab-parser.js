@@ -114,14 +114,20 @@
     const items = [];
     const seen = new Set();
 
+    function nykaaKey(url) {
+      const m = String(url || '').match(/\/p\/(\d+)/i);
+      return m ? `nykaa:${m[1]}` : absUrl(url);
+    }
+
     function pushItem({ title, price, url, image }) {
       const abs = absUrl(url);
-      if (!abs || !isNykaaProductUrl(abs) || seen.has(abs)) return;
+      const key = nykaaKey(abs);
+      if (!abs || !isNykaaProductUrl(abs) || seen.has(key)) return;
       if (!title || title.length < 5) return;
-      seen.add(abs);
+      seen.add(key);
       items.push({
         title,
-        price: price && !price.startsWith('₹') && /\d/.test(price) ? `₹${price}` : (price || ''),
+        price: price && !/^₹/.test(price) && /\d/.test(price) ? `₹${String(price).replace(/^price\s*/i, '').trim()}` : (price || ''),
         url: abs,
         image: image || '',
       });
