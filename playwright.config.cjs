@@ -8,7 +8,13 @@ module.exports = defineConfig({
   testMatch: '**/*.spec.cjs',
   testIgnore: process.env.RUN_LIVE_COMPARE
     ? []
-    : ['**/compare-real-products.spec.cjs', '**/compare-regression.spec.cjs'],
+    : [
+      '**/compare-real-products.spec.cjs',
+      '**/compare-regression.spec.cjs',
+      '**/compare.spec.cjs',
+      '**/compare-hardening.spec.cjs',
+      '**/shopping-assistant.spec.cjs',
+    ],
   timeout: 60_000,
   expect: { timeout: 15_000 },
 

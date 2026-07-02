@@ -2,7 +2,6 @@
 // Sends RMF_COMPARE_SEARCH to the service worker, which runs compare/search.js.
 (function () {
   const ALL_SITES = window.RMF_Defaults.ALL_COMPARE_SITES;
-  const parsePriceNum = window.RMF_Price.parsePriceForSort;
   const send = window.RMF_Runtime.sendMessage;
   const SEARCH_TIMEOUT_MS = 120000;
 
@@ -174,21 +173,7 @@
   function sortedRanked() {
     const ranked = state.data?.ranked || [];
     let list = ranked.filter((m) => state.filterSites.has(m.site));
-    if (state.sort === 'price-asc') {
-      list = [...list].sort((a, b) => parsePriceNum(a.price) - parsePriceNum(b.price));
-    } else if (state.sort === 'price-desc') {
-      list = [...list].sort((a, b) => parsePriceNum(b.price) - parsePriceNum(a.price));
-    } else {
-      list = [...list].sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0));
-    }
-    return list;
-  }
-
-  function priceBreakdownLabel(label, s) {
-    if (label === 'same') return s?.compare?.priceSame || 'Same';
-    if (label === 'similar') return s?.compare?.priceSimilar || 'Similar';
-    if (label === 'different' || label === 'very-different') return s?.compare?.priceDifferent || 'Different';
-    return s?.compare?.priceUnknown || 'Unknown';
+    return list.sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0));
   }
 
   function breakdownSymbol(field, s) {
@@ -220,12 +205,16 @@
     if (breakdown.fit?.value || breakdown.fit?.ok != null) {
       row(s?.compare?.breakdownFit || 'Fit', breakdownSymbol(breakdown.fit, s));
     }
+    if (breakdown.category?.value || breakdown.category?.ok != null) {
+      row(s?.compare?.breakdownCategory || 'Category', breakdownSymbol(breakdown.category, s));
+    }
     const imgScore = breakdown.image?.score;
     row(
       s?.compare?.breakdownImage || 'Image',
-      imgScore != null && imgScore > 0 ? imgScore.toFixed(2) : (imgScore === 0 ? '0' : (s?.compare?.breakdownUnknown || '—')),
+      imgScore != null && imgScore > 0
+        ? `${Math.round(imgScore * 100)}%`
+        : (imgScore === 0 ? '0%' : (s?.compare?.breakdownUnknown || '—')),
     );
-    row(s?.compare?.breakdownPrice || 'Price', priceBreakdownLabel(breakdown.price?.label, s));
 
     return dl;
   }
@@ -294,13 +283,9 @@
       title.className = 'result-title';
       title.textContent = item.title;
 
-      const price = document.createElement('div');
-      price.className = 'result-price';
-      price.textContent = s ? s.compare.price(item.price) : (item.price || '—');
-
       const breakdown = renderMatchBreakdown(item.match?.breakdown, s);
 
-      body.append(head, title, price);
+      body.append(head, title);
       if (breakdown) body.append(breakdown);
       if (window.RMF_MarketplaceUrl?.isSafeCompareUrl(item.url)) {
         const view = document.createElement('a');
@@ -534,12 +519,8 @@
         metaEl.appendChild(pill);
         metaEl.appendChild(document.createTextNode(' '));
       }
-      if (p.brand) {
-        metaEl.appendChild(document.createTextNode(p.brand));
-        if (p.price) metaEl.appendChild(document.createTextNode(' '));
-      }
-      if (p.price) metaEl.appendChild(document.createTextNode(p.price));
-      metaEl.hidden = !(p.site || p.brand || p.price);
+      if (p.brand) metaEl.appendChild(document.createTextNode(p.brand));
+      metaEl.hidden = !(p.site || p.brand);
     }
     if (actions) actions.hidden = false;
     if (btn) {

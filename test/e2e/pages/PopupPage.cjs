@@ -1,16 +1,14 @@
-// Page Object Model — extension popup (3-tab shopping assistant).
+// Page Object Model — extension popup (scan + settings).
 class PopupPage {
   /** @param {import('@playwright/test').Page} page */
   constructor(page) {
     this.page = page;
     this.scanPanel = page.locator('#panel-scan');
-    this.comparePanel = page.locator('#panel-compare');
     this.settingsPanel = page.locator('#panel-settings');
     this.statusCard = page.locator('#status-card');
     this.statusChip = page.locator('#status-chip');
     this.toggleEnabled = page.locator('#toggle-enabled');
     this.rescanBtn = page.locator('#rescan');
-    this.compareList = page.locator('#compare-list');
   }
 
   async goto(url) {

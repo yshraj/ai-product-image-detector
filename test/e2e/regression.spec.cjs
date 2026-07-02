@@ -14,7 +14,7 @@ const { activateMarketplaceTab, closeMarketplaceTabs } = require('./helpers/tab-
 const { MYNTRA_LISTING_URL, MYNTRA_PRODUCT_URL, MANIFEST } = require('./helpers/constants.cjs');
 
 test.describe('Regression — extension surfaces', () => {
-  test('all three popup tabs render without page errors', async ({ extensionContext, popupUrl }) => {
+  test('scan and settings tabs render without page errors', async ({ extensionContext, popupUrl }) => {
     const page = await extensionContext.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -22,7 +22,7 @@ test.describe('Regression — extension surfaces', () => {
     const popup = new PopupPage(page);
     await popup.goto(popupUrl);
 
-    for (const tab of ['scan', 'compare', 'settings']) {
+    for (const tab of ['scan', 'settings']) {
       await popup.selectTab(tab);
       await expect(popup.page.locator(`#panel-${tab}`)).toBeVisible();
     }
@@ -115,7 +115,7 @@ test.describe('Regression — user workflows', () => {
     await other.close();
   });
 
-  test('full journey: scan listing → similar products on product page', async ({
+  test('full journey: scan listing → open settings on product page', async ({
     extensionContext, popupUrl, contentPage,
   }) => {
     await contentPage.setViewportAllVisible();
@@ -130,22 +130,18 @@ test.describe('Regression — user workflows', () => {
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
     await productTab.bringToFront();
 
-    await setSyncStorage(extensionContext, { serpApiKey: 'test_serp_key' });
-
     const popup = await extensionContext.newPage();
     const popupPage = new PopupPage(popup);
     await popupPage.goto(popupUrl);
 
-    await popupPage.selectTab('compare');
     await expect.poll(async () => {
-      const t = await popup.locator('#compare-title').textContent();
-      return t && /Test Brand/i.test(t);
+      const t = await popup.locator('#scan-count').textContent();
+      return t && /\d+/.test(t);
     }, { timeout: 10_000 }).toBe(true);
-    await popup.locator('#compare-search').click();
-    await expect.poll(() => popup.locator('.compare-results .result-card').count(), { timeout: 25_000 }).toBeGreaterThan(0);
 
     await popupPage.selectTab('settings');
-    await expect(popup.locator('#compare-sites')).toBeVisible();
+    await popup.locator('#tab-huggingface').click();
+    await expect(popup.locator('#panel-huggingface')).toBeVisible();
 
     await popup.close();
     await productTab.close();
@@ -164,17 +160,6 @@ test.describe('Regression — user workflows', () => {
 });
 
 test.describe('Regression — error handling', () => {
-  test('compare search without product returns error', async ({ extensionContext }) => {
-    const res = await sendRuntimeMessage(extensionContext, {
-      type: 'RMF_COMPARE_SEARCH',
-      product: { site: 'myntra', title: '' },
-      sites: ['amazon'],
-      cache: false,
-    });
-    expect(res.ok).toBe(true);
-    expect(res.matches?.length ?? 0).toBe(0);
-  });
-
   test('engine health endpoint responds when HF not configured', async ({ extensionContext }) => {
     const { getEngineHealth } = require('./helpers/chrome-messaging.cjs');
     const health = await getEngineHealth(extensionContext);

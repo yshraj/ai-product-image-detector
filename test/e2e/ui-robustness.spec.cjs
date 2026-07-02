@@ -47,7 +47,7 @@ test.describe('UI robustness', () => {
     // remain switchable and visible in the dark palette.
     expect(luminance(darkBg), `dark bg ${darkBg} should be darker than light bg ${lightBg}`)
       .toBeLessThan(luminance(lightBg));
-    for (const tab of ['compare', 'settings', 'scan']) {
+    for (const tab of ['settings', 'scan']) {
       await popup.selectTab(tab);
       await expect(page.locator(`#panel-${tab}`)).toBeVisible();
     }
@@ -65,15 +65,14 @@ test.describe('UI robustness', () => {
     const popup = new PopupPage(page);
     await popup.goto(popupUrl);
 
-    const tabs = ['compare', 'settings', 'scan'];
+    const tabs = ['settings', 'scan'];
     for (let i = 0; i < 30; i++) {
       // Fire clicks without awaiting visibility between them — worst case.
       await popup.nav(tabs[i % tabs.length]).click({ noWaitAfter: true });
     }
     // After the storm, the last selected tab must be the single active panel.
-    await popup.selectTab('compare');
-    await expect(popup.comparePanel).toBeVisible();
-    await expect(popup.scanPanel).toBeHidden();
+    await popup.selectTab('scan');
+    await expect(popup.scanPanel).toBeVisible();
     await expect(popup.settingsPanel).toBeHidden();
     expect(errors, errors.join('\n')).toEqual([]);
     await page.close();

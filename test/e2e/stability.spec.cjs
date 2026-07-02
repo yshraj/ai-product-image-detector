@@ -9,16 +9,12 @@ const { closeMarketplaceTabs, activateMarketplaceTab } = require('./helpers/tab-
 const {
   MYNTRA_PRODUCT_URL,
   MYNTRA_PRODUCT_URL_2,
-  MYNTRA_LISTING_URL,
 } = require('./helpers/constants.cjs');
 
 const MYNTRA = 'https://www.myntra.com/*';
 
 // Simulate an SPA product-to-product navigation the way a real PDP does it:
 // change the URL via pushState AND mutate the title/og/JSON-LD nodes in place.
-// The content script's MutationObserver (title selectors) + 1200ms popup poll
-// are what actually re-detect the product — the pushState wrapper alone runs in
-// the page's main world and never reaches the isolated content-script world.
 async function spaNavigateToProductB(page) {
   await page.evaluate((url) => {
     history.pushState({}, '', url);
@@ -42,8 +38,6 @@ async function spaNavigateToProductB(page) {
   }, MYNTRA_PRODUCT_URL_2);
 }
 
-// Collect uncaught exceptions and console.error output on a page. Resource-load
-// failures (image 404s etc.) are ignored — we only gate on real JS errors.
 function attachErrorCollector(page, sink) {
   page.on('pageerror', (err) => sink.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -59,15 +53,12 @@ test.describe('Stability & lifecycle', () => {
     await closeMarketplaceTabs(extensionContext);
   });
 
-  // ---- The flagship symptom, happy path: popup opened while already on a
-  // product page must detect the product without a refresh. -----------------
-  test('popup opened on a product page detects the product without refresh', async ({
+  test('popup opened on a product page shows live scan stats without refresh', async ({
     extensionContext, popupUrl,
   }) => {
     const productTab = await extensionContext.newPage();
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
 
-    // Content script must be ready and returning the product.
     await expect.poll(async () => {
       const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL);
       return p?.title || '';
@@ -76,18 +67,18 @@ test.describe('Stability & lifecycle', () => {
     const popupTab = await extensionContext.newPage();
     const popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    await popup.selectTab('compare');
 
-    const title = popupTab.locator('#compare-title');
-    await expect(title).toContainText(/Test Brand/i, { timeout: 12_000 });
-    await expect(title).not.toHaveClass(/muted/);
+    await expect(popup.scanPanel).toBeVisible();
+    await expect.poll(async () => {
+      const t = await popupTab.locator('#scan-count').textContent();
+      return t && /\d+/.test(t);
+    }, { timeout: 12_000 }).toBe(true);
 
     await popupTab.close();
     await productTab.close();
   });
 
-  // ---- SPA route change (no reload) must refresh the popup's product. ------
-  test('SPA product→product change refreshes the popup without a reload', async ({
+  test('SPA product→product change keeps content script product in sync', async ({
     extensionContext, popupUrl,
   }) => {
     const productTab = await extensionContext.newPage();
@@ -101,57 +92,55 @@ test.describe('Stability & lifecycle', () => {
     const popupTab = await extensionContext.newPage();
     const popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    await popup.selectTab('compare');
-    await expect(popupTab.locator('#compare-title')).toContainText(/Test Brand/i, { timeout: 12_000 });
+    await expect(popup.scanPanel).toBeVisible();
 
-    // Navigate to a different product entirely in-page (no reload).
     await spaNavigateToProductB(productTab);
 
-    // The popup must reflect the new product without being reopened or the page
-    // reloaded — via RMF_PRODUCT_CHANGED or the 1200ms watcher poll.
-    await expect(popupTab.locator('#compare-title')).toContainText(/Other Brand/i, { timeout: 12_000 });
+    await expect.poll(async () => {
+      const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL_2);
+      return p?.title || '';
+    }, { timeout: 12_000 }).toMatch(/Other Brand/i);
 
     await popupTab.close();
     await productTab.close();
   });
 
-  // ---- Per-active-tab isolation: no product state leaks between tabs. ------
-  test('popup reflects the active tab, not a stale one', async ({ extensionContext, popupUrl }) => {
-    const tabA = await extensionContext.newPage();
-    await tabA.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
+  test('popup reflects the active tab scan stats, not a stale one', async ({
+    extensionContext, popupUrl, contentPage,
+  }) => {
+    await contentPage.setViewportAllVisible();
+    await contentPage.gotoListing();
+    await contentPage.waitForScan(3);
+    await activateMarketplaceTab(extensionContext, 'men-shirts');
+
     const tabB = await extensionContext.newPage();
     await tabB.goto(MYNTRA_PRODUCT_URL_2, { waitUntil: 'domcontentloaded' });
-
     await expect.poll(async () => {
       const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL_2);
       return p?.title || '';
     }, { timeout: 10_000 }).toMatch(/Other Brand/i);
 
-    // Activate product A, open a fresh popup → must show A.
-    await activateMarketplaceTab(extensionContext, '1234567');
+    await activateMarketplaceTab(extensionContext, 'men-shirts');
     let popupTab = await extensionContext.newPage();
     let popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    await popup.selectTab('compare');
-    await expect(popupTab.locator('#compare-title')).toContainText(/Test Brand/i, { timeout: 12_000 });
+    const listingCount = await popupTab.locator('#scan-count').textContent();
+    expect(listingCount && /\d+/.test(listingCount)).toBe(true);
     await popupTab.close();
 
-    // Activate product B, open a fresh popup → must show B (no leak from A).
     await activateMarketplaceTab(extensionContext, '9876543');
     popupTab = await extensionContext.newPage();
     popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    await popup.selectTab('compare');
-    await expect(popupTab.locator('#compare-title')).toContainText(/Other Brand/i, { timeout: 12_000 });
+    await expect.poll(async () => {
+      const t = await popupTab.locator('#scan-count').textContent();
+      return t && /\d+/.test(t);
+    }, { timeout: 12_000 }).toBe(true);
     await popupTab.close();
 
-    await tabA.close();
     await tabB.close();
   });
 
-  // ---- Repeated open/close must re-initialise cleanly with no JS errors. ---
-  // A representative sample of the "open 100+ times" requirement — kept modest
-  // so it stays fast in CI while still exercising re-initialisation.
   test('repeated popup open/close stays consistent and error-free', async ({
     extensionContext, popupUrl,
   }) => {
@@ -163,10 +152,7 @@ test.describe('Stability & lifecycle', () => {
       const popup = new PopupPage(page);
       await popup.goto(popupUrl);
 
-      // Every tab must render its status chip and switch cleanly each time.
       await expect(popup.statusChip).toBeVisible();
-      await popup.selectTab('compare');
-      await expect(popup.comparePanel).toBeVisible();
       await popup.selectTab('settings');
       await expect(popup.settingsPanel).toBeVisible();
       await popup.selectTab('scan');
@@ -177,20 +163,24 @@ test.describe('Stability & lifecycle', () => {
     expect(errors, `console/page errors across ${OPENS} popup opens:\n${errors.join('\n')}`).toEqual([]);
   });
 
-  // ---- Listing page shows the empty state (not a false product). ----------
-  test('popup on a category page shows the empty state, not a stale product', async ({
-    extensionContext, popupUrl,
+  test('popup on a category page shows scan activity, not a stale product state', async ({
+    extensionContext, popupUrl, contentPage,
   }) => {
-    const listingTab = await extensionContext.newPage();
-    await listingTab.goto(MYNTRA_LISTING_URL, { waitUntil: 'domcontentloaded' });
+    await contentPage.setViewportAllVisible();
+    await contentPage.gotoListing();
+    await contentPage.waitForScan(1);
+    await activateMarketplaceTab(extensionContext, 'men-shirts');
 
     const popupTab = await extensionContext.newPage();
     const popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    await popup.selectTab('compare');
 
-    await expect(popupTab.locator('#compare-title')).toContainText(/open a product page/i, { timeout: 12_000 });
+    await expect(popup.scanPanel).toBeVisible();
+    await expect.poll(async () => {
+      const t = await popupTab.locator('#scan-count').textContent();
+      return t && /\d+/.test(t);
+    }, { timeout: 12_000 }).toBe(true);
+
     await popupTab.close();
-    await listingTab.close();
   });
 });

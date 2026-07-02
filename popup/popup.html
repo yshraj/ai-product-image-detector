@@ -12,16 +12,17 @@
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-          <path d="M6.5 9.5h11l-1.2 8.5H7.7L6.5 9.5Z" fill="#fff"/>
-          <path d="M8.2 9.5 9 6.5h6l.8 3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="16.8" cy="7.2" r="3.2" fill="#f97316"/>
-          <path d="M15.5 7.2 16.8 8.5 18.5 6.7" stroke="#fff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+          <rect x="6" y="7" width="12" height="9" rx="1.8" fill="#F8FAFC"/>
+          <circle cx="12" cy="11.5" r="2.6" fill="#94A3B8"/>
+          <rect x="8.2" y="14.8" width="7.6" height="1.1" rx="0.55" fill="#CBD5E1"/>
+          <circle cx="16.5" cy="16.8" r="3.4" fill="#10B981"/>
+          <path d="M14.8 16.8 L15.9 17.9 L18.3 15.2" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
       <div class="brand-text">
         <div class="brand-name">True<span class="brand-accent">Kart</span></div>
-        <div class="brand-sub" id="brand-tagline">Real photos · Best prices · Shop India</div>
+        <div class="brand-sub" id="brand-tagline">Real photos · Shop smarter in India</div>
       </div>
     </div>
     <label class="switch" title="Enable / disable AI scanning">
@@ -49,7 +50,16 @@
           <button class="link-btn" id="rescan" type="button">Rescan</button>
         </div>
         <p class="scan-count" id="scan-count">—</p>
-        <p class="scan-progress" id="scan-progress" hidden></p>
+        <div class="scan-progress" id="scan-progress" hidden aria-live="polite">
+          <div class="scan-progress-head">
+            <span class="scan-progress-status" aria-hidden="true"></span>
+            <span class="scan-progress-label" id="scan-progress-label"></span>
+            <span class="scan-progress-pct" id="scan-progress-pct"></span>
+          </div>
+          <div class="scan-progress-track" id="scan-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="scan-progress-label">
+            <div class="scan-progress-fill" id="scan-progress-fill"></div>
+          </div>
+        </div>
         <div class="breakdown" id="breakdown">
           <button type="button" class="bd bd-high" data-filter="high" title="Highlight AI generated"><span id="bd-high">0</span><small>AI generated</small></button>
           <button type="button" class="bd bd-med" data-filter="med" title="Highlight likely AI"><span id="bd-med">0</span><small>Likely AI</small></button>
@@ -81,45 +91,6 @@
         <h2 class="card-h">Recent scans</h2>
         <ul class="scan-history" id="scan-history"></ul>
         <p class="empty-hint" id="scan-history-empty" hidden></p>
-      </div>
-    </section>
-
-    <!-- ============ COMPARE ============ -->
-    <section class="panel" id="panel-compare" role="tabpanel" aria-labelledby="nav-compare" hidden>
-      <div class="card">
-        <h2 class="card-h compare-heading-row" id="compare-heading">
-          Similar products
-          <span class="beta-badge" title="Match quality is still improving" aria-label="Beta feature">Beta</span>
-        </h2>
-        <p class="product-title" id="compare-title">—</p>
-        <p class="compare-meta" id="compare-meta" hidden></p>
-        <div class="compare-actions" id="compare-actions" hidden>
-          <button class="primary" id="compare-search" type="button">
-            <span class="btn-label" id="compare-search-label">Find similar products</span>
-            <span class="spinner" aria-hidden="true"></span>
-          </button>
-          <button class="ghost" id="compare-refresh" type="button" title="Rescan for this product">Refresh</button>
-        </div>
-        <div class="compare-filters" id="compare-filters" hidden></div>
-        <p class="compare-status" id="compare-status" hidden role="status" aria-live="polite"></p>
-        <p class="compare-site-status" id="compare-site-status" hidden aria-live="polite"></p>
-        <div class="compare-toolbar" id="compare-toolbar" hidden>
-          <label class="sort-label" for="compare-sort">Sort</label>
-          <select id="compare-sort" class="sort-select">
-            <option value="score">Best match</option>
-            <option value="price-asc">Price: low to high</option>
-            <option value="price-desc">Price: high to low</option>
-          </select>
-        </div>
-        <div class="compare-display-filters" id="compare-display-filters" hidden></div>
-        <div class="compare-skeleton" id="compare-skeleton" hidden></div>
-        <div class="compare-results" id="compare-results" hidden></div>
-        <p class="empty-hint" id="compare-empty" hidden></p>
-        <details class="compare-manual" id="compare-manual" hidden>
-          <summary id="compare-manual-summary">Search manually on each site</summary>
-          <div class="action-list" id="compare-list"></div>
-        </details>
-        <p class="note" id="compare-note"></p>
       </div>
     </section>
 
@@ -193,34 +164,12 @@
       </div>
 
       <div class="card">
-        <h2 class="card-h" id="compare-sites-label">Similar products marketplaces</h2>
-        <p class="hint" id="compare-sites-hint">Choose which sites appear in Similar products.</p>
-        <div class="checks" id="compare-sites">
-          <label class="check"><input type="checkbox" data-site="amazon" checked /> <span>Amazon</span></label>
-          <label class="check"><input type="checkbox" data-site="flipkart" checked /> <span>Flipkart</span></label>
-          <label class="check"><input type="checkbox" data-site="myntra" checked /> <span>Myntra</span></label>
-          <label class="check"><input type="checkbox" data-site="meesho" checked /> <span>Meesho</span></label>
-          <label class="check"><input type="checkbox" data-site="nykaa" checked /> <span>Nykaa</span></label>
-        </div>
-      </div>
-
-      <div class="card">
         <h2 class="card-h">Notifications</h2>
         <label class="check notify-check">
           <input type="checkbox" id="notify-on-ai" />
           <span>Notify when AI images are found on a page</span>
         </label>
         <p class="hint">One quiet OS notification per page — off by default.</p>
-      </div>
-
-      <div class="card">
-        <h2 class="card-h">Similar products search API</h2>
-        <p class="hint" id="serp-hint">Optional SerpApi key for reliable cross-site product search (Google Shopping).</p>
-        <div class="field">
-          <label class="visually-hidden" for="serp-api-key">SerpApi key</label>
-          <input type="password" id="serp-api-key" placeholder="SerpApi key (optional)" autocomplete="off" spellcheck="false" />
-        </div>
-        <button class="ghost" id="serp-save" type="button">Save API key</button>
       </div>
 
       <div class="card">
@@ -244,10 +193,6 @@
       </span>
       <span>Scan</span>
     </button>
-    <button class="nav-btn" role="tab" id="nav-compare" aria-controls="panel-compare" data-tab="compare" aria-selected="false">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Similar products</span>
-    </button>
     <button class="nav-btn" role="tab" id="nav-settings" aria-controls="panel-settings" data-tab="settings" aria-selected="false">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.5M12 18.5V21M21 12h-2.5M5.5 12H3m13.4-6.4-1.8 1.8M8.4 15.6l-1.8 1.8m11.8 0-1.8-1.8M8.4 8.4 6.6 6.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span>Settings</span>
@@ -258,13 +203,10 @@
   <script src="../utils/defaults.js"></script>
   <script src="../utils/price.js"></script>
   <script src="../utils/marketplace-url.js"></script>
-  <script src="../utils/product-fingerprint.js"></script>
   <script src="../utils/chrome-runtime.js"></script>
   <script src="../utils/strings.js"></script>
   <script src="../utils/ui.js"></script>
-  <script src="../compare/config.js"></script>
   <script src="../utils/report.js"></script>
-  <script src="compare-panel.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
