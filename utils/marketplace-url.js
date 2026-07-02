@@ -30,5 +30,43 @@
     return false;
   }
 
-  return { isMarketplaceProductUrl, MARKETPLACE_TAB_URLS };
+  const COMPARE_LINK_HOSTS = new Set([
+    'www.amazon.in', 'amazon.in',
+    'www.flipkart.com', 'flipkart.com',
+    'www.myntra.com', 'myntra.com',
+    'www.meesho.com', 'meesho.com',
+    'www.nykaa.com', 'nykaa.com',
+  ]);
+
+  const COMPARE_IMAGE_HOST_SUFFIXES = [
+    '.myntassets.com',
+    '.flixcart.com',
+    'images.meesho.com',
+    '.nykaa.com',
+    '.media-amazon.com',
+    '.ssl-images-amazon.com',
+  ];
+
+  /**
+   * Allow only https URLs on known marketplace/CDN hosts (compare result links/images).
+   * @param {string|null|undefined} url
+   * @param {{ images?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function isSafeCompareUrl(url, opts = {}) {
+    if (!url) return false;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== 'https:') return false;
+      const h = u.hostname.toLowerCase();
+      if (COMPARE_LINK_HOSTS.has(h)) return true;
+      if (opts.images) {
+        return COMPARE_IMAGE_HOST_SUFFIXES.some((suf) => h === suf.replace(/^\./, '') || h.endsWith(suf));
+      }
+      return false;
+    } catch { /* invalid URL */ }
+    return false;
+  }
+
+  return { isMarketplaceProductUrl, isSafeCompareUrl, MARKETPLACE_TAB_URLS };
 }));

@@ -265,10 +265,10 @@
 
       const thumb = document.createElement('div');
       thumb.className = 'result-thumb';
-      if (item.image) {
+      if (item.image && window.RMF_MarketplaceUrl?.isSafeCompareUrl(item.image, { images: true })) {
         const img = document.createElement('img');
         img.src = item.image;
-        img.alt = '';
+        img.alt = item.title || mp.name || item.site || 'Product image';
         img.loading = 'lazy';
         thumb.appendChild(img);
       } else {
@@ -298,18 +298,19 @@
       price.className = 'result-price';
       price.textContent = s ? s.compare.price(item.price) : (item.price || '—');
 
-      const view = document.createElement('a');
-      view.className = 'result-view';
-      view.href = item.url;
-      view.target = '_blank';
-      view.rel = 'noopener noreferrer';
-      view.textContent = s ? s.compare.viewOn(mp.name || item.site) : `View on ${item.site}`;
-
       const breakdown = renderMatchBreakdown(item.match?.breakdown, s);
 
       body.append(head, title, price);
       if (breakdown) body.append(breakdown);
-      body.append(view);
+      if (window.RMF_MarketplaceUrl?.isSafeCompareUrl(item.url)) {
+        const view = document.createElement('a');
+        view.className = 'result-view';
+        view.href = item.url;
+        view.target = '_blank';
+        view.rel = 'noopener noreferrer';
+        view.textContent = s ? s.compare.viewOn(mp.name || item.site) : `View on ${item.site}`;
+        body.append(view);
+      }
       card.append(thumb, body);
       resultsEl.appendChild(card);
     }
