@@ -1,5 +1,5 @@
 // web-ext configuration — keeps dev/tooling files out of the packaged zip.
-module.exports = {
+export default {
   ignoreFiles: [
     'node_modules',
     'dist',
@@ -11,6 +11,7 @@ module.exports = {
     'playwright.config.cjs',
     'package.json',
     'package-lock.json',
+    'web-ext-config.mjs',
     'web-ext-config.cjs',
     'research',
     'qa-screenshots',
