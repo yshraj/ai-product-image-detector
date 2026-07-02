@@ -1,6 +1,6 @@
 # Privacy Policy — TrueKart
 
-_Last updated: 2026-06-30_
+_Last updated: 2026-07-02_
 
 **TrueKart does not collect, store, or transmit any personal data to us.**
 There is no account system, no backend server operated by us, and no analytics,
@@ -16,9 +16,11 @@ advertising, or tracking of any kind.
   this at any time from the popup or the Settings page.
 - **Activity history** (flagged items) is stored locally in `chrome.storage.local` and
   never leaves your device unless you export it yourself.
-- **Your Hugging Face access token** (if you connect one) is stored locally on your
-  device and is used only to authenticate requests to Hugging Face. It is never sent to
-  us, never bundled in the extension, and is excluded from exported settings.
+- **Your Hugging Face access token and SerpApi key** (if you provide them) are stored
+  with `chrome.storage.sync`, the same as your other preferences. This means they sync
+  only across your own signed-in Chrome profile — encrypted by Google, and never sent to
+  us. They are used only to authenticate your requests to Hugging Face and SerpApi, are
+  never bundled in the extension, and are excluded from exported settings.
 
 ## What leaves your device
 
@@ -29,15 +31,24 @@ advertising, or tracking of any kind.
   (`router.huggingface.co`, `huggingface.co`) to classify the image. This is governed by
   [Hugging Face's privacy policy](https://huggingface.co/privacy). We are not an
   intermediary and do not see this traffic.
-- **Compare & Tools:** when you use marketplace search links, reverse image search, or
-  share/copy actions, your browser opens or contacts those third-party services directly
-  (Amazon, Flipkart, Google Lens, etc.). We do not proxy or log those requests.
+- **Compare / Similar products (optional):** when you look for the same product on other
+  marketplaces, your browser sends the product's search query directly to those
+  marketplaces (Amazon, Flipkart, Myntra, Meesho, Nykaa). If you have configured a SerpApi
+  key, the query is also sent to **SerpApi** (`serpapi.com`), which searches Google
+  Shopping on your behalf. To rank results by image similarity, the extension downloads an
+  open-source CLIP model from **Hugging Face** (`huggingface.co`) the first time you use
+  this feature and caches it in your browser; the image comparison itself then runs
+  on-device. We do not proxy or log any of these requests.
+- **Reverse image search & external links (optional):** when you use reverse image search
+  or a manual search link, your browser opens or contacts those third-party services
+  directly (Google Lens, Bing, Amazon, etc.). We do not proxy or log those requests.
 
 ## Permissions
 
-Host access is limited to the supported marketplaces (Myntra, Flipkart, Meesho, Nykaa),
-their image CDNs, and the Hugging Face API. The background service worker only fetches
-public `http(s)` image URLs and refuses loopback/private network addresses.
+Host access is limited to the supported marketplaces (Myntra, Flipkart, Meesho, Nykaa and
+Amazon.in), their image CDNs, the Hugging Face API, and SerpApi. The background service
+worker only fetches public `http(s)` image URLs and refuses loopback/private network
+addresses.
 
 ## Data deletion
 
