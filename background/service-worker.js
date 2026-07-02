@@ -230,11 +230,23 @@ function bufferToBase64(buf) {
   return btoa(bin);
 }
 
+const MAX_IMAGE_REDIRECTS = 5;
+
 async function fetchImage(url) {
-  if (!isAllowedHttpUrl(url)) throw new Error('blocked URL');
-  const res = await fetch(url, { credentials: 'omit' });
-  if (!res.ok) throw new Error('image HTTP ' + res.status);
-  return res;
+  let current = url;
+  for (let hop = 0; hop <= MAX_IMAGE_REDIRECTS; hop++) {
+    if (!isAllowedHttpUrl(current)) throw new Error('blocked URL');
+    const res = await fetch(current, { credentials: 'omit', redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('Location');
+      if (!loc) throw new Error('redirect without Location');
+      current = new URL(loc, current).href;
+      continue;
+    }
+    if (!res.ok) throw new Error('image HTTP ' + res.status);
+    return res;
+  }
+  throw new Error('too many redirects');
 }
 
 // ---- activity history (local, capped, deduped) ----------------------------
