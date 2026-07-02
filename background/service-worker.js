@@ -18,30 +18,13 @@ try {
       '../utils/defaults.js',
       '../utils/price.js',
       '../utils/storage-local.js',
-      '../utils/product-query.js',
-      '../utils/product-fingerprint.js',
-      '../utils/product-matcher.js',
-      '../compare/config.js',
-      '../compare/parsers.js',
-      '../compare/serp-search.js',
-      '../compare/internal-apis.js',
-      '../compare/score-config.js',
-      '../compare/attribute-parser.js',
-      '../compare/similarity.js',
-      '../compare/search.js',
-      '../compare/tab-search.js',
-      '../compare/clip-bridge.js',
       '../utils/trust-storage.js',
     );
   }
 } catch (e) {
-  console.error('[RMF] compare modules failed to load:', e);
+  console.error('[RMF] worker modules failed to load:', e);
 }
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
-const CompareSearch = (typeof self !== 'undefined' && self.RMF_CompareSearch) || null;
-const TabSearch = (typeof self !== 'undefined' && self.RMF_TabSearch) || null;
-const ClipBridge = (typeof self !== 'undefined' && self.RMF_ClipBridge) || null;
-const ProductFingerprint = (typeof self !== 'undefined' && self.RMF_ProductFingerprint) || null;
 
 const RMFDefaults = (typeof self !== 'undefined' && self.RMF_Defaults) || {};
 const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
@@ -86,16 +69,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
       }
     }
     setupContextMenu();
-    await clearCompareCache();
   });
-}
-
-async function clearCompareCache() {
-  try {
-    const all = await chrome.storage.local.get(null);
-    const keys = Object.keys(all).filter((k) => k.startsWith('rmf_compare_'));
-    if (keys.length) await chrome.storage.local.remove(keys);
-  } catch { /* ignore */ }
 }
 
 const DETECT_SCRIPTS = [
@@ -219,6 +193,14 @@ function isAllowedHttpUrl(u) {
   }
   return true;
 }
+
+/** Reject messages from contexts outside this extension. */
+function isTrustedSender(sender) {
+  return typeof chrome !== 'undefined' && sender?.id === chrome.runtime.id;
+}
+
+/** Upper bound on context-menu / inline detect payloads (~9 MiB decoded). */
+const MAX_DETECT_DATA_URL_LEN = 12 * 1024 * 1024;
 
 function bufferToBase64(buf) {
   const bytes = new Uint8Array(buf);
@@ -556,6 +538,7 @@ if (typeof chrome !== 'undefined' && chrome.commands?.onCommand) {
 function registerMessageRouter() {
   if (typeof chrome === 'undefined' || !chrome.runtime?.onMessage) return;
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!isTrustedSender(_sender)) return false;
   if (msg?.type === 'RMF_FETCH_IMAGE' && msg.url) {
     if (!isAllowedHttpUrl(msg.url)) { sendResponse({ ok: false, error: 'blocked URL' }); return true; }
     fetchImageAsDataUrl(msg.url)
@@ -575,6 +558,10 @@ function registerMessageRouter() {
     return true;
   }
   if (msg?.type === 'RMF_DETECT_DATA' && msg.dataUrl) {
+    if (String(msg.dataUrl).length > MAX_DETECT_DATA_URL_LEN) {
+      sendResponse({ ok: false, error: 'Image too large' });
+      return true;
+    }
     detectFromDataUrl(msg.dataUrl)
       .then((out) => {
         if (out.result) sendResponse({ ok: true, result: out.result });
@@ -612,12 +599,6 @@ function registerMessageRouter() {
       .catch(() => sendResponse({ ok: true, health: null }));
     return true;
   }
-  if (msg?.type === 'RMF_COMPARE_SEARCH' && msg.product) {
-    handleCompareSearch(msg)
-      .then((r) => sendResponse(r))
-      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
-    return true;
-  }
   if (msg?.type === 'RMF_GET_SELLERS') {
     const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
     (Trust ? Trust.getSellerList() : Promise.resolve([]))
@@ -644,49 +625,13 @@ function registerMessageRouter() {
 }
 registerMessageRouter();
 
-// ---- cross-marketplace product search -------------------------------------
-
-async function handleCompareSearch(msg) {
-  if (!CompareSearch) {
-    return { ok: false, error: 'Compare module failed to load — reload the extension' };
-  }
-  const product = msg.product;
-  const fingerprint = product?.fingerprint
-    || (ProductFingerprint?.productFingerprint ? ProductFingerprint.productFingerprint(product) : '');
-  const cfg = await chrome.storage.sync.get(DEFAULTS);
-  const sites = Array.isArray(msg.sites) && msg.sites.length
-    ? msg.sites
-    : (cfg.compareSites || DEFAULTS.compareSites);
-  const serpApiKey = msg.serpApiKey || cfg.serpApiKey || '';
-
-  const tabFetchFn = (TabSearch && chrome.tabs?.create && chrome.scripting?.executeScript)
-    ? TabSearch.fetchSearchPageViaTab
-    : null;
-
-  if (typeof self !== 'undefined') {
-    self.RMF_FetchImage = { fetchImageAsDataUrl, isAllowedHttpUrl };
-  }
-
-  const useClip = cfg.compareUseClip !== false && !!product?.image;
-  if (useClip && ClipBridge?.warmupClip) {
-    ClipBridge.warmupClip().catch((err) => {
-      console.warn('[RMF Compare] CLIP warmup:', err?.message || err);
-    });
-  }
-
-  const data = await CompareSearch.searchAll(product, sites, {
-    tabFetchFn,
-    compareUseTabs: cfg.compareUseTabs === true,
-    serpApiKey,
-    clipBridge: ClipBridge,
-    useClip,
-    debug: cfg.compareDebugLog === true,
-  });
-  return { ok: true, productFingerprint: fingerprint, ...data };
-}
-
-// Exposed for unit tests when this file is required under Node. In the service
-// worker `module` is undefined, so this is a no-op there.
+// Exposed for unit tests when this file is required under Node.
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { isAllowedHttpUrl, parseHfResult, friendlyHfError };
+  module.exports = {
+    isAllowedHttpUrl,
+    isTrustedSender,
+    MAX_DETECT_DATA_URL_LEN,
+    parseHfResult,
+    friendlyHfError,
+  };
 }
