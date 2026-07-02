@@ -584,6 +584,10 @@
     while (Date.now() < deadline) {
       const p = await getProduct();
       if (p?.title && p.isProductPage !== false) return p;
+      // A definitive "not a product page" (e.g. a category listing) won't become
+      // a product without navigation — show the empty state now instead of
+      // making the user stare at a placeholder for the full timeout.
+      if (p?.isProductPage === false) return p;
       await new Promise((r) => setTimeout(r, 250));
     }
     return getProduct();

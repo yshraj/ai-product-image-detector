@@ -792,11 +792,17 @@
   }
 
   function checkProductChange() {
+    // Capture the previous fingerprint BEFORE onLocationMaybeChanged(), which
+    // resets lastProductFingerprint to '' on any URL change. Without this, a
+    // real SPA navigation (the URL changes) would wipe `prev`, the `if (!prev)`
+    // guard below would swallow the RMF_PRODUCT_CHANGED emit, and the popup
+    // would stay stuck on the previous product until a manual page refresh.
+    const prev = lastProductFingerprint;
     onLocationMaybeChanged();
     const p = getProduct();
     const fp = p.fingerprint || '';
     if (!p.isProductPage) {
-      if (lastProductFingerprint) {
+      if (prev) {
         lastProductFingerprint = '';
         try {
           chrome.runtime.sendMessage({ type: 'RMF_PRODUCT_CHANGED', product: p, fingerprint: '' });
@@ -804,10 +810,9 @@
       }
       return;
     }
-    if (!fp || fp === lastProductFingerprint) return;
-    const prev = lastProductFingerprint;
+    if (!fp || fp === prev) return;
     lastProductFingerprint = fp;
-    if (!prev) return;
+    if (!prev) return; // very first detection — the popup pulls the product itself
     try {
       chrome.runtime.sendMessage({
         type: 'RMF_PRODUCT_CHANGED',

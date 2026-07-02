@@ -270,11 +270,19 @@ function addHistory(entry) {
 // Non-intrusive, off by default. Honey's notifications are disliked for blocking
 // the page; Rakuten's quiet nudge is loved — we do a single OS-level summary.
 let lastNotifyAt = 0;
-function notifyAI(ai) {
+async function notifyAI(ai) {
   const count = Number(ai) || 0;
   if (count <= 0 || typeof chrome === 'undefined') return;
   const now = Date.now();
-  if (now - lastNotifyAt < 30_000) return; // global throttle: at most 1 / 30s
+  // The throttle must survive service-worker restarts: MV3 unloads the worker on
+  // idle, which would reset an in-memory-only timestamp and let notifications
+  // re-fire inside the 30s window. Persist and read it back from session storage.
+  let last = lastNotifyAt;
+  try {
+    const { rmf_lastNotify } = await chrome.storage.session.get('rmf_lastNotify');
+    if (rmf_lastNotify?.at) last = Math.max(last, rmf_lastNotify.at);
+  } catch { /* session unavailable — fall back to in-memory */ }
+  if (now - last < 30_000) return; // global throttle: at most 1 / 30s
   lastNotifyAt = now;
   // Observable record (also handy for the popup / tests) — always written when notified.
   try { chrome.storage.session.set({ rmf_lastNotify: { ai: count, at: now } }); } catch { /* noop */ }
