@@ -376,6 +376,20 @@
     session.pending = document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="pending"]`).length;
   }
 
+  // Cards the viewport gate is still holding back: never attempted (no scan
+  // marker) yet carrying a real, loadable image. Drives the "Scan whole page"
+  // affordance — cards without a usable image are excluded so it can reach zero.
+  function countUnscanned() {
+    let n = 0;
+    document.querySelectorAll(SITE.cardSelector).forEach((card) => {
+      if (card.getAttribute('data-rmf-scanned')) return; // pending or done
+      const img = card.querySelector(SITE.imageSelector);
+      const src = img && (img.currentSrc || img.src);
+      if (src && !src.startsWith('data:')) n++;
+    });
+    return n;
+  }
+
   function recordScanHistory() {
     if (!session.scanned) return;
     try {
@@ -471,11 +485,13 @@
   }
 
   // --- per-card processing -------------------------------------------------
-  async function processCard(card) {
+  async function processCard(card, opts) {
+    const force = !!(opts && opts.force);
     if (!isActive()) return;
     if (card.getAttribute('data-rmf-scanned')) return;
-    // Skip without marking so it's retried when scrolled into view.
-    if (!isInView(card)) return;
+    // Skip without marking so it's retried when scrolled into view. A forced
+    // "Scan whole page" run bypasses the viewport gate to reach off-screen cards.
+    if (!force && !isInView(card)) return;
 
     const imgEl = card.querySelector(SITE.imageSelector);
     if (!imgEl || !imgEl.src || imgEl.src.startsWith('data:')) return;
@@ -757,8 +773,42 @@
     const cards = document.querySelectorAll(SITE.cardSelector);
     Log?.debug(`scanning ${cards.length} cards on ${SITE.name}`);
     session.total = cards.length;
-    cards.forEach(processCard);
+    cards.forEach((card) => processCard(card));
     updateSessionCounts();
+  }
+
+  // User-initiated "Scan whole page". The normal scan is viewport-gated to keep
+  // remote (Hugging Face) call volume low, so a long category page only scans
+  // what's visible until the user scrolls. This walks the page top-to-bottom so
+  // lazy-loaded images actually load and get scanned, then restores the scroll
+  // position. The per-URL cache and 3-way concurrency limit still apply, so a
+  // second run is cheap and repeated cards are never re-analysed.
+  let scanningPage = false;
+  async function scanEntirePage() {
+    if (!isActive() || scanningPage) return;
+    scanningPage = true;
+    const startY = window.scrollY;
+    const viewport = window.innerHeight || document.documentElement.clientHeight || 800;
+    const step = Math.max(200, Math.round(viewport * 0.85));
+    const MAX_STEPS = 60; // guard against runaway infinite-scroll feeds
+    try {
+      for (let i = 0; i <= MAX_STEPS; i++) {
+        const docBottom = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+        const target = Math.min(i * step, Math.max(0, docBottom - viewport));
+        window.scrollTo(0, target);
+        // Force-scan everything now on-screen (bypasses the viewport gate for
+        // cards that are laid out but were skipped on the initial pass).
+        document.querySelectorAll(SITE.cardSelector).forEach((card) => processCard(card, { force: true }));
+        updateSessionCounts();
+        reportBadge();
+        await new Promise((r) => setTimeout(r, 220));
+        if (target >= docBottom - viewport) break;
+      }
+    } finally {
+      window.scrollTo(0, startY);
+      scanAll();
+      scanningPage = false;
+    }
   }
 
   // Coalesce many rapid triggers (mutations, scroll) into one idle rescan.
@@ -844,9 +894,14 @@
         rerender(); // clears badges + counts, then re-scans (cache hits)
         sendResponse?.({ ok: true });
         return true;
+      case 'SCAN_PAGE':
+        // Fire-and-forget: the popup polls GET_STATS for progress (like RESCAN).
+        scanEntirePage();
+        sendResponse?.({ ok: true, total: countCards() });
+        return true;
       case 'GET_STATS':
         updateSessionCounts();
-        sendResponse({ ...session, active: isActive() });
+        sendResponse({ ...session, unscanned: countUnscanned(), active: isActive() });
         return true; // async-safe
       case 'HIGHLIGHT_FILTER':
         highlightCards(msg.filter);

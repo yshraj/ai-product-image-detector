@@ -91,6 +91,9 @@
       history: 'Recent scans',
       historyEmpty: 'Scan a category page to see history here.',
       confidenceLabel: 'Flag threshold',
+      scanAll: 'Scan whole page',
+      scanAllCount: (n) => `Scan whole page · ${n} more`,
+      scanningAll: 'Scanning page…',
     },
 
     // compare tab

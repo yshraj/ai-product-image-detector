@@ -34,6 +34,10 @@ async function rescanTab(context, tabUrl = 'https://www.myntra.com/*') {
   return sendTabMessage(context, tabUrl, { type: 'RESCAN' });
 }
 
+async function scanWholePage(context, tabUrl = 'https://www.myntra.com/*') {
+  return sendTabMessage(context, tabUrl, { type: 'SCAN_PAGE' });
+}
+
 async function setContentEnabled(context, enabled, tabUrl = 'https://www.myntra.com/*') {
   return sendTabMessage(context, tabUrl, { type: 'SET_ENABLED', enabled });
 }
@@ -80,6 +84,7 @@ module.exports = {
   getProduct,
   getPageReport,
   rescanTab,
+  scanWholePage,
   setContentEnabled,
   toggleDetection,
   validateHfToken,

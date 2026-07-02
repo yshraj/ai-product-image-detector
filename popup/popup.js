@@ -110,6 +110,26 @@ function setupScanPanel() {
     });
   }
 
+  const scanPageBtn = $('scan-page');
+  if (scanPageBtn) {
+    scanPageBtn.addEventListener('click', async () => {
+      const s = S();
+      scanPageBtn.setAttribute('aria-busy', 'true');
+      $('scan-page-label').textContent = s?.scan?.scanningAll || 'Scanning page…';
+      await sendToActiveTab({ type: 'SCAN_PAGE' });
+      // Poll until the page has settled (nothing pending and every card scanned),
+      // mirroring the Rescan flow. scanEntirePage scrolls the page, so give it room.
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 350));
+        const stats = await sendToActiveTab({ type: 'GET_STATS' });
+        await updateScan();
+        if (stats && !stats.pending && (Number(stats.unscanned) || 0) === 0) break;
+      }
+      scanPageBtn.setAttribute('aria-busy', 'false');
+      await updateScan();
+    });
+  }
+
   document.querySelectorAll('.bd[data-filter]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const filter = btn.dataset.filter;
@@ -373,6 +393,18 @@ async function updateScan() {
   const done = live.scanned || 0;
   const pending = live.pending || 0;
   setScanProgress(done, total, pending, scanReady && state.enabled && (pending > 0 || (total > done)));
+
+  // "Scan whole page" surfaces only when off-screen products remain unscanned.
+  // Skip while a scan-all run is in flight so its live label isn't overwritten.
+  const scanPageBtn = $('scan-page');
+  if (scanPageBtn && scanPageBtn.getAttribute('aria-busy') !== 'true') {
+    const more = Number(live.unscanned) || 0;
+    const showScanAll = scanReady && state.enabled && more > 0;
+    scanPageBtn.hidden = !showScanAll;
+    if (showScanAll) {
+      $('scan-page-label').textContent = s ? s.scan.scanAllCount(more) : `Scan whole page · ${more} more`;
+    }
+  }
 
   const hint = $('scan-hint');
   const tip = $('scan-tip');

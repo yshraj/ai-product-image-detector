@@ -213,6 +213,20 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .bd-high { background: #fdecec; border-color: #f6cccc; } .bd-high span { color: var(--red); }
 .bd-med { background: #fdf4e6; border-color: #f4dcb8; } .bd-med span { color: var(--amber); }
 .bd-ok { background: #e8f6ee; border-color: #bfe6cd; } .bd-ok span { color: var(--green); }
+.scan-all-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; margin-top: 10px; padding: 9px 12px; min-height: 40px;
+  border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+  background: var(--bg-2); color: var(--accent-2); cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 700;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), transform 0.12s var(--ease);
+}
+.scan-all-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.scan-all-btn:active { transform: scale(0.99); }
+.scan-all-btn:focus-visible { box-shadow: var(--ring); }
+.scan-all-btn[aria-busy="true"] { pointer-events: none; opacity: 0.7; }
+.scan-all-btn[aria-busy="true"] svg { animation: scan-all-bob 0.9s ease-in-out infinite; }
+@keyframes scan-all-bob { 50% { transform: translateY(2px); } }
 .empty-hint {
   margin: 12px 0 0; font-size: 11.5px; color: var(--muted-2); line-height: 1.5;
   background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: var(--radius-sm);
