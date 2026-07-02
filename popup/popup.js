@@ -10,6 +10,21 @@ const TABS = ['scan', 'settings'];
 const $ = (id) => document.getElementById(id);
 const S = () => window.RMF_STRINGS;
 
+// List cached-verdict keys without deserializing every stored value.
+// chrome.storage.local.getKeys() (Chrome 130+) returns keys only; the scan
+// watcher polls this ~2.5×/s, so avoiding a full get(null) of history +
+// corrections + every cached verdict is a real saving on busy pages.
+async function getCacheKeys() {
+  try {
+    if (chrome.storage.local.getKeys) {
+      const keys = await chrome.storage.local.getKeys();
+      return keys.filter((k) => k.startsWith(CACHE_PREFIX));
+    }
+  } catch { /* fall through to get(null) */ }
+  const all = await chrome.storage.local.get(null);
+  return Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+}
+
 let state = { ...DEFAULTS };
 let health = null;
 
@@ -340,8 +355,7 @@ function setScanProgress(done, total, pending, show) {
 
 async function updateScan() {
   const s = S();
-  const all = await chrome.storage.local.get(null);
-  $('cache-count').textContent = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX)).length;
+  $('cache-count').textContent = (await getCacheKeys()).length;
 
   const active = await getActiveTab();
   let live = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0 };
@@ -508,8 +522,7 @@ function setupSettings() {
   $('shortcuts-link').addEventListener('click', (e) => { e.preventDefault(); chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); });
   $('privacy-link').addEventListener('click', (e) => { e.preventDefault(); if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage(); });
   $('clear-cache').addEventListener('click', async () => {
-    const all = await chrome.storage.local.get(null);
-    const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+    const keys = await getCacheKeys();
     await chrome.storage.local.remove(keys);
     toast(`Cleared ${keys.length} cached`);
     updateScan();
@@ -540,8 +553,7 @@ function setupSettings() {
       // Verdicts change with the engine set — clear cached results so the
       // next scan re-runs through the new model set.
       try {
-        const all = await chrome.storage.local.get(null);
-        await chrome.storage.local.remove(Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX)));
+        await chrome.storage.local.remove(await getCacheKeys());
       } catch { /* noop */ }
       toast(state.hfEnsemble ? 'Ensemble on — higher recall' : 'Ensemble off');
     });
@@ -571,8 +583,7 @@ async function connectHuggingFace() {
   health = null;
   // Always clear cached verdicts when connecting HF — old preview/heuristic
   // results would otherwise stick for 7 days and look like HF scores.
-  const all = await chrome.storage.local.get(null);
-  const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+  const keys = await getCacheKeys();
   if (keys.length) await chrome.storage.local.remove(keys);
   if (modelChanged || wasPreview) updateScan();
   feedback('ok', r.user ? `Connected as ${r.user}` : 'Token verified — you’re connected');

@@ -165,8 +165,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // verdicts from a different model don't linger).
 async function clearDetectionCache() {
   try {
-    const all = await chrome.storage.local.get(null);
-    const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
+    // getKeys() (Chrome 130+) avoids deserializing every stored verdict value.
+    const keys = chrome.storage.local.getKeys
+      ? (await chrome.storage.local.getKeys()).filter((k) => k.startsWith(CACHE_PREFIX))
+      : Object.keys(await chrome.storage.local.get(null)).filter((k) => k.startsWith(CACHE_PREFIX));
     if (keys.length) await chrome.storage.local.remove(keys);
     return keys.length;
   } catch { return 0; }
