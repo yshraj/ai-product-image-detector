@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "animate": {
+      "source": "delphi-ai/animate-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "bf758e2d7aa41c5e722540b604b31f351831857e8dda354deb94954b9121c27b"
+    },
     "chrome-extensions": {
       "source": "googlechrome/modern-web-guidance",
       "sourceType": "github",
