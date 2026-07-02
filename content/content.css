@@ -27,6 +27,13 @@
 .rmf-badge[data-conf="high"] { background: #d92d20; }
 .rmf-badge[data-conf="med"]  { background: #b54708; }
 
+.rmf-flagged-img {
+  box-shadow: inset 0 0 0 3px rgba(181, 71, 8, 0.92);
+}
+.rmf-flagged-img[data-rmf-conf="high"] {
+  box-shadow: inset 0 0 0 3px rgba(217, 45, 32, 0.92);
+}
+
 .rmf-label {
   font-weight: 600;
   letter-spacing: 0.01em;
