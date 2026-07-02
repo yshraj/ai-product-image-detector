@@ -1,94 +1,61 @@
 /* TrueKart — styles injected into supported pages */
 
-.rmf-badge.rmf-compact .rmf-label { display: none; }
-.rmf-badge.rmf-compact:hover .rmf-label,
-.rmf-badge.rmf-compact:focus-within .rmf-label { display: inline-flex; }
-.rmf-badge.rmf-compact .rmf-compact-ico {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 6px; color: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
-}
-.rmf-badge[data-conf="high"] .rmf-compact-ico { background: rgba(226, 75, 74, 0.94); color: #fff; }
-.rmf-badge[data-conf="med"] .rmf-compact-ico { background: rgba(239, 159, 39, 0.94); color: #2a1800; }
-.rmf-badge.rmf-compact:hover .rmf-compact-ico,
-.rmf-badge.rmf-compact:focus-within .rmf-compact-ico { display: none; }
-.rmf-pop-layers { font-size: 10.5px; color: #9aa3b2; margin-top: 6px; line-height: 1.4; }
-.rmf-highlight { outline: 3px solid #0d9488 !important; outline-offset: 2px; transition: outline 0.2s; }
-
+/* AI verdict badge — a single pill anchored to the product image (bottom-right).
+   It is the ONLY mark the extension paints on a card: sparkle + verdict + %. */
 .rmf-badge {
   position: absolute;
-  top: auto;
   bottom: 8px;
   right: 8px;
-  left: auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   z-index: 9999;
-  pointer-events: none;
+  padding: 4px 9px;
+  border-radius: 9px;
+  color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.35;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.24), 0 6px 16px rgba(16, 24, 40, 0.24);
   animation: rmf-badge-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes rmf-badge-in {
-  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
+/* Confirmed AI reads as a firm warning; "likely" is a softer amber. Both use
+   AA-contrast solid fills so the same white text works on either. */
+.rmf-badge[data-conf="high"] { background: #d92d20; }
+.rmf-badge[data-conf="med"]  { background: #b54708; }
 
 .rmf-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-  line-height: 1.4;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
-  -webkit-backdrop-filter: saturate(140%) blur(2px);
-  backdrop-filter: saturate(140%) blur(2px);
-}
-
-.rmf-badge[data-conf="high"] .rmf-label {
-  background: rgba(226, 75, 74, 0.94);
-  color: #fff;
-}
-
-.rmf-badge[data-conf="med"] .rmf-label {
-  background: rgba(239, 159, 39, 0.94);
-  color: #2a1800;
 }
 
 .rmf-score {
-  font-size: 11px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.38);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
-  padding: 3px 7px;
-  border-radius: 6px;
-  line-height: 1.4;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  opacity: 0.96;
 }
 
-.rmf-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 4px;
-  border-radius: 0 3px 3px 0;
-  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  z-index: 9999;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+/* Preview (on-device heuristic) reads as tentative — a subtle inner hairline
+   instead of extra words, so the label stays "AI Generated" / "Likely AI". */
+.rmf-badge[data-preview="true"] {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+              0 1px 2px rgba(16, 24, 40, 0.24), 0 6px 16px rgba(16, 24, 40, 0.24);
 }
 
-/* Heuristic preview badges read as tentative (dashed, slightly muted). */
-.rmf-badge[data-preview="true"] .rmf-label {
-  border: 1px dashed rgba(255, 255, 255, 0.6);
+.rmf-badge:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@keyframes rmf-badge-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.rmf-highlight { outline: 3px solid #0d9488 !important; outline-offset: 2px; transition: outline 0.2s; }
 
 /* "Why flagged?" details popover */
 .rmf-pop {
@@ -114,6 +81,7 @@
 .rmf-pop-row { color: #eef1f5; }
 .rmf-pop-sub { color: #9aa3b2; font-size: 11px; margin-top: 4px; word-break: break-all; }
 .rmf-pop-note { color: #d9c08a; font-size: 11px; margin-top: 6px; }
+.rmf-pop-layers { font-size: 10.5px; color: #9aa3b2; margin-top: 6px; line-height: 1.4; }
 .rmf-pop-actions { margin-top: 9px; border-top: 1px solid #2a2f3a; padding-top: 9px; display: grid; gap: 8px; }
 .rmf-pop-alabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: #9aa3b2; margin-bottom: 4px; }
 .rmf-pop-alinks { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -133,18 +101,7 @@
 .rmf-pop-wrong:hover { color: #eef1f5; }
 .rmf-pop-wrong:focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; color: #eef1f5; }
 .rmf-ctx-badge { animation: rmf-badge-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
-.rmf-trust {
-  display: inline-block; font-size: 10px; font-weight: 600; margin-right: 6px;
-  padding: 2px 6px; border-radius: 4px; background: rgba(13, 148, 136, 0.14); color: #0f766e;
-}
-.rmf-price-tag {
-  position: absolute; top: 8px; left: 8px; z-index: 9998;
-  font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 5px;
-  background: rgba(22, 163, 74, 0.92); color: #fff; pointer-events: none;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .rmf-badge, .rmf-pop { animation: none; }
-  .rmf-bar { transition: none; }
 }

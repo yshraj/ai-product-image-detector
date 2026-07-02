@@ -95,23 +95,6 @@
     return target;
   }
 
-  // Small inline "AI spark" mark used on badges instead of an emoji — renders
-  // identically on every OS and reads as intentional product UI, not a hack.
-  function aiGlyph() {
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '11');
-    svg.setAttribute('height', '11');
-    svg.setAttribute('fill', 'currentColor');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.style.flex = '0 0 auto';
-    const p = document.createElementNS(NS, 'path');
-    p.setAttribute('d', 'M12 2l1.7 5.9 5.9 1.7-5.9 1.7L12 17l-1.7-5.7L4.4 9.6l5.9-1.7L12 2z');
-    svg.appendChild(p);
-    return svg;
-  }
-
   function injectOverlay(card, result) {
     const { isAI, confidence } = result;
     // A card counts as flagged only if the model says AI *and* the confidence
@@ -125,42 +108,36 @@
 
     const target = resolveOverlayTarget(card);
     target.querySelector('.rmf-badge')?.remove();
-    target.querySelector('.rmf-bar')?.remove();
 
+    // One clean pill: sparkle + verdict + confidence. Always shows the verdict
+    // (no bare-percentage state) so it reads as a single, deliberate signal.
     const high = confidence >= AI_THRESHOLD;
+    const pct = Math.round(confidence);
+    const verdict = high ? 'AI Generated' : 'Likely AI';
+    const spoken = high ? 'AI generated' : 'Likely AI generated';
+
     const badge = document.createElement('div');
-    badge.className = 'rmf-badge rmf-compact';
+    badge.className = 'rmf-badge';
     badge.setAttribute('data-conf', high ? 'high' : 'med');
     // Announce to assistive tech (the host page's content, not ours).
     badge.setAttribute('role', 'img');
-    const verdict = high ? 'AI generated' : 'Likely AI generated';
     badge.setAttribute('aria-label',
-      `${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'}: ${verdict}, ${Math.round(confidence)}% confidence` +
+      `${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'}: ${spoken}, ${pct}% confidence` +
       (result.preview ? ' (preview heuristic)' : ''));
-    if (result.preview) {
-      badge.setAttribute('data-preview', 'true');
-      badge.title = 'Heuristic preview — connect a model in the popup for accurate detection';
-    } else {
-      badge.title = `${verdict} · ${Math.round(confidence)}% confidence`;
-    }
+    badge.title = result.preview
+      ? `${verdict} · ${pct}% · heuristic preview — connect a model in the popup for accurate detection`
+      : `${verdict} · ${pct}% confidence`;
+    if (result.preview) badge.setAttribute('data-preview', 'true');
+
     const label = document.createElement('span');
     label.className = 'rmf-label';
-    label.append(aiGlyph(), document.createTextNode(
-      (high ? 'AI Generated' : 'Likely AI') + (result.preview ? ' · preview' : '')));
-    const compact = document.createElement('span');
-    compact.className = 'rmf-compact-ico';
-    compact.appendChild(aiGlyph());
+    label.textContent = verdict;
     const score = document.createElement('span');
     score.className = 'rmf-score';
-    score.textContent = `${Math.round(confidence)}%`;
-    badge.append(compact, label, score);
+    score.textContent = `${pct}%`;
+    badge.append(label, score);
 
-    const bar = document.createElement('div');
-    bar.className = 'rmf-bar';
-    bar.style.width = `${Math.round(confidence)}%`;
-    bar.style.background = high ? '#E24B4A' : '#EF9F27';
-
-    target.append(badge, bar);
+    target.append(badge);
     const img = card.querySelector(SITE.imageSelector);
     attachDetails(badge, target, {
       confidence, source: result.source, preview: !!result.preview, model: result.model,
@@ -574,19 +551,8 @@
       cur.name = seller;
       all[key] = cur;
       await chrome.storage.local.set({ rmf_seller_trust: all });
-      const total = cur.aiGenerated + cur.likelyAi + cur.normal;
-      if (total >= 3) {
-        const aiPct = Math.round(((cur.aiGenerated + cur.likelyAi) / total) * 100);
-        let tag = card.querySelector('.rmf-trust');
-        if (!tag) {
-          tag = document.createElement('span');
-          tag.className = 'rmf-trust';
-          const anchor = card.querySelector('a') || card;
-          anchor.insertAdjacentElement('afterbegin', tag);
-        }
-        tag.textContent = aiPct >= 50 ? `${aiPct}% AI photos` : `${100 - aiPct}% real photos`;
-        tag.title = `${seller}: ${cur.aiGenerated} AI, ${cur.likelyAi} likely, ${cur.normal} normal`;
-      }
+      // Seller stats are recorded for the popup/export, but we intentionally do
+      // not paint a per-card seller tag — the AI badge is the only on-page mark.
     } catch { /* ignore */ }
   }
 
@@ -604,16 +570,8 @@
       hist.push({ price, at: Date.now() });
       all[id] = hist.slice(-20);
       await chrome.storage.local.set({ rmf_price_history: all });
-      if (price <= low) {
-        const target = resolveOverlayTarget(card);
-        let tag = target.querySelector('.rmf-price-tag');
-        if (!tag) {
-          tag = document.createElement('span');
-          tag.className = 'rmf-price-tag';
-          target.appendChild(tag);
-        }
-        tag.textContent = price < low ? 'Price drop' : 'Lowest seen';
-      }
+      // Price history is recorded but not shown on-page — the extension marks
+      // cards with the AI verdict only, keeping the overlay uncluttered.
     } catch { /* ignore */ }
   }
 
