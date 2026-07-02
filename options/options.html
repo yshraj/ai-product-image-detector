@@ -24,7 +24,7 @@
         <div class="brand-sub">Real photos. Best prices. Shop India.</div>
       </div>
     </div>
-    <span class="ver" id="version">v1.3.0</span>
+    <span class="ver" id="version">v1.7.0</span>
   </header>
 
   <main id="main">
@@ -123,7 +123,7 @@
       <div class="btn-row">
         <button class="ghost" id="export-settings" type="button">Export settings</button>
         <button class="ghost" id="import-settings" type="button">Import settings</button>
-        <input type="file" id="import-file" accept="application/json" hidden />
+        <input type="file" id="import-file" accept="application/json" aria-label="Choose a settings file to import" hidden />
         <button class="ghost" id="clear-cache" type="button">Clear cache</button>
         <button class="ghost danger" id="reset-all" type="button">Reset all settings</button>
       </div>
@@ -144,7 +144,7 @@
     <!-- About & legal -->
     <section class="card" aria-labelledby="about-h">
       <div class="card-head"><h2 id="about-h">About &amp; help</h2></div>
-      <p class="muted">TrueKart <span id="about-ver">v1.3.0</span> — compare prices,
+      <p class="muted">TrueKart <span id="about-ver">v1.7.0</span> — compare prices,
         copy product details, and spot AI-generated photos on Myntra, Flipkart, Meesho and Nykaa.</p>
 
       <div class="link-row">
@@ -195,6 +195,7 @@
   <div id="toast-host" aria-live="assertive"></div>
   <script src="../utils/defaults.js"></script>
   <script src="../utils/strings.js"></script>
+  <script src="../utils/ui.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

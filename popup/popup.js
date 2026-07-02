@@ -173,6 +173,9 @@ async function maybeShowOnboarding() {
   });
   overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish(); });
   renderStep();
+  // Move focus into the dialog so keyboard/screen-reader users land on the
+  // primary action instead of somewhere behind the modal.
+  overlay.querySelector('#onboard-next').focus();
 }
 
 async function renderScanHistory() {
@@ -372,7 +375,10 @@ async function sendToActiveTab(message) {
     // Retry on the visible tab — SPAs may update URL before title/meta refresh.
     for (let i = 0; i < 16; i++) {
       const p = await tryTab();
-      if (p?.isProductPage === false) return null;
+      // A definitive "not a product page" is returned as-is (not null) so the
+      // Compare panel can show its empty state immediately rather than polling
+      // out the full timeout. Matches the Amazon branch above.
+      if (p?.isProductPage === false) return p;
       if (p?.title && p.isProductPage !== false && productMatchesTabUrl(p, active.url)) return p;
       await new Promise((r) => setTimeout(r, 200));
     }
@@ -540,8 +546,10 @@ function setupSettings() {
     const f = $('hf-token');
     const show = f.type === 'password';
     f.type = show ? 'text' : 'password';
-    $('hf-token-toggle').textContent = show ? 'hide' : 'show';
-    $('hf-token-toggle').setAttribute('aria-pressed', String(show));
+    const btn = $('hf-token-toggle');
+    btn.textContent = show ? 'hide' : 'show';
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? 'Hide access token' : 'Show access token');
   });
   $('goto-hf').addEventListener('click', () => { setActiveProvider('huggingface'); $('hf-token').focus(); });
 
@@ -595,12 +603,15 @@ function setupSettings() {
 
   const serpKey = $('serp-api-key');
   if (serpKey) {
-    $('serp-save')?.addEventListener('click', async () => {
+    const saveSerp = async () => {
       state.serpApiKey = serpKey.value.trim();
       if (await saveSync({ serpApiKey: state.serpApiKey })) {
         toast(state.serpApiKey ? 'SerpApi key saved' : 'SerpApi key cleared');
       }
-    });
+    };
+    $('serp-save')?.addEventListener('click', saveSerp);
+    // Enter-to-submit, matching the Hugging Face token field.
+    serpKey.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveSerp(); });
   }
 
   const notifyToggle = $('notify-on-ai');
@@ -686,30 +697,7 @@ function setActiveMode(mode) {
   });
 }
 function setupRovingGroup(groupId, values, onSelect, kind = 'tab') {
-  const group = $(groupId);
-  const btns = Array.from(group.querySelectorAll('.seg'));
-  const valueOf = (b) => b.dataset.provider || b.dataset.mode;
-  btns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      btns.forEach((b) => {
-        const on = b === btn;
-        b.classList.toggle('active', on);
-        b.setAttribute(kind === 'tab' ? 'aria-selected' : 'aria-checked', String(on));
-        b.tabIndex = on ? 0 : -1;
-      });
-      onSelect(valueOf(btn));
-    });
-    btn.addEventListener('keydown', (e) => {
-      const i = btns.indexOf(btn);
-      let j = null;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % btns.length;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + btns.length) % btns.length;
-      if (j === null) return;
-      e.preventDefault();
-      btns[j].focus();
-      btns[j].click();
-    });
-  });
+  window.RMF_UI.rovingGroup($(groupId), { kind, onSelect });
 }
 
 // ---- status ---------------------------------------------------------------
@@ -773,7 +761,7 @@ async function exportPage(format) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `shopsmart-${report.site}-${stamp}.${isCsv ? 'csv' : 'json'}`;
+  a.download = `truekart-${report.site}-${stamp}.${isCsv ? 'csv' : 'json'}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -785,16 +773,5 @@ async function exportPage(format) {
 function setBusy(btnId, busy) { const b = $(btnId); b.setAttribute('aria-busy', String(busy)); b.disabled = busy; }
 function feedback(kind, msg) { const el = $('hf-feedback'); el.className = 'feedback ' + kind; el.textContent = msg; el.hidden = false; }
 function clearFeedback() { const el = $('hf-feedback'); el.hidden = true; el.textContent = ''; }
-function toast(msg, isErr, isOk) {
-  const t = document.createElement('div');
-  t.className = 'toast' + (isErr ? ' err' : isOk ? ' ok' : '');
-  t.textContent = msg;
-  t.setAttribute('role', isErr ? 'alert' : 'status');
-  $('toast-host').appendChild(t);
-  const dismiss = () => {
-    t.classList.add('out');
-    setTimeout(() => t.remove(), 220);
-  };
-  setTimeout(dismiss, isErr ? 3200 : 2400);
-}
+const toast = (msg, isErr, isOk) => window.RMF_UI.toast(msg, isErr, isOk);
 window.RMF_toast = toast;

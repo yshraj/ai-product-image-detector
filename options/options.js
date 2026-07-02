@@ -90,17 +90,9 @@ function wireEvents() {
   $('opt-enabled').addEventListener('change', (e) => save({ enabled: e.target.checked }));
   $('opt-notify').addEventListener('change', (e) => save({ notifyOnAI: e.target.checked }));
 
-  document.querySelectorAll('#mode-seg .seg').forEach((btn) => {
-    btn.addEventListener('click', () => { setMode(btn.dataset.mode); save({ mode: btn.dataset.mode }); });
-    btn.addEventListener('keydown', (e) => {
-      const btns = [...document.querySelectorAll('#mode-seg .seg')];
-      const i = btns.indexOf(btn);
-      let j = null;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % btns.length;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + btns.length) % btns.length;
-      if (j === null) return;
-      e.preventDefault(); btns[j].focus(); btns[j].click();
-    });
+  window.RMF_UI.rovingGroup($('mode-seg'), {
+    kind: 'radio',
+    onSelect: (mode) => { setMode(mode); save({ mode }); },
   });
 
   const slider = $('opt-confidence');
@@ -304,15 +296,4 @@ async function resetAll() {
 }
 
 // ---- toast ----------------------------------------------------------------
-function toast(msg, isErr, isOk) {
-  const t = document.createElement('div');
-  t.className = 'toast' + (isErr ? ' err' : isOk ? ' ok' : '');
-  t.textContent = msg;
-  t.setAttribute('role', isErr ? 'alert' : 'status');
-  $('toast-host').appendChild(t);
-  const dismiss = () => {
-    t.classList.add('out');
-    setTimeout(() => t.remove(), 220);
-  };
-  setTimeout(dismiss, isErr ? 3200 : 2400);
-}
+const toast = (msg, isErr, isOk) => window.RMF_UI.toast(msg, isErr, isOk);
