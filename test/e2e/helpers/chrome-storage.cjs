@@ -7,7 +7,37 @@ async function getSyncStorage(context, keys) {
 }
 
 async function setSyncStorage(context, obj) {
-  return inServiceWorker(context, (o) => new Promise((r) => chrome.storage.sync.set(o, r)), obj);
+  // Surface chrome.runtime.lastError (e.g. MAX_WRITE_OPERATIONS_PER_MINUTE) instead
+  // of silently resolving — a swallowed quota error otherwise looks like a value bug.
+  return inServiceWorker(context, (o) => new Promise((resolve, reject) => {
+    chrome.storage.sync.set(o, () => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else resolve();
+    });
+  }), obj);
+}
+
+/**
+ * Reset sync storage to `desired`, writing ONLY the keys that differ from the
+ * current value. Across a full suite the auto-reset fires before every test;
+ * blindly re-writing all sync keys each time approaches chrome.storage.sync's
+ * ~120 writes/minute quota and gets throttled, which silently drops later
+ * writes. Diffing keeps the reset a no-op when nothing changed.
+ */
+async function resetSyncStorage(context, desired) {
+  return inServiceWorker(context, (want) => new Promise((resolve, reject) => {
+    chrome.storage.sync.get(null, (cur) => {
+      const patch = {};
+      for (const k of Object.keys(want)) {
+        if (JSON.stringify(cur[k]) !== JSON.stringify(want[k])) patch[k] = want[k];
+      }
+      if (!Object.keys(patch).length) return resolve(false);
+      chrome.storage.sync.set(patch, () => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve(true);
+      });
+    });
+  }), desired);
 }
 
 async function getLocalStorage(context, keys) {
@@ -40,7 +70,7 @@ async function getSessionStorage(context, keys) {
 async function resetExtensionStorage(context, overrides = {}) {
   // CLIP offscreen load is slow and flaky under parallel CI workers; mocked compare E2E
   // tests exercise text/SerpApi ranking only. Live compare suites opt in via overrides.
-  await setSyncStorage(context, { ...DEFAULT_SYNC, compareUseClip: false, ...overrides });
+  await resetSyncStorage(context, { ...DEFAULT_SYNC, compareUseClip: false, ...overrides });
   await setLocalStorage(context, { rmf_onboarding_done: true });
   await clearDetectionCache(context);
   await clearHistory(context);
@@ -53,6 +83,7 @@ module.exports = {
   DEFAULT_SYNC,
   getSyncStorage,
   setSyncStorage,
+  resetSyncStorage,
   getLocalStorage,
   setLocalStorage,
   clearDetectionCache,

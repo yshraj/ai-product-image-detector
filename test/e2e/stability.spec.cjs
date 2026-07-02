@@ -124,8 +124,12 @@ test.describe('Stability & lifecycle', () => {
     let popupTab = await extensionContext.newPage();
     let popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
-    const listingCount = await popupTab.locator('#scan-count').textContent();
-    expect(listingCount && /\d+/.test(listingCount)).toBe(true);
+    // Poll: scan-count is populated by an async updateScan() after the popup
+    // messages the content script — reading it synchronously races that round-trip.
+    await expect.poll(async () => {
+      const t = await popupTab.locator('#scan-count').textContent();
+      return !!(t && /\d+/.test(t));
+    }, { timeout: 12_000 }).toBe(true);
     await popupTab.close();
 
     await activateMarketplaceTab(extensionContext, '9876543');
