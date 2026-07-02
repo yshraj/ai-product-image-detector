@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TrueKart — AI Photo Check & Price Compare",
+  "name": "TrueKart — AI Photo Check",
   "version": "1.7.0",
-  "description": "Real product photos. Best prices. Compare on Myntra, Flipkart, Meesho & Nykaa — spot AI images and shop smarter.",
+  "description": "Spot AI-generated product photos on Myntra, Flipkart, Meesho and Nykaa while you shop.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -14,8 +14,7 @@
     "scripting",
     "tabs",
     "notifications",
-    "contextMenus",
-    "offscreen"
+    "contextMenus"
   ],
   "host_permissions": [
     "https://www.myntra.com/*",
@@ -32,8 +31,7 @@
     "https://*.nykaa.com/*",
     "https://*.media-amazon.com/*",
     "https://*.ssl-images-amazon.com/*",
-    "https://*.amazon.in/*",
-    "https://serpapi.com/*"
+    "https://*.amazon.in/*"
   ],
   "content_scripts": [
     {
@@ -48,12 +46,13 @@
         "utils/defaults.js",
         "utils/marketplace-url.js",
         "utils/price.js",
-        "utils/product-fingerprint.js",
         "utils/product-query.js",
         "utils/strings.js",
         "utils/logger.js",
         "utils/throttle.js",
         "utils/cache.js",
+        "utils/storage-local.js",
+        "utils/trust-storage.js",
         "detection/exif-check.js",
         "detection/tfjs-detector.js",
         "detection/remote.js",
@@ -91,13 +90,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "libs/onnx/*.wasm"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

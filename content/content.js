@@ -85,17 +85,33 @@
   }
 
   // --- overlay -------------------------------------------------------------
-  function resolveOverlayTarget(card) {
+  function clearCardVisuals(card) {
+    card.querySelector('.rmf-badge')?.remove();
+    card.querySelectorAll('.rmf-flagged-img').forEach((el) => {
+      el.classList.remove('rmf-flagged-img');
+      el.removeAttribute('data-rmf-conf');
+    });
+  }
+
+  /** Anchor the badge on the same <img> we scanned — not the whole product card. */
+  function resolveOverlayTarget(card, imgEl) {
+    const img = imgEl || card.querySelector(SITE.imageSelector);
+    if (img?.parentElement) {
+      const target = img.parentElement;
+      if (getComputedStyle(target).position === 'static') {
+        target.style.position = 'relative';
+      }
+      return { target, img };
+    }
     let target = card.querySelector(SITE.overlayTargetSelector) || card;
-    // Can't append children to an <img>; climb to its parent.
     if (target.tagName === 'IMG') target = target.parentElement || card;
     if (getComputedStyle(target).position === 'static') {
       target.style.position = 'relative';
     }
-    return target;
+    return { target, img: img || null };
   }
 
-  function injectOverlay(card, result) {
+  function injectOverlay(card, result, imgEl) {
     const { isAI, confidence } = result;
     // A card counts as flagged only if the model says AI *and* the confidence
     // clears the user's threshold — this is what the "minimum confidence" pref
@@ -104,46 +120,55 @@
     card.setAttribute('data-rmf-scanned', 'true');
     card.setAttribute('data-rmf-ai', flagged ? 'true' : 'false');
 
-    if (!flagged) { applyMode(card); return; }
+    if (!flagged) {
+      clearCardVisuals(card);
+      applyMode(card);
+      return;
+    }
 
-    const target = resolveOverlayTarget(card);
-    target.querySelector('.rmf-badge')?.remove();
+    const { target, img } = resolveOverlayTarget(card, imgEl);
+    clearCardVisuals(card);
 
-    // One clean pill: sparkle + verdict + confidence. Always shows the verdict
-    // (no bare-percentage state) so it reads as a single, deliberate signal.
+    // One clean pill: verdict + confidence. Preview mode gets an extra tag so
+    // users know this is the weak heuristic, not Hugging Face.
     const high = confidence >= AI_THRESHOLD;
     const pct = Math.round(confidence);
     const verdict = high ? 'AI Generated' : 'Likely AI';
     const spoken = high ? 'AI generated' : 'Likely AI generated';
+    const productName = extractName(card);
 
     const badge = document.createElement('div');
     badge.className = 'rmf-badge';
     badge.setAttribute('data-conf', high ? 'high' : 'med');
-    // Announce to assistive tech (the host page's content, not ours).
     badge.setAttribute('role', 'img');
     badge.setAttribute('aria-label',
       `${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'}: ${spoken}, ${pct}% confidence` +
+      (productName ? ` — ${productName}` : '') +
       (result.preview ? ' (preview heuristic)' : ''));
     badge.title = result.preview
-      ? `${verdict} · ${pct}% · heuristic preview — connect a model in the popup for accurate detection`
-      : `${verdict} · ${pct}% confidence`;
+      ? `${verdict} · ${pct}% · preview only — connect Hugging Face in Settings for accurate detection`
+      : `${verdict} · ${pct}% confidence` + (productName ? ` · ${productName}` : '');
     if (result.preview) badge.setAttribute('data-preview', 'true');
 
     const label = document.createElement('span');
     label.className = 'rmf-label';
-    label.textContent = verdict;
+    label.textContent = result.preview ? `${verdict} · Preview` : verdict;
     const score = document.createElement('span');
     score.className = 'rmf-score';
     score.textContent = `${pct}%`;
     badge.append(label, score);
 
     target.append(badge);
-    const img = card.querySelector(SITE.imageSelector);
+    if (img) {
+      img.classList.add('rmf-flagged-img');
+      img.setAttribute('data-rmf-conf', high ? 'high' : 'med');
+    }
     attachDetails(badge, target, {
       confidence, source: result.source, preview: !!result.preview, model: result.model,
       layers: result.layers || null,
       imageUrl: (img && (img.currentSrc || img.src)) || '',
-      query: extractName(card) || '',
+      query: productName || '',
+      productName,
       card,
     });
     applyMode(card);
@@ -213,6 +238,13 @@
       : t((s) => s.details.engineHuggingFace, 'Hugging Face');
 
     pop.append(h, conf, eng);
+
+    if (info.productName) {
+      const prod = document.createElement('div');
+      prod.className = 'rmf-pop-sub';
+      prod.textContent = info.productName;
+      pop.appendChild(prod);
+    }
 
     if (info.model && !isPreview) {
       const m = document.createElement('div'); m.className = 'rmf-pop-sub';
@@ -358,7 +390,7 @@
           at: Date.now(),
           url: location.href,
         });
-        chrome.storage.local.set({ rmf_scan_history: hist.slice(0, 10) });
+        chrome.storage.local.set({ rmf_scan_history: hist.slice(0, 5) });
       });
     } catch { /* ignore */ }
   }
@@ -369,7 +401,10 @@
       const r = card.__rmfResult;
       if (!r) return;
       card.querySelector('.rmf-badge')?.remove();
-      card.querySelector('.rmf-bar')?.remove();
+      card.querySelectorAll('.rmf-flagged-img').forEach((el) => {
+        el.classList.remove('rmf-flagged-img');
+        el.removeAttribute('data-rmf-conf');
+      });
       if (r.isAI && r.confidence >= minConfidence) injectOverlay(card, r);
       else {
         card.setAttribute('data-rmf-scanned', 'true');
@@ -476,7 +511,7 @@
     try {
       const result = await limit(() => window.RMF_Detect(imgUrl));
       card.__rmfResult = result; // kept for the page-export report
-      injectOverlay(card, result);
+      injectOverlay(card, result, imgEl);
       session.scanned++;
       if (result.isAI && result.confidence >= minConfidence) {
         session.ai++;
@@ -541,38 +576,20 @@
   async function recordSellerStats(card, result) {
     const seller = extractBrand(card);
     if (!seller) return;
+    const Trust = window.RMF_TrustStorage;
+    if (!Trust?.recordSeller) return;
     const verdict = result.confidence >= AI_THRESHOLD ? 'high' : 'med';
-    try {
-      const { rmf_seller_trust: all = {} } = await chrome.storage.local.get('rmf_seller_trust');
-      const key = seller.toLowerCase().slice(0, 80);
-      const cur = all[key] || { name: seller, aiGenerated: 0, likelyAi: 0, normal: 0, lastSeen: 0 };
-      if (verdict === 'high') cur.aiGenerated++; else cur.likelyAi++;
-      cur.lastSeen = Date.now();
-      cur.name = seller;
-      all[key] = cur;
-      await chrome.storage.local.set({ rmf_seller_trust: all });
-      // Seller stats are recorded for the popup/export, but we intentionally do
-      // not paint a per-card seller tag — the AI badge is the only on-page mark.
-    } catch { /* ignore */ }
+    try { await Trust.recordSeller(seller, verdict); } catch { /* ignore */ }
   }
 
   async function recordPriceTag(card, imgUrl) {
     const priceText = extractPrice(card);
     if (!priceText) return;
-    const price = Number(String(priceText).replace(/[^\d.]/g, ''));
-    if (!Number.isFinite(price)) return;
     const link = card.querySelector('a[href]');
-    const id = link?.href ? new URL(link.href, location.href).pathname.slice(0, 120) : imgUrl.slice(-80);
-    try {
-      const { rmf_price_history: all = {} } = await chrome.storage.local.get('rmf_price_history');
-      const hist = Array.isArray(all[id]) ? all[id] : [];
-      const low = hist.length ? Math.min(...hist.map((h) => h.price)) : price;
-      hist.push({ price, at: Date.now() });
-      all[id] = hist.slice(-20);
-      await chrome.storage.local.set({ rmf_price_history: all });
-      // Price history is recorded but not shown on-page — the extension marks
-      // cards with the AI verdict only, keeping the overlay uncluttered.
-    } catch { /* ignore */ }
+    const url = link?.href || imgUrl;
+    const Trust = window.RMF_TrustStorage;
+    if (!Trust?.recordPrice) return;
+    try { await Trust.recordPrice(url, priceText); } catch { /* ignore */ }
   }
 
   function engineOf(r) {
@@ -729,89 +746,6 @@
     return product;
   }
 
-  // --- product change detection (SPA navigation) ---------------------------
-  let lastProductFingerprint = '';
-  let lastProductHref = location.href;
-  let productCheckTimer = null;
-
-  function scheduleProductCheck() {
-    if (productCheckTimer) return;
-    productCheckTimer = setTimeout(() => {
-      productCheckTimer = null;
-      checkProductChange();
-    }, 350);
-  }
-
-  function onLocationMaybeChanged() {
-    if (location.href === lastProductHref) return;
-    lastProductHref = location.href;
-    lastProductFingerprint = '';
-    scheduleProductCheck();
-  }
-
-  function checkProductChange() {
-    // Capture the previous fingerprint BEFORE onLocationMaybeChanged(), which
-    // resets lastProductFingerprint to '' on any URL change. Without this, a
-    // real SPA navigation (the URL changes) would wipe `prev`, the `if (!prev)`
-    // guard below would swallow the RMF_PRODUCT_CHANGED emit, and the popup
-    // would stay stuck on the previous product until a manual page refresh.
-    const prev = lastProductFingerprint;
-    onLocationMaybeChanged();
-    const p = getProduct();
-    const fp = p.fingerprint || '';
-    if (!p.isProductPage) {
-      if (prev) {
-        lastProductFingerprint = '';
-        try {
-          chrome.runtime.sendMessage({ type: 'RMF_PRODUCT_CHANGED', product: p, fingerprint: '' });
-        } catch { /* popup closed */ }
-      }
-      return;
-    }
-    if (!fp || fp === prev) return;
-    lastProductFingerprint = fp;
-    if (!prev) return; // very first detection — the popup pulls the product itself
-    try {
-      chrome.runtime.sendMessage({
-        type: 'RMF_PRODUCT_CHANGED',
-        product: p,
-        fingerprint: fp,
-        previousFingerprint: prev,
-      });
-    } catch { /* popup closed */ }
-  }
-
-  function startProductWatcher() {
-    lastProductFingerprint = getProduct().fingerprint || '';
-
-    const titleSelectors = [
-      'h1',
-      'meta[property="og:title"]',
-      'meta[property="og:image"]',
-      '[class*="pdp-"]',
-      '[class*="product-title"]',
-      '[class*="ProductDescription"]',
-    ];
-    const nodes = titleSelectors.flatMap((sel) => [...document.querySelectorAll(sel)]);
-
-    const obs = new MutationObserver(() => scheduleProductCheck());
-    for (const node of nodes) {
-      obs.observe(node, { childList: true, subtree: true, characterData: true, attributes: true });
-    }
-    obs.observe(document.body, { childList: true, subtree: true });
-
-    const wrapHistory = (fn) => function (...args) {
-      const ret = fn.apply(this, args);
-      onLocationMaybeChanged();
-      scheduleProductCheck();
-      return ret;
-    };
-    history.pushState = wrapHistory(history.pushState);
-    history.replaceState = wrapHistory(history.replaceState);
-    window.addEventListener('popstate', () => { onLocationMaybeChanged(); scheduleProductCheck(); });
-    window.addEventListener('hashchange', () => { onLocationMaybeChanged(); scheduleProductCheck(); });
-  }
-
   function clearStalePending() {
     document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="pending"]`).forEach((card) => {
       card.removeAttribute('data-rmf-scanned');
@@ -884,6 +818,10 @@
 
   function teardownBadges() {
     document.querySelectorAll('.rmf-badge, .rmf-bar, .rmf-pop').forEach((el) => el.remove());
+    document.querySelectorAll('.rmf-flagged-img').forEach((el) => {
+      el.classList.remove('rmf-flagged-img');
+      el.removeAttribute('data-rmf-conf');
+    });
     document.querySelectorAll('[data-rmf-scanned]').forEach((c) => {
       c.removeAttribute('data-rmf-scanned');
       c.removeAttribute('data-rmf-ai');
@@ -961,6 +899,5 @@
     // refresh. Cheap: scanAll is viewport-gated and every image is cache-keyed.
     [400, 1200, 2500].forEach((t) => setTimeout(scheduleScan, t));
   }
-  startProductWatcher();
   Log?.debug(`${(window.RMF_STRINGS?.app?.shortName) || 'TrueKart'} on ${SITE.name} (mode=${mode}, active=${isActive()}, minConf=${minConfidence})`);
 })();
