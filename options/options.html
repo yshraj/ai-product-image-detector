@@ -13,11 +13,9 @@
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
-          <rect x="6" y="7" width="12" height="9" rx="1.8" fill="#F8FAFC"/>
-          <circle cx="12" cy="11.5" r="2.6" fill="#94A3B8"/>
-          <rect x="8.2" y="14.8" width="7.6" height="1.1" rx="0.55" fill="#CBD5E1"/>
-          <circle cx="16.5" cy="16.8" r="3.4" fill="#10B981"/>
-          <path d="M14.8 16.8 L15.9 17.9 L18.3 15.2" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.97 13.97 L19.03 19.03" fill="none" stroke="#F8FAFC" stroke-width="2.8" stroke-linecap="round"/>
+          <circle cx="9.94" cy="9.94" r="6.1" fill="#F8FAFC"/>
+          <path d="M7.22 10.13 L9.28 12.19 L13.22 7.41" fill="none" stroke="#047857" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
       <div class="brand-text">
@@ -29,6 +27,7 @@
   </header>
 
   <main id="main">
+    <h1 class="visually-hidden">TrueKart settings</h1>
     <!-- Engine status (managed from the toolbar popup) -->
     <section class="card" aria-labelledby="engine-h">
       <div class="card-head">
@@ -65,9 +64,9 @@
           <p class="muted">What to do with images flagged as AI.</p>
         </div>
         <div class="segmented" id="mode-seg" role="radiogroup" aria-labelledby="mode-h">
-          <button class="seg" role="radio" data-mode="all">Show all</button>
-          <button class="seg" role="radio" data-mode="badge">Badge only</button>
-          <button class="seg" role="radio" data-mode="hide">Hide AI</button>
+          <button class="seg" role="radio" aria-checked="false" data-mode="all">Show all</button>
+          <button class="seg" role="radio" aria-checked="false" data-mode="badge">Badge only</button>
+          <button class="seg" role="radio" aria-checked="false" data-mode="hide">Hide AI</button>
         </div>
       </div>
 
