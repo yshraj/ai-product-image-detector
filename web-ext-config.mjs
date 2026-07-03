@@ -20,6 +20,13 @@ export default {
     'README.md',
     '.gitignore',
     '.github',
+    '.agents',
+    'logos',
+    'CHROMEWEBSTORE.md',
+    'NEXT_PLAN.md',
+    'FEATURES.md',
+    'TODO_price_compare.md',
+    'skills-lock.json',
   ],
   build: {
     overwriteDest: true,
