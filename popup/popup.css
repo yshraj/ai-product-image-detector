@@ -228,7 +228,7 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
   inset: 0;
   transform: translateX(-100%);
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
-  animation: sh-sweep 1.4s var(--ease) infinite;
+  animation: sh-sweep 1.4s linear infinite;
   will-change: transform;
 }
 /* Gentle top-down cascade so the rows don't shimmer in lockstep. */
