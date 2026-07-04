@@ -331,6 +331,7 @@
       wrap.appendChild(actionRow(S ? S.actions.findIdentical : 'Find identical', [
         popLink(S ? S.actions.lens : 'Google Lens', 'https://lens.google.com/uploadbyurl?url=' + enc(info.imageUrl)),
         popLink(S ? S.actions.bing : 'Bing', 'https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:' + enc(info.imageUrl)),
+        popCopyButton(S ? S.actions.copyLink : 'Copy link', info.imageUrl),
       ]));
       any = true;
     }
@@ -363,6 +364,51 @@
     a.textContent = text;
     a.addEventListener('click', (e) => e.stopPropagation()); // keep the product link / popover intact
     return a;
+  }
+
+  // Copy `text` to the clipboard. The async Clipboard API is preferred, but some
+  // marketplaces set a restrictive Permissions-Policy that blocks it in content
+  // scripts, so fall back to a temporary-textarea execCommand copy (works under
+  // the click user-gesture). Returns true on success.
+  async function copyToClipboard(text) {
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
+    } catch { /* blocked — fall through to the legacy path */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch { return false; }
+  }
+
+  // "Copy link" as a button styled like the other popover links, with inline
+  // "Copied!" feedback so the action is confirmed without a toast.
+  function popCopyButton(text, url) {
+    const S = window.RMF_STRINGS;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rmf-pop-link rmf-pop-copy';
+    b.textContent = text;
+    b.addEventListener('click', async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (b.dataset.busy === '1') return;
+      b.dataset.busy = '1';
+      const ok = await copyToClipboard(url);
+      b.textContent = ok ? (S ? S.actions.copied : 'Copied!') : (S ? S.actions.copyFailed : 'Copy failed');
+      b.classList.toggle('is-copied', ok);
+      setTimeout(() => {
+        b.textContent = text;
+        b.classList.remove('is-copied');
+        b.dataset.busy = '0';
+      }, 1500);
+    });
+    return b;
   }
 
   // --- display mode --------------------------------------------------------
