@@ -491,6 +491,13 @@ async function updateScan() {
   const confHint = $('conf-hint');
   const bd = $('breakdown');
 
+  // Recent scans is global (tab-independent) history read from storage, so it
+  // must resolve on every popup state — including unsupported tabs and the
+  // paused state, both of which return early below. Rendering it here (before
+  // those returns) prevents the skeleton from shimmering forever on e.g.
+  // google.com, where GET_STATS never resolves and scanReady stays false.
+  await renderScanHistory();
+
   if (!scanReady) {
     $('scan-title').textContent = s?.app?.shortName || 'TrueKart';
     $('scan-count').textContent = '';
@@ -530,7 +537,6 @@ async function updateScan() {
   tip.hidden = !(live.ai > 0);
   if (live.ai > 0) tip.textContent = s ? s.scan.whyFlagged : 'Tap any flagged badge for Why flagged?';
   $('export-row').hidden = !(live.scanned > 0);
-  await renderScanHistory();
 }
 
 function applyPopupStrings(s) {
