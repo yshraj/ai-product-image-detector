@@ -10,8 +10,6 @@ npx playwright install --with-deps chromium   # first time only
 npm run validate       # manifest + syntax (fast sanity check)
 npm run test:unit      # Node unit tests
 npm test               # Playwright E2E specs (offline mocks)
-npm run test:compare-real  # Live marketplace compare suite (network)
-npm run test:compare-regression  # Attribute-matching regression on 5 live pages (network)
 npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 
@@ -20,8 +18,7 @@ npm run test:headed    # E2E with visible browser (HEADLESS=0)
 ```
 test/e2e/
 ├── fixtures/
-│   ├── extension.fixture.cjs       # Default — offline mocks, storage reset per test
-│   └── extension-real.fixture.cjs  # Live network — no marketplace mocks (compare-real)
+│   └── extension.fixture.cjs       # Offline mocks, storage reset per test
 ├── helpers/
 │   ├── constants.cjs           # Paths, manifest, defaults
 │   ├── extension-launcher.cjs  # launchPersistentContext + --load-extension
@@ -34,30 +31,8 @@ test/e2e/
 │   ├── PopupPage.cjs
 │   ├── OptionsPage.cjs
 │   └── ContentPage.cjs
-└── *.spec.cjs                  # Test suites (incl. regression.spec.cjs, compare-real-products)
+└── *.spec.cjs                  # Test suites (incl. regression.spec.cjs)
 ```
-
-### Live compare tests (`compare-real-products.spec.cjs`)
-
-Exercises **real** Amazon, Myntra, and Flipkart pages (no `mock-routes`). Run separately — not part of CI by default:
-
-```bash
-npx playwright install chromium   # first time
-npm run test:compare-real
-node scripts/generate-compare-real-report.cjs   # markdown tables from evidence JSON
-```
-
-Evidence is written to `test-results/compare-real-products/` (per-brand JSON, screenshots, tier summaries). See [TODO_price_compare.md](../../TODO_price_compare.md) for latest run notes.
-
-### Compare regression (`compare-regression.spec.cjs`)
-
-Exercises five live pages covering exact-match, brand/pattern discrimination, search pages, and listing pages:
-
-```bash
-npm run test:compare-regression
-```
-
-Evidence: `test-results/compare-regression/` (per-case JSON, screenshots, HTML failure tables, `summary.json`). Uses the real extension fixture with `compareUseTabs` and attribute-based scoring debug output.
 
 ## Writing tests
 
@@ -87,11 +62,5 @@ Place PNG fixtures in `test/assets/` (`ai0.png`, `real1.png`, …). The CDN mock
 ## Offline guarantees
 
 - Marketplace pages (Myntra, Flipkart, Meesho, Nykaa, Amazon) are served from `test/e2e/helpers/marketplace-fixture.cjs`
-- SerpApi compare requests are intercepted in `mock-routes.cjs` — no real API quota consumed
+- Hugging Face and image-CDN requests are intercepted in `mock-routes.cjs` — no real API quota consumed and no network egress
 - Context-menu image checks invoke `RMF_runImageCheck` in the service worker (no native OS menu)
-
-## QA screenshots
-
-```bash
-npm run test:qa-screenshots   # writes to qa-screenshots/
-```

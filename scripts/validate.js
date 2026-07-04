@@ -69,7 +69,7 @@ try {
 }
 
 // 5. no stray debugger statements in shipped JS
-const shipDirs = ['background', 'content', 'compare', 'detection', 'options', 'popup', 'utils'];
+const shipDirs = ['background', 'content', 'detection', 'options', 'popup', 'utils'];
 for (const dir of shipDirs) {
   const base = path.join(root, dir);
   if (!fs.existsSync(base)) continue;
