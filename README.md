@@ -112,7 +112,7 @@ This runs `web-ext run --target chromium`, which opens Chrome with the extension
 3. Run validation and tests before pushing:
 
 ```bash
-npm run validate      # manifest, file refs, JS syntax, version sync
+npm run lint          # ESLint + validate (manifest, file refs, JS syntax, version sync)
 npm run test:unit     # Node unit tests
 npm test              # Playwright E2E tests (offline mocks)
 ```
@@ -199,7 +199,8 @@ Design rationale: **[docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md)**
 
 ```bash
 npm run validate        # manifest + file refs + JS syntax + version + no debugger
-npm run lint            # alias for validate
+npm run eslint          # ESLint (flat config)
+npm run lint            # ESLint + validate
 npm run test:unit       # Node unit tests (defaults, cache, marketplace-url, ondevice, SSRF, HF parsing, …)
 npm test                # Playwright E2E tests (offline mocks)
 npm run test:e2e        # same as npm test
@@ -223,7 +224,7 @@ Test architecture details: **[test/e2e/README.md](test/e2e/README.md)**.
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
 
 ```
-npm ci → validate → test:unit → playwright install → test:e2e
+npm ci → eslint → validate → test:unit → playwright install → test:e2e
 ```
 
 ---
@@ -309,7 +310,7 @@ Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
 1. Fork and clone the repo.
 2. `npm ci && npx playwright install --with-deps chromium`
 3. Make changes in vanilla JS — match existing patterns (UMD modules, `RMF_` prefixes).
-4. `npm run validate && npm run test:unit && npm test` must pass.
+4. `npm run lint && npm run test:unit && npm test` must pass.
 5. Load unpacked at `chrome://extensions` and smoke-test on a marketplace page.
 6. Open a pull request against `main`.
 
