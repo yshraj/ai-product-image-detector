@@ -7,7 +7,7 @@
     app: {
       name: 'TrueKart',
       shortName: 'TrueKart',
-      tagline: 'Real photos. Shop smarter in India.',
+      tagline: 'Spot AI & fake product photos before you buy.',
     },
 
     // toolbar action badge
@@ -68,7 +68,7 @@
     },
 
     // bottom navigation
-    nav: { scan: 'Scan', compare: 'Similar products', settings: 'Settings' },
+    nav: { scan: 'Scan', settings: 'Settings' },
 
     // scan breakdown
     scan: {
@@ -79,10 +79,9 @@
       normal: 'Normal',
       none: 'No products scanned yet — open a category page and scroll.',
       paused: 'Scanning is paused — turn it on to analyze images.',
-      unsupported: 'Open a product or category page on Myntra, Flipkart, Meesho or Nykaa.',
+      unsupported: 'Open a product or category page on AliExpress, Temu, Shein, Amazon, Myntra, Flipkart, Meesho or Nykaa.',
       noActiveTab: 'No active tab — switch to a supported marketplace page.',
       starting: 'Scanner starting… If this persists, reload the page.',
-      amazonLimited: 'Amazon has limited support — use Myntra, Flipkart, Meesho or Nykaa for full tools.',
       confidence: (n) => `Flagging at ${n}% confidence or higher`,
       whyFlagged: 'Tap any flagged badge on the page for Why flagged?',
       engine: 'AI scanner',
@@ -96,49 +95,6 @@
       scanningAll: 'Scanning page…',
     },
 
-    // compare tab
-    compare: {
-      heading: 'Similar products',
-      note: 'We search other marketplaces automatically and score how closely each result matches.',
-      noProduct: 'Open a product page to find similar items elsewhere.',
-      on: (site) => `Search on ${site}`,
-      findSimilar: 'Find similar products',
-      searching: 'Searching marketplaces…',
-      searchingSite: (site) => `Searching ${site}…`,
-      sameProduct: 'Same product',
-      similarProduct: 'Similar product',
-      possibleMatch: 'Possible match',
-      matchScore: (n) => `${n}% match`,
-      breakdownBrand: 'Brand',
-      breakdownColor: 'Color',
-      breakdownPattern: 'Pattern',
-      breakdownFit: 'Fit',
-      breakdownCategory: 'Category',
-      breakdownImage: 'Image',
-      breakdownFinal: 'Final',
-      breakdownOk: '✔',
-      breakdownMiss: '✖',
-      breakdownUnknown: '—',
-      noMatches: 'No close matches found — try the manual search links below.',
-      weakMatches: 'Found products on other sites but none matched closely enough — try manual search or refresh.',
-      searchFailed: 'Search failed — use the manual links below or reload the extension.',
-      sitesFailed: (sites) => `Could not reach ${sites}`,
-      partialResults: (sites) => `Some sites unavailable (${sites})`,
-      cached: 'Showing cached results',
-      manualSearch: 'Search manually on each site',
-      viewOn: (site) => `View on ${site}`,
-      emptyHint: 'Open a product page on Flipkart, Myntra, Meesho or Nykaa, then search for the same item elsewhere.',
-      listingPage: 'This looks like a category page — open a specific product to find similar items.',
-      noSitesSelected: 'Select at least one marketplace to search.',
-      serpFallback: 'SerpApi unavailable — searched marketplaces directly.',
-      searchTimeout: 'Search timed out — try fewer sites or use the manual links below.',
-      filterSites: 'Sites to search',
-      sortBy: 'Sort results',
-      cachedCount: (n) => `${n} cached comparison${n === 1 ? '' : 's'}`,
-      refresh: 'Refresh',
-      staleResults: 'Product changed — rescanning…',
-    },
-
     // "support the developer" footer (persistent, bottom of popup)
     support: {
       title: 'Buy me a coffee',
@@ -148,8 +104,6 @@
 
     settings: {
       aiDetection: 'AI detection',
-      compareSites: 'Similar products marketplaces',
-      compareSitesHint: 'Choose which sites appear in Similar products.',
       more: 'More',
     },
 

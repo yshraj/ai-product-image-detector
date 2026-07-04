@@ -7,11 +7,27 @@
   }
 }(typeof self !== 'undefined' ? self : this, function () {
   const MARKETPLACE_TAB_URLS = [
+    'https://www.aliexpress.com/*',
+    'https://www.aliexpress.us/*',
+    'https://www.temu.com/*',
+    'https://www.shein.com/*',
+    'https://www.amazon.com/*',
+    'https://www.amazon.co.uk/*',
+    'https://www.amazon.de/*',
+    'https://www.amazon.in/*',
+    'https://www.amazon.ca/*',
+    'https://www.amazon.com.au/*',
+    'https://www.amazon.fr/*',
+    'https://www.amazon.it/*',
+    'https://www.amazon.es/*',
+    'https://www.amazon.co.jp/*',
     'https://www.myntra.com/*',
     'https://www.flipkart.com/*',
     'https://www.meesho.com/*',
     'https://www.nykaa.com/*',
   ];
+
+  const isAmazonHost = (host) => /(^|\.)amazon\.[a-z.]+$/.test(host);
 
   /**
    * @param {string|null|undefined} url
@@ -22,6 +38,10 @@
     try {
       const u = new URL(url);
       const host = u.hostname.replace(/^www\./, '');
+      if (isAmazonHost(host)) return /\/(dp|gp\/product)\//.test(u.pathname);
+      if (host.includes('aliexpress.')) return /\/item\//.test(u.pathname);
+      if (host.includes('temu.com')) return /-g-\d|goods/.test(u.pathname);
+      if (host.includes('shein.')) return /-p-\d+/.test(u.pathname) || /\/product\//.test(u.pathname);
       if (host === 'flipkart.com') return /\/p\//.test(u.pathname);
       if (host === 'myntra.com') return /\/buy$/.test(u.pathname) || /\d{6,}/.test(u.pathname);
       if (host === 'meesho.com') return /\/product\//.test(u.pathname);
@@ -30,48 +50,15 @@
     return false;
   }
 
-  const COMPARE_LINK_HOSTS = new Set([
-    'www.amazon.in', 'amazon.in',
-    'www.flipkart.com', 'flipkart.com',
-    'www.myntra.com', 'myntra.com',
-    'www.meesho.com', 'meesho.com',
-    'www.nykaa.com', 'nykaa.com',
-  ]);
-
-  const COMPARE_IMAGE_HOST_SUFFIXES = [
-    '.myntassets.com',
-    '.flixcart.com',
-    'images.meesho.com',
-    '.nykaa.com',
-    '.media-amazon.com',
-    '.ssl-images-amazon.com',
+  const SUPPORTED_HOSTS = [
+    'aliexpress.com', 'aliexpress.us',
+    'temu.com', 'shein.com',
+    'myntra.com', 'flipkart.com', 'meesho.com', 'nykaa.com',
   ];
 
   /**
-   * Allow only https URLs on known marketplace/CDN hosts (compare result links/images).
-   * @param {string|null|undefined} url
-   * @param {{ images?: boolean }} [opts]
-   * @returns {boolean}
-   */
-  function isSafeCompareUrl(url, opts = {}) {
-    if (!url) return false;
-    try {
-      const u = new URL(url);
-      if (u.protocol !== 'https:') return false;
-      const h = u.hostname.toLowerCase();
-      if (COMPARE_LINK_HOSTS.has(h)) return true;
-      if (opts.images) {
-        return COMPARE_IMAGE_HOST_SUFFIXES.some((suf) => h === suf.replace(/^\./, '') || h.endsWith(suf));
-      }
-      return false;
-    } catch { /* invalid URL */ }
-    return false;
-  }
-
-  const SUPPORTED_HOSTS = ['myntra.com', 'flipkart.com', 'meesho.com', 'nykaa.com'];
-
-  /**
    * True when the URL is on a supported marketplace host (listing or product).
+   * Amazon is matched across all regional TLDs (amazon.com, amazon.co.uk, …).
    * @param {string|null|undefined} url
    * @returns {boolean}
    */
@@ -79,6 +66,7 @@
     if (!url) return false;
     try {
       const host = new URL(url).hostname.replace(/^www\./, '');
+      if (isAmazonHost(host)) return true;
       return SUPPORTED_HOSTS.some((h) => host === h || host.endsWith('.' + h));
     } catch { /* invalid URL */ }
     return false;
@@ -86,7 +74,6 @@
 
   return {
     isMarketplaceProductUrl,
-    isSafeCompareUrl,
     isSupportedMarketplaceUrl,
     MARKETPLACE_TAB_URLS,
   };

@@ -20,10 +20,10 @@
       </span>
       <div class="brand-text">
         <div class="brand-name">True<span class="brand-accent">Kart</span></div>
-        <div class="brand-sub">Real photos. Shop smarter in India.</div>
+        <div class="brand-sub">Spot AI &amp; fake product photos before you buy.</div>
       </div>
     </div>
-    <span class="ver" id="version">v1.7.0</span>
+    <span class="ver" id="version">v1.8.0</span>
   </header>
 
   <main id="main">
@@ -37,6 +37,40 @@
       <p class="muted" id="engine-sub">—</p>
       <p class="hint">Connect or switch your AI detection engine (Hugging Face / Preview) from the
         toolbar popup — click the extension icon next to the address bar.</p>
+    </section>
+
+    <!-- On-device model (local ONNX) -->
+    <section class="card" aria-labelledby="ondevice-h" id="ondevice-card" hidden>
+      <div class="card-head">
+        <h2 id="ondevice-h">On-device model</h2>
+        <span class="chip" id="ondevice-chip">—</span>
+      </div>
+      <p class="muted">Run AI-photo detection fully on your device — no Hugging Face token and no
+        image ever leaves your computer. Downloads the model once (a few hundred MB) and caches it
+        locally. Predictions match the Hugging Face reference model.</p>
+
+      <div class="row col">
+        <div class="row-text">
+          <label class="row-title" for="ondevice-url">Model URL</label>
+          <p class="muted">HTTPS URL of the hosted ONNX weights (must support range requests). See
+            <a href="https://github.com/yshraj/ai-product-image-detector/blob/main/docs/ONDEVICE.md" target="_blank" rel="noopener">docs/ONDEVICE.md</a>.</p>
+        </div>
+        <input type="url" id="ondevice-url" placeholder="https://…/model.onnx" spellcheck="false" />
+      </div>
+
+      <div class="ondevice-progress" id="ondevice-progress" hidden>
+        <div class="scan-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="ondevice-progress-label" id="ondevice-progress-track">
+          <div class="scan-progress-fill" id="ondevice-progress-fill"></div>
+        </div>
+        <span id="ondevice-progress-label" class="muted">Idle</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="ghost" id="ondevice-download" type="button">Download model</button>
+        <button class="ghost" id="ondevice-cancel" type="button" hidden>Cancel</button>
+        <button class="ghost danger" id="ondevice-delete" type="button" hidden>Delete cached model</button>
+      </div>
+      <p class="ondevice-feedback" id="ondevice-feedback" role="alert" hidden></p>
     </section>
 
     <!-- Preferences (autosave) -->
@@ -99,6 +133,10 @@
           <p class="muted">Turn detection on or off per site.</p>
         </div>
         <div class="checks" id="site-checks">
+          <label class="check"><input type="checkbox" data-site="aliexpress" /> <span>AliExpress</span></label>
+          <label class="check"><input type="checkbox" data-site="temu" /> <span>Temu</span></label>
+          <label class="check"><input type="checkbox" data-site="shein" /> <span>Shein</span></label>
+          <label class="check"><input type="checkbox" data-site="amazon" /> <span>Amazon</span></label>
           <label class="check"><input type="checkbox" data-site="myntra" /> <span>Myntra</span></label>
           <label class="check"><input type="checkbox" data-site="flipkart" /> <span>Flipkart</span></label>
           <label class="check"><input type="checkbox" data-site="meesho" /> <span>Meesho</span></label>
@@ -144,8 +182,8 @@
     <!-- About & legal -->
     <section class="card" aria-labelledby="about-h">
       <div class="card-head"><h2 id="about-h">About &amp; help</h2></div>
-      <p class="muted">TrueKart <span id="about-ver">v1.7.0</span> — compare prices,
-        copy product details, and spot AI-generated photos on Myntra, Flipkart, Meesho and Nykaa.</p>
+      <p class="muted">TrueKart <span id="about-ver">v1.8.0</span> — spot AI-generated and
+        fake product photos on AliExpress, Temu, Shein, Amazon, and other shopping sites before you buy.</p>
 
       <div class="link-row">
         <a class="linkout" id="help-link" href="https://github.com/yshraj/ai-product-image-detector#troubleshooting" target="_blank" rel="noopener">Help &amp; FAQ</a>

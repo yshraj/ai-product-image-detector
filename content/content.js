@@ -533,8 +533,6 @@
         session.ai++;
         if (result.confidence >= AI_THRESHOLD) session.aiHigh++; else session.aiLikely++;
         logFlag(imgUrl, result);
-        recordSellerStats(card, result);
-        recordPriceTag(card, imgUrl);
       }
       updateSessionCounts();
       reportBadge();
@@ -583,31 +581,6 @@
     return lines.slice(0, 2).join(' ').slice(0, 160);
   }
 
-  function extractBrand(card) {
-    const name = extractName(card) || '';
-    const first = name.split(/\s+/)[0];
-    return first && first.length > 2 ? first : '';
-  }
-
-  async function recordSellerStats(card, result) {
-    const seller = extractBrand(card);
-    if (!seller) return;
-    const Trust = window.RMF_TrustStorage;
-    if (!Trust?.recordSeller) return;
-    const verdict = result.confidence >= AI_THRESHOLD ? 'high' : 'med';
-    try { await Trust.recordSeller(seller, verdict); } catch { /* ignore */ }
-  }
-
-  async function recordPriceTag(card, imgUrl) {
-    const priceText = extractPrice(card);
-    if (!priceText) return;
-    const link = card.querySelector('a[href]');
-    const url = link?.href || imgUrl;
-    const Trust = window.RMF_TrustStorage;
-    if (!Trust?.recordPrice) return;
-    try { await Trust.recordPrice(url, priceText); } catch { /* ignore */ }
-  }
-
   function engineOf(r) {
     if (r.source === 'huggingface') return 'huggingface';
     if (r.preview || r.source === 'heuristic') return 'preview';
@@ -643,123 +616,6 @@
       aiFlagged,
       products,
     };
-  }
-
-  // Best-effort "current product" for the Compare/Tools tabs. Uses Open Graph /
-  // standard meta + heuristics so it works on product pages of any site without
-  // fragile per-site selectors; fields degrade to '' when unavailable.
-  function walkJsonLd(fn) {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent);
-        const items = Array.isArray(data) ? data : [data];
-        for (const item of items) {
-          const found = fn(item);
-          if (found) return found;
-          if (item['@graph']) {
-            for (const g of item['@graph']) {
-              const f2 = fn(g);
-              if (f2) return f2;
-            }
-          }
-        }
-      } catch { /* skip malformed blocks */ }
-    }
-    return '';
-  }
-
-  function cleanTitle(raw) {
-    if (!raw) return '';
-    return raw
-      .replace(/\s*[-–—|]\s*Buy\b[^|]*$/i, '')
-      .replace(/\s*[-–—|]\s*Online at Best Prices[^|]*$/i, '')
-      .replace(/\s*\|\s*Flipkart\.com.*$/i, '')
-      .replace(/\s*\|\s*Myntra.*$/i, '')
-      .replace(/\s*\|\s*Nykaa.*$/i, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function getProduct() {
-    const isProductPage = (window.RMF_MarketplaceUrl?.isMarketplaceProductUrl || (() => false))(location.href);
-    if (!isProductPage) {
-      return { site: SITE.name, title: '', isProductPage: false, url: location.href };
-    }
-
-    const meta = (sel) => document.querySelector(sel)?.getAttribute('content')?.trim() || '';
-    const jsonTitle = walkJsonLd((item) => {
-      if (item['@type'] === 'Product' && item.name) return String(item.name);
-      return '';
-    });
-    const ogTitle = meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]');
-    const h1 = document.querySelector('h1')?.textContent || '';
-    const title = cleanTitle(jsonTitle || ogTitle || h1 || document.title || '').slice(0, 200);
-
-    let image = meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]');
-    if (!image) {
-      let best = '', area = 0;
-      document.querySelectorAll('img').forEach((im) => {
-        const src = im.currentSrc || im.src;
-        if (!src || src.startsWith('data:')) return;
-        const a = (im.naturalWidth || im.width || 0) * (im.naturalHeight || im.height || 0);
-        if (a > area) { area = a; best = src; }
-      });
-      image = best;
-    }
-
-    const brand = meta('meta[property="product:brand"]') || meta('meta[property="og:brand"]') ||
-      walkJsonLd((item) => (item['@type'] === 'Product' && item.brand?.name) || item.brand?.name || '');
-
-    const priceMeta = meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]');
-    let price = priceMeta ? ('₹' + priceMeta).replace('₹₹', '₹') : '';
-    if (!price) { const m = (document.body.innerText || '').match(/₹\s?[\d,]+(?:\.\d+)?/); if (m) price = m[0].replace(/\s/g, ''); }
-
-    let rating = meta('meta[property="og:rating"]') || walkJsonLd((item) => {
-      const ar = item.aggregateRating || (item['@type'] === 'AggregateRating' ? item : null);
-      if (ar?.ratingValue) {
-        const val = String(ar.ratingValue);
-        return ar.bestRating ? `${val}/${ar.bestRating}` : val;
-      }
-      return '';
-    });
-    if (!rating) {
-      const m = (document.body.innerText || '').match(/(\d(?:\.\d)?)\s*(?:★|out of 5|\/\s*5)/i);
-      if (m) rating = m[1] + '/5';
-    }
-
-    let seller = meta('meta[property="product:retailer"]') || walkJsonLd((item) => {
-      const offers = item.offers || (item['@type'] === 'Offer' ? item : null);
-      const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
-      for (const o of list) {
-        if (o.seller?.name) return o.seller.name;
-      }
-      return '';
-    });
-    if (!seller) {
-      const m = (document.body.innerText || '').match(/(?:sold by|seller[:\s]+)([A-Za-z0-9][A-Za-z0-9 &.'-]{1,40})/i);
-      if (m) seller = m[1].trim();
-    }
-
-    const extractColor = window.RMF_ProductQuery?.extractColorFromProduct;
-    let color = extractColor ? extractColor({ title, brand }) : '';
-    if (!color) {
-      const colourRow = [...document.querySelectorAll('li, tr, div, p, span')].find((el) => {
-        const t = (el.textContent || '').trim();
-        return /^(colour|color)\s*[:\-]/i.test(t) && t.length < 80;
-      });
-      if (colourRow) {
-        const m = colourRow.textContent.match(/(?:colour|color)\s*[:\-]\s*([a-z\s]+)/i);
-        if (m) color = m[1].trim().toLowerCase().split(/[,/|]/)[0].trim();
-      }
-    }
-    const fingerprintFn = window.RMF_ProductFingerprint?.productFingerprint;
-    const product = {
-      site: SITE.name, title, brand, price, rating, seller, image, color,
-      url: location.href, isProductPage: true,
-    };
-    if (fingerprintFn) product.fingerprint = fingerprintFn(product);
-    return product;
   }
 
   function clearStalePending() {
@@ -915,9 +771,6 @@
       case 'GET_PAGE_REPORT':
         sendResponse(buildReport());
         return true;
-      case 'GET_PRODUCT':
-        sendResponse(getProduct());
-        return true;
       default:
         break;
     }
@@ -938,6 +791,35 @@
     }
     if (changes.notifyOnAI) notifyOnAI = changes.notifyOnAI.newValue === true;
   });
+
+  // --- SPA navigation ------------------------------------------------------
+  // AliExpress / Temu / Amazon / Flipkart / Myntra are single-page apps: they
+  // swap the product grid via history.pushState/replaceState without a full page
+  // load, so `document_idle` fires only once. Watch for real path changes and
+  // re-run a clean scan so badges/counters reflect the new page instead of
+  // lingering from the previous one. Debounced; ignores query-only changes.
+  let lastPath = location.pathname;
+  let navTimer = null;
+  function onLocationChanged() {
+    if (location.pathname === lastPath) return;
+    lastPath = location.pathname;
+    if (navTimer) clearTimeout(navTimer);
+    navTimer = setTimeout(() => { if (isActive()) rerender(); }, 400);
+  }
+  ['pushState', 'replaceState'].forEach((fn) => {
+    const orig = history[fn];
+    if (typeof orig === 'function' && !orig.__rmfPatched) {
+      const patched = function (...args) {
+        const ret = orig.apply(this, args);
+        try { window.dispatchEvent(new Event('rmf:locationchange')); } catch { /* noop */ }
+        return ret;
+      };
+      patched.__rmfPatched = true;
+      history[fn] = patched;
+    }
+  });
+  window.addEventListener('popstate', onLocationChanged);
+  window.addEventListener('rmf:locationchange', onLocationChanged);
 
   // --- init ----------------------------------------------------------------
   document.addEventListener('visibilitychange', () => {

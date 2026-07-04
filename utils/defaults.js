@@ -3,19 +3,15 @@
  * @typedef {Object} SyncSettings
  * @property {boolean} enabled
  * @property {'all'|'badge'|'hide'} mode
- * @property {'heuristic'|'huggingface'} provider
+ * @property {'heuristic'|'huggingface'|'ondevice'} provider
  * @property {string} hfToken
  * @property {string} hfModel
  * @property {boolean} hfVerified
  * @property {string} hfUser
  * @property {number} minConfidence
  * @property {string[]} disabledSites
- * @property {string[]} compareSites
- * @property {string} serpApiKey
  * @property {boolean} notifyOnAI
- * @property {boolean} compareUseTabs
- * @property {boolean} compareUseClip
- * @property {boolean} compareDebugLog
+ * @property {string} ondeviceModelUrl
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -24,8 +20,6 @@
     root.RMF_Defaults = factory();
   }
 }(typeof self !== 'undefined' ? self : this, function () {
-  const ALL_COMPARE_SITES = ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'];
-
   /** @type {SyncSettings} */
   const SYNC_DEFAULTS = {
     enabled: true,
@@ -43,12 +37,10 @@
     hfUser: '',
     minConfidence: 70,
     disabledSites: [],
-    compareSites: [...ALL_COMPARE_SITES],
-    serpApiKey: '',
     notifyOnAI: false,
-    compareUseTabs: false,
-    compareUseClip: true,
-    compareDebugLog: false,
+    // On-device (local ONNX) detector. URL of the hosted ONNX weights; empty
+    // until the user (or a full build) configures it. See docs/ONDEVICE.md.
+    ondeviceModelUrl: '',
   };
 
   const CONTENT_PREF_DEFAULTS = {
@@ -62,7 +54,7 @@
   const CACHE_PREFIX = 'rmf_cache_';
   const HISTORY_KEY = 'rmf_history';
   const AI_THRESHOLD = 90;
-  const CONTENT_SITES = ['myntra', 'flipkart', 'meesho', 'nykaa'];
+  const CONTENT_SITES = ['aliexpress', 'temu', 'shein', 'amazon', 'myntra', 'flipkart', 'meesho', 'nykaa'];
 
   // "Support the developer" target. Provider-agnostic on purpose: swapping to
   // GitHub Sponsors / Ko-fi / Stripe / Lemon Squeezy / Polar / Patreon or a
@@ -73,7 +65,6 @@
   };
 
   return {
-    ALL_COMPARE_SITES,
     SYNC_DEFAULTS,
     CONTENT_PREF_DEFAULTS,
     CACHE_PREFIX,

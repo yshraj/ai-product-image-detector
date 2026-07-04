@@ -36,10 +36,6 @@ const ACTIVE_TAB_ONLY = new Set([
   'SET_ENABLED', 'SET_MODE', 'SET_MIN_CONFIDENCE',
 ]);
 
-function isAmazonUrl(url) {
-  try { return new URL(url).hostname.includes('amazon.'); } catch { return false; }
-}
-
 function isSupportedMarketplaceUrl(url) {
   return window.RMF_MarketplaceUrl?.isSupportedMarketplaceUrl?.(url) === true;
 }
@@ -486,7 +482,6 @@ async function updateScan() {
     hint.hidden = false;
     hint.classList.remove('is-starting');
     if (!active?.id) hint.textContent = s ? s.scan.noActiveTab : '';
-    else if (isAmazonUrl(active.url)) hint.textContent = s ? s.scan.amazonLimited : '';
     else if (isSupportedMarketplaceUrl(active.url)) {
       hint.textContent = s ? s.scan.starting : '';
       hint.classList.add('is-starting');
