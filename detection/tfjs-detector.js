@@ -1,31 +1,17 @@
-// detection/tfjs-detector.js  — Layer 2 (on-device)
-// Two modes:
-//   (a) If a global `tf` (TensorFlow.js) + a loaded model are present, run real
-//       on-device inference (Phase 2 — wire up window.RMF_LOAD_TFJS_MODEL).
-//   (b) Otherwise a zero-dependency canvas heuristic. It loads pixels from the
-//       data URL the service worker fetched (no CORS taint) and combines three
-//       cues into a 0-100 AI-likelihood:
-//         - noise residual  : real camera photos carry sensor noise even in flat
-//                              regions; AI renders are unnaturally clean. (primary)
-//         - smoothness      : AI images over-smooth edges/detail.
-//         - background flatness: studio-flat backgrounds lean synthetic (weak).
+// detection/tfjs-detector.js  — Layer 2 (on-device preview heuristic)
+// A zero-dependency canvas heuristic. It loads pixels from the data URL the
+// service worker fetched (no CORS taint) and combines three cues into a 0-100
+// AI-likelihood:
+//   - noise residual   : real camera photos carry sensor noise even in flat
+//                        regions; AI renders are unnaturally clean. (primary)
+//   - smoothness       : AI images over-smooth edges/detail.
+//   - background flatness: studio-flat backgrounds lean synthetic (weak).
 //
 // This is a HEURISTIC, not a trained detector — it varies per image and orders
 // clean/synthetic vs noisy/real correctly, but it WILL misclassify. For reliable
-// results wire a model (a) or use the AI-or-Not API (Layer 3).
+// results the user connects Hugging Face (Layer 3) or the opt-in on-device ONNX
+// engine; this layer is the no-configuration "preview" fallback only.
 (function () {
-  let _model = null;
-  let _modelTried = false;
-
-  async function tryLoadModel() {
-    if (_modelTried) return _model;
-    _modelTried = true;
-    if (typeof window.RMF_LOAD_TFJS_MODEL === 'function' && window.tf) {
-      try { _model = await window.RMF_LOAD_TFJS_MODEL(window.tf); } catch { _model = null; }
-    }
-    return _model;
-  }
-
   function loadImageEl(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -104,20 +90,6 @@
   async function RMF_TfjsDetector(imageUrl, dataUrl) {
     const src = dataUrl || imageUrl;
     try {
-      const model = await tryLoadModel();
-      if (model && window.tf) {
-        const tf = window.tf;
-        const imgEl = await loadImageEl(src);
-        const input = tf.tidy(() =>
-          tf.browser.fromPixels(imgEl).resizeBilinear([224, 224]).toFloat().div(127.5).sub(1).expandDims(0)
-        );
-        const out = model.predict(input);
-        const arr = await out.data();
-        tf.dispose([input, out]);
-        const confidence = Math.round((arr[arr.length - 1] || 0) * 100);
-        return { isAI: confidence >= 60, confidence, source: 'tfjs' };
-      }
-
       const imgEl = await loadImageEl(src);
       const confidence = heuristicScore(imgEl);
       return { isAI: confidence >= 60, confidence, source: 'heuristic' };
