@@ -6,6 +6,8 @@
  * @property {'heuristic'|'huggingface'|'ondevice'} provider
  * @property {string} hfToken
  * @property {string} hfModel
+ * @property {string} hfModel2 - optional 2nd model for the max-score ensemble
+ * @property {boolean} hfEnsemble - run both models and take the higher AI score
  * @property {boolean} hfVerified
  * @property {string} hfUser
  * @property {number} minConfidence
