@@ -25,11 +25,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateStats();
   renderHistory();
   wireEvents();
+  initOndevice();
 });
 
 // ---- engine status (read-only) -------------------------------------------
 function renderEngine() {
   const chip = $('engine-chip');
+  if (state.provider === 'ondevice') {
+    chip.textContent = 'On-device'; chip.dataset.state = 'good';
+    $('engine-sub').textContent = 'Local ONNX model — no token, images never leave your device';
+    return;
+  }
   if (state.provider === 'huggingface' && state.hfToken && state.hfVerified) {
     chip.textContent = 'Connected'; chip.dataset.state = 'good';
     $('engine-sub').textContent = `Hugging Face · ${state.hfUser ? state.hfUser + ' · ' : ''}${state.hfModel || DEFAULTS.hfModel}`;
@@ -113,6 +119,101 @@ function wireEvents() {
   $('clear-cache').addEventListener('click', clearCache);
   $('reset-all').addEventListener('click', resetAll);
   $('clear-history').addEventListener('click', clearHistory);
+}
+
+// ---- on-device model ------------------------------------------------------
+function sendMsg(payload) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(payload, (resp) => {
+        if (chrome.runtime.lastError) resolve(null); else resolve(resp);
+      });
+    } catch { resolve(null); }
+  });
+}
+
+function fmtBytes(n) {
+  if (!n) return '0 MB';
+  return `${(n / (1024 * 1024)).toFixed(0)} MB`;
+}
+
+function renderOndeviceStatus(status) {
+  if (!status) return;
+  const chip = $('ondevice-chip');
+  const prog = $('ondevice-progress');
+  const fill = $('ondevice-progress-fill');
+  const track = $('ondevice-progress-track');
+  const label = $('ondevice-progress-label');
+  const dl = $('ondevice-download');
+  const cancel = $('ondevice-cancel');
+  const del = $('ondevice-delete');
+  const fb = $('ondevice-feedback');
+  const phase = status.phase || 'idle';
+
+  const chipText = { idle: 'Not downloaded', downloading: 'Downloading…', ready: 'Ready', error: 'Error', runtimeMissing: 'Runtime missing', modelMissing: 'Not downloaded' };
+  chip.textContent = chipText[phase] || phase;
+  if (phase === 'ready') chip.removeAttribute('data-state'); // base chip = green
+  else chip.dataset.state = phase === 'error' ? 'error' : 'warn';
+
+  const downloading = phase === 'downloading';
+  prog.hidden = !downloading && phase !== 'ready';
+  if (downloading) {
+    const pct = Number(status.pct) || 0;
+    fill.style.width = `${pct}%`;
+    track.setAttribute('aria-valuenow', String(pct));
+    label.textContent = `${pct}% · ${fmtBytes(status.received)} / ${status.total ? fmtBytes(status.total) : '—'}`;
+  } else if (phase === 'ready') {
+    fill.style.width = '100%';
+    track.setAttribute('aria-valuenow', '100');
+    label.textContent = 'Model ready — detection runs on your device.';
+  }
+
+  dl.hidden = downloading || phase === 'ready';
+  cancel.hidden = !downloading;
+  del.hidden = phase !== 'ready';
+
+  if (phase === 'error' && status.error) {
+    fb.hidden = false; fb.textContent = status.error;
+  } else {
+    fb.hidden = true;
+  }
+}
+
+async function initOndevice() {
+  const card = $('ondevice-card');
+  const resp = await sendMsg({ type: 'RMF_ONDEVICE_STATUS' });
+  if (!resp || !resp.available) return; // engine not usable in this build — keep hidden
+  card.hidden = false;
+
+  const urlInput = $('ondevice-url');
+  urlInput.value = state.ondeviceModelUrl || '';
+  renderOndeviceStatus(resp.status);
+
+  urlInput.addEventListener('change', () => save({ ondeviceModelUrl: urlInput.value.trim() }));
+  $('ondevice-download').addEventListener('click', async () => {
+    if (!urlInput.value.trim() && !DEFAULTS.ondeviceModelUrl) {
+      const fb = $('ondevice-feedback');
+      fb.hidden = false; fb.textContent = 'Set a model URL first.';
+      return;
+    }
+    await save({ ondeviceModelUrl: urlInput.value.trim() });
+    // Make on-device the active engine so verdicts use it once the model is ready.
+    await save({ provider: 'ondevice' });
+    renderEngine();
+    await sendMsg({ type: 'RMF_ONDEVICE_START' });
+  });
+  $('ondevice-cancel').addEventListener('click', () => sendMsg({ type: 'RMF_ONDEVICE_CANCEL' }));
+  $('ondevice-delete').addEventListener('click', async () => {
+    if (!confirm('Delete the cached on-device model? You can re-download it later.')) return;
+    await sendMsg({ type: 'RMF_ONDEVICE_DELETE' });
+    // Fall back to the preview heuristic if on-device was the active engine.
+    if (state.provider === 'ondevice') { await save({ provider: 'heuristic' }); renderEngine(); }
+  });
+
+  // Live progress broadcasts from the service worker.
+  chrome.runtime.onMessage.addListener((m) => {
+    if (m?.type === 'RMF_ONDEVICE_STATUS' && m.status) renderOndeviceStatus(m.status);
+  });
 }
 
 // ---- activity history -----------------------------------------------------

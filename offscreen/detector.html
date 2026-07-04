@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TrueKart On-Device Detector</title>
+</head>
+<body>
+  <!-- Loaded in dependency order. ort.min.js sets the global `ort`; the other
+       scripts attach RMF_OndeviceConfig / RMF_ModelStore. All are bundled in the
+       package (no remote code). If ort.min.js is absent, detector.js reports
+       runtimeMissing and the service worker falls back gracefully. -->
+  <script src="../libs/onnx/ort.min.js"></script>
+  <script src="../utils/ondevice-config.js"></script>
+  <script src="../detection/ondevice/model-store.js"></script>
+  <script src="detector.js"></script>
+</body>
+</html>

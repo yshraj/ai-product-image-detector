@@ -16,14 +16,16 @@ try {
   if (typeof importScripts === 'function') {
     importScripts(
       '../utils/defaults.js',
-      '../utils/price.js',
-      '../utils/storage-local.js',
-      '../utils/trust-storage.js',
+      '../utils/ondevice-config.js',
+      '../detection/ondevice/model-store.js',
+      '../detection/ondevice/download-manager.js',
+      '../detection/ondevice/engine.js',
     );
   }
 } catch (e) {
   console.error('[RMF] worker modules failed to load:', e);
 }
+const Ondevice = (typeof self !== 'undefined' && self.RMF_OndeviceEngine) || null;
 const STRINGS = (typeof self !== 'undefined' && self.RMF_STRINGS) || null;
 
 const RMFDefaults = (typeof self !== 'undefined' && self.RMF_Defaults) || {};
@@ -37,12 +39,8 @@ const DEFAULTS = RMFDefaults.SYNC_DEFAULTS || {
   hfUser: '',
   minConfidence: 70,
   disabledSites: [],
-  compareSites: ['amazon', 'flipkart', 'myntra', 'meesho', 'nykaa'],
-  serpApiKey: '',
   notifyOnAI: false,
-  compareUseTabs: false,
-  compareUseClip: true,
-  compareDebugLog: false,
+  ondeviceModelUrl: '',
 };
 const HISTORY_KEY = RMFDefaults.HISTORY_KEY || 'rmf_history';
 const CACHE_PREFIX = RMFDefaults.CACHE_PREFIX || 'rmf_cache_';
@@ -461,6 +459,11 @@ async function detectFromDataUrl(dataUrl) {
   }
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   try {
+    if (cfg.provider === 'ondevice' && Ondevice) {
+      const out = await Ondevice.detect(dataUrl);
+      if (out.result) { await recordOk('ondevice'); return { result: out.result }; }
+      return { error: 'On-device model not ready — download it in Settings' };
+    }
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
       const models = hfModelsFor(cfg);
       const blob = await (await fetch(dataUrl)).blob();
@@ -482,6 +485,15 @@ async function detectFromDataUrl(dataUrl) {
 async function remoteDetect(url) {
   const cfg = await chrome.storage.sync.get(DEFAULTS);
   try {
+    if (cfg.provider === 'ondevice' && Ondevice) {
+      // On-device is the authoritative path when selected. If the model isn't
+      // downloaded yet (or the runtime isn't bundled) fall back to the preview
+      // heuristic — the popup surfaces download status separately.
+      const dataUrl = await fetchImageAsDataUrl(url);
+      const out = await Ondevice.detect(dataUrl);
+      if (out.result) { await recordOk('ondevice'); return { result: out.result }; }
+      return { noProvider: true };
+    }
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
       const models = hfModelsFor(cfg);
       const r = models.length > 1
@@ -601,18 +613,34 @@ function registerMessageRouter() {
       .catch(() => sendResponse({ ok: true, health: null }));
     return true;
   }
-  if (msg?.type === 'RMF_GET_SELLERS') {
-    const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
-    (Trust ? Trust.getSellerList() : Promise.resolve([]))
-      .then((list) => sendResponse({ ok: true, sellers: list }))
-      .catch(() => sendResponse({ ok: true, sellers: [] }));
+  if (msg?.type === 'RMF_ONDEVICE_STATUS') {
+    // "available" = the on-device engine can actually run in this build: the
+    // engine module is loaded AND the offscreen API is present (which requires
+    // the "offscreen" manifest permission + bundled ONNX Runtime). In the lean
+    // default build it is false, so the UI hides the on-device controls.
+    const available = !!Ondevice && !!(chrome.offscreen && chrome.offscreen.createDocument);
+    (Ondevice ? Ondevice.refreshStatusFromCache() : Promise.resolve({ phase: 'runtimeMissing' }))
+      .then((s) => sendResponse({ ok: true, status: s, available }))
+      .catch(() => sendResponse({ ok: true, status: { phase: 'error' }, available }));
     return true;
   }
-  if (msg?.type === 'RMF_GET_CORRECTIONS') {
-    const Trust = (typeof self !== 'undefined' && self.RMF_TrustStorage) || null;
-    (Trust ? Trust.getCorrections() : Promise.resolve([]))
-      .then((list) => sendResponse({ ok: true, corrections: list }))
-      .catch(() => sendResponse({ ok: true, corrections: [] }));
+  if (msg?.type === 'RMF_ONDEVICE_START') {
+    if (!Ondevice) { sendResponse({ ok: false, error: 'On-device engine unavailable in this build' }); return true; }
+    // Long-running: kick it off and respond immediately; progress is broadcast
+    // via RMF_ONDEVICE_STATUS messages. The pending fetch keeps the worker alive.
+    Ondevice.startDownload().catch(() => {});
+    sendResponse({ ok: true, status: Ondevice.getStatus() });
+    return true;
+  }
+  if (msg?.type === 'RMF_ONDEVICE_CANCEL') {
+    if (Ondevice) Ondevice.cancelDownload();
+    sendResponse({ ok: true });
+    return true;
+  }
+  if (msg?.type === 'RMF_ONDEVICE_DELETE') {
+    (Ondevice ? Ondevice.deleteModel() : Promise.resolve())
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
     return true;
   }
   if (msg?.type === 'RMF_RUN_IMAGE_CHECK' && msg.tabId && msg.url) {
