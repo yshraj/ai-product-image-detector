@@ -242,7 +242,7 @@ async function renderHistory() {
     const ico = document.createElement('span');
     ico.className = 'empty-state-ico';
     ico.setAttribute('aria-hidden', 'true');
-    ico.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    ico.appendChild(window.RMF_UI.svg('<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'));
     const p = document.createElement('p');
     p.textContent = (S && S.history.empty) || 'Nothing flagged yet.';
     empty.append(ico, p);

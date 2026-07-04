@@ -50,5 +50,14 @@
     });
   }
 
-  root.RMF_UI = { toast, rovingGroup };
+  // Build an <svg> element from a STATIC, author-controlled markup string
+  // without using innerHTML. DOMParser never executes scripts, and callers only
+  // ever pass literal icon markup — so this stays XSS-safe while keeping icons
+  // readable and clearing linters that flag any innerHTML assignment.
+  function svg(markup) {
+    const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
+    return document.importNode(doc.documentElement, true);
+  }
+
+  root.RMF_UI = { toast, rovingGroup, svg };
 })(typeof self !== 'undefined' ? self : this);

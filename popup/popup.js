@@ -183,24 +183,29 @@ async function maybeShowOnboarding() {
   const steps = [
     { title: 'Scan products', body: 'Open a shopping page (AliExpress, Temu, Shein, Amazon…) and TrueKart flags product images that look AI-generated.' },
     { title: 'Read the badges', body: 'Red badges = AI generated (90%+). Amber = likely AI. Tap any badge for a breakdown and a reverse image search.' },
-    { title: 'Turn on accurate detection', body: 'The default preview is fast but rough. Connect a <b>free</b> Hugging Face model (no payment) for reliable results — about a minute to set up.', cta: 'connect' },
+    { title: 'Turn on accurate detection', body: 'The default preview is fast but rough. Connect a free Hugging Face model (no payment) for reliable, accurate results — about a minute to set up.', cta: 'connect' },
   ];
   let step = 0;
 
-  const overlay = document.createElement('div');
-  overlay.className = 'onboarding';
-  overlay.innerHTML = `<div class="onboarding-card" role="dialog" aria-modal="true" aria-label="Welcome to TrueKart">
-    <div class="onboarding-steps" aria-hidden="true"></div>
-    <h3 id="onboard-title"></h3>
-    <p id="onboard-body"></p>
-    <div class="onboarding-actions">
-      <button class="onboarding-skip" type="button">Skip</button>
-      <button class="primary" type="button" id="onboard-next">Next</button>
-    </div>
-  </div>`;
+  const el = (tag, props = {}, ...kids) => {
+    const { attrs, ...rest } = props;
+    const node = Object.assign(document.createElement(tag), rest);
+    for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+    node.append(...kids);
+    return node;
+  };
+
+  const dots = el('div', { className: 'onboarding-steps', attrs: { 'aria-hidden': 'true' } });
+  const title = el('h3', { id: 'onboard-title' });
+  const body = el('p', { id: 'onboard-body' });
+  const skipBtn = el('button', { type: 'button', className: 'onboarding-skip', textContent: 'Skip' });
+  const nextBtn = el('button', { type: 'button', className: 'primary', id: 'onboard-next' });
+  const card = el('div',
+    { className: 'onboarding-card', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Welcome to TrueKart' } },
+    dots, title, body, el('div', { className: 'onboarding-actions' }, skipBtn, nextBtn));
+  const overlay = el('div', { className: 'onboarding' }, card);
   document.body.appendChild(overlay);
 
-  const dots = overlay.querySelector('.onboarding-steps');
   steps.forEach((_, i) => {
     const d = document.createElement('span');
     d.className = 'onboarding-dot' + (i === 0 ? ' active' : '');
@@ -225,16 +230,16 @@ async function maybeShowOnboarding() {
   const renderStep = () => {
     const s = steps[step];
     const last = step === steps.length - 1;
-    overlay.querySelector('#onboard-title').textContent = s.title;
-    overlay.querySelector('#onboard-body').innerHTML = s.body;
-    overlay.querySelector('#onboard-next').textContent = last
+    title.textContent = s.title;
+    body.textContent = s.body;
+    nextBtn.textContent = last
       ? (s.cta === 'connect' ? 'Connect a free model' : 'Got it')
       : 'Next';
     dots.querySelectorAll('.onboarding-dot').forEach((d, i) => d.classList.toggle('active', i === step));
   };
 
-  overlay.querySelector('.onboarding-skip').addEventListener('click', finish);
-  overlay.querySelector('#onboard-next').addEventListener('click', () => {
+  skipBtn.addEventListener('click', finish);
+  nextBtn.addEventListener('click', () => {
     if (step >= steps.length - 1) {
       if (steps[step].cta === 'connect') goConnectModel();
       else finish();
@@ -244,7 +249,7 @@ async function maybeShowOnboarding() {
   renderStep();
   // Move focus into the dialog so keyboard/screen-reader users land on the
   // primary action instead of somewhere behind the modal.
-  overlay.querySelector('#onboard-next').focus();
+  nextBtn.focus();
 }
 
 // Fill the Recent-scans list with shimmer placeholders that mirror the real
