@@ -9,10 +9,10 @@ export default {
     'test-results',
     'playwright-report',
     'playwright.config.cjs',
+    'eslint.config.mjs',
     'package.json',
     'package-lock.json',
     'web-ext-config.mjs',
-    'web-ext-config.cjs',
     'research',
     'CHANGELOG.md',
     'LICENSE',
@@ -22,9 +22,7 @@ export default {
     '.agents',
     'logos',
     'CHROMEWEBSTORE.md',
-    'NEXT_PLAN.md',
     'FEATURES.md',
-    'TODO_price_compare.md',
     'skills-lock.json',
     // On-device engine assets: the ONNX Runtime + offscreen detector are only
     // needed for the opt-in on-device model (see docs/ONDEVICE.md). Excluded
