@@ -21,7 +21,6 @@
     "test:e2e:headed": "HEADLESS=0 playwright test --headed",
     "test:headed": "HEADLESS=0 playwright test --headed",
     "test:report": "playwright show-report playwright-report",
-    "test:qa-screenshots": "node scripts/capture-qa-screenshots.cjs",
     "lint": "node scripts/validate.js",
     "lint:firefox": "web-ext lint --source-dir .",
     "start": "web-ext run --target chromium --source-dir .",

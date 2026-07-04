@@ -14,7 +14,6 @@ export default {
     'web-ext-config.mjs',
     'web-ext-config.cjs',
     'research',
-    'qa-screenshots',
     'CHANGELOG.md',
     'LICENSE',
     'README.md',
