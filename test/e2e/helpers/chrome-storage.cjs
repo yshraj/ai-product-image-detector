@@ -66,6 +66,10 @@ async function getSessionStorage(context, keys) {
   return inServiceWorker(context, (k) => chrome.storage.session.get(k), keys);
 }
 
+async function setSessionStorage(context, obj) {
+  return inServiceWorker(context, (o) => new Promise((r) => chrome.storage.session.set(o, r)), obj);
+}
+
 /** Reset sync + local detection artifacts to a known baseline. */
 async function resetExtensionStorage(context, overrides = {}) {
   await resetSyncStorage(context, { ...DEFAULT_SYNC, ...overrides });
@@ -87,5 +91,6 @@ module.exports = {
   clearDetectionCache,
   clearHistory,
   getSessionStorage,
+  setSessionStorage,
   resetExtensionStorage,
 };

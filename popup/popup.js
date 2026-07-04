@@ -645,6 +645,36 @@ function setupSettings() {
     updateScan();
   });
 
+  const retryBtn = $('status-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', async () => {
+      const s = S();
+      if (retryBtn.getAttribute('aria-busy') === 'true') return;
+      retryBtn.setAttribute('aria-busy', 'true');
+      retryBtn.disabled = true;
+      if (s?.status?.retrying) retryBtn.textContent = s.status.retrying;
+      // Drop cached verdicts (incl. the short-lived remote-error backoff entries
+      // the pipeline stores) so the failed images re-attempt immediately, then
+      // rescan the active tab and refresh engine health.
+      try {
+        const keys = await getCacheKeys();
+        if (keys.length) await chrome.storage.local.remove(keys);
+      } catch { /* best-effort */ }
+      await sendToActiveTab({ type: 'RESCAN' });
+      for (let i = 0; i < 25; i++) {
+        await new Promise((r) => setTimeout(r, 400));
+        const stats = await sendToActiveTab({ type: 'GET_STATS' });
+        if (!stats?.pending && (stats?.scanned || 0) > 0) break;
+      }
+      await refreshHealth();
+      renderStatus();
+      await updateScan();
+      retryBtn.disabled = false;
+      retryBtn.setAttribute('aria-busy', 'false');
+      if (s?.status?.retry) retryBtn.textContent = s.status.retry;
+    });
+  }
+
   const notifyToggle = $('notify-on-ai');
   if (notifyToggle) {
     notifyToggle.addEventListener('change', async (e) => {
@@ -774,6 +804,17 @@ function renderStatus() {
   $('status-sub').textContent = sub;
   $('status-sub').title = sub;
   $('status-chip').textContent = chip;
+
+  // Retry is offered only in the error state — a one-tap recovery from HF
+  // cold-starts / rate limits / transient failures, without re-typing anything.
+  const retry = $('status-retry');
+  if (retry) {
+    retry.hidden = stateName !== 'error';
+    if (s?.status) {
+      retry.textContent = s.status.retry;
+      retry.setAttribute('aria-label', s.status.retryAria);
+    }
+  }
 }
 async function refreshHealth() { const r = await send({ type: 'RMF_ENGINE_HEALTH' }); health = (r && r.ok) ? r.health : null; }
 

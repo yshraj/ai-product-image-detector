@@ -45,6 +45,9 @@
       findIdentical: 'Find identical',
       lens: 'Google Lens',
       bing: 'Bing',
+      copyLink: 'Copy link',
+      copied: 'Copied!',
+      copyFailed: 'Copy failed',
       searchElsewhere: 'Search elsewhere',
       amazon: 'Amazon',
       flipkart: 'Flipkart',
@@ -65,6 +68,13 @@
       layerNone: 'Not run',
       close: 'Close',
       markWrong: 'Not AI? Mark wrong',
+    },
+
+    // engine status card (popup)
+    status: {
+      retry: 'Retry',
+      retrying: 'Retrying…',
+      retryAria: 'Retry the last failed scan',
     },
 
     // bottom navigation
