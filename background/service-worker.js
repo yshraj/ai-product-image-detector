@@ -367,6 +367,28 @@ async function fetchImageAsDataUrl(url) {
   return `data:${mime};base64,${bufferToBase64(buf)}`;
 }
 
+// Hugging Face's inference endpoint rejects some image content types — notably
+// image/avif, which AliExpress/Amazon/Temu increasingly serve ("Content type
+// image/avif not supported"). Transcode anything outside a known-good set to
+// JPEG in-worker (createImageBitmap + OffscreenCanvas are available in MV3
+// service workers, and Chrome can decode AVIF/WebP). On any failure we return
+// the original blob so behaviour is never worse than before.
+const HF_SAFE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+async function toHfCompatibleBlob(blob) {
+  if (blob && HF_SAFE_TYPES.has(blob.type)) return blob;
+  if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas !== 'function') return blob;
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    return await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+  } catch {
+    return blob;
+  }
+}
+
 // ---- Hugging Face Inference API -------------------------------------------
 function parseHfResult(data) {
   // Response is [{label,score}, ...] or [[...]]. Labels vary by model:
@@ -435,12 +457,12 @@ async function postHfEnsembleBlob(blob, token, models) {
 
 async function detectHuggingFace(url, token, model) {
   const imgRes = await fetchImage(url);
-  return postHfBlob(await imgRes.blob(), token, model);
+  return postHfBlob(await toHfCompatibleBlob(await imgRes.blob()), token, model);
 }
 
 async function detectHfEnsemble(url, token, models) {
   const imgRes = await fetchImage(url);
-  return postHfEnsembleBlob(await imgRes.blob(), token, models);
+  return postHfEnsembleBlob(await toHfCompatibleBlob(await imgRes.blob()), token, models);
 }
 
 // Which models to run, given config. Returns [primary] or [primary, secondary].
@@ -465,7 +487,7 @@ async function detectFromDataUrl(dataUrl) {
     }
     if (cfg.provider === 'huggingface' && cfg.hfToken) {
       const models = hfModelsFor(cfg);
-      const blob = await (await fetch(dataUrl)).blob();
+      const blob = await toHfCompatibleBlob(await (await fetch(dataUrl)).blob());
       const r = models.length > 1
         ? await postHfEnsembleBlob(blob, cfg.hfToken, models)
         : await postHfBlob(blob, cfg.hfToken, models[0]);
