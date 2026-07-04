@@ -45,9 +45,9 @@ advertising, or tracking of any kind.
 
 ## Permissions
 
-Host access is limited to the supported marketplaces (AliExpress, Temu, Shein,
-Amazon — global and regional — Myntra, Flipkart, Meesho, Nykaa), their image
-CDNs, and the Hugging Face API. The background service worker only fetches public
+Host access is limited to the supported marketplaces (AliExpress, Temu, Shein
+— global and Shein India — Amazon — global and regional — Myntra, Flipkart,
+Meesho, Nykaa), their image CDNs, and the Hugging Face API. The background service worker only fetches public
 `http(s)` image URLs and refuses loopback/private/link-local network addresses
 (an SSRF guard).
 

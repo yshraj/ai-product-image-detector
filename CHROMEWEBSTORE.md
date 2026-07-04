@@ -65,7 +65,7 @@ English
 | `tabs` | permissions | Reads the active tab's URL to know whether it's a supported shopping site, and opens the Settings/support pages. |
 | `notifications` | permissions | Shows a single optional OS notification when AI images are found on a page (off by default). |
 | `contextMenus` | permissions | Adds a right-click menu option to check a specific image on the page. |
-| Marketplace page hosts — `aliexpress.com`, `aliexpress.us`, `temu.com`, `shein.com`, `amazon.com`/`.co.uk`/`.de`/`.in`/`.ca`/`.com.au`/`.fr`/`.it`/`.es`/`.co.jp`, `myntra.com`, `flipkart.com`, `meesho.com`, `nykaa.com` | host_permissions | Scanning product images on these shopping sites is the extension's core function. |
+| Marketplace page hosts — `aliexpress.com`, `aliexpress.us`, `temu.com`, `shein.com`, `sheinindia.in`, `amazon.com`/`.co.uk`/`.de`/`.in`/`.ca`/`.com.au`/`.fr`/`.it`/`.es`/`.co.jp`, `myntra.com`, `flipkart.com`, `meesho.com`, `nykaa.com` | host_permissions | Scanning product images on these shopping sites is the extension's core function. |
 | `router.huggingface.co`, `huggingface.co`, `cdn-lfs.huggingface.co` | host_permissions | Sends the product image (with your own access token) to the Hugging Face model you connect, to classify whether a photo is AI-generated. |
 | Image CDN hosts — `*.alicdn.com`, `*.kwcdn.com`, `*.ltwebstatic.com`, `*.media-amazon.com`, `*.ssl-images-amazon.com`, `assets.myntassets.com`, `*.flixcart.com`, `images.meesho.com`, `*.nykaa.com` | host_permissions | Fetches the product image bytes from each store's image CDN so they can be analyzed. |
 
