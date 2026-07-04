@@ -48,10 +48,11 @@ This document explains how the pieces fit together. For onboarding commands, see
 | `content/sites/*.js` | Per-marketplace DOM selectors (`window.RMF_SITE`) |
 | `content/check-image.js` | Context-menu image check (injected on demand) |
 | `detection/` | Detection pipeline modules (remote, EXIF, heuristic) |
-| `compare/` | *(optional / dev-only)* Cross-marketplace search — not wired in shipped MV3 build |
+| `detection/ondevice/` | Opt-in local ONNX engine (download, cache, engine) — see [ONDEVICE.md](ONDEVICE.md) |
+| `offscreen/detector.*` | Offscreen ONNX Runtime session (opt-in) |
 | `popup/` | Two-tab UI (Scan + Settings) |
 | `options/` | Full settings page (history, import/export, legal) |
-| `utils/` | Shared helpers (defaults, cache, strings, price, URLs) |
+| `utils/` | Shared helpers (defaults, cache, strings, URLs) |
 | `libs/exifr.min.js` | Vendored EXIF parser (lite UMD build) |
 | `icons/` | Extension icons (16 / 48 / 128) |
 | `scripts/validate.js` | Manifest + syntax + version validation |
@@ -75,15 +76,15 @@ Loaded when the user clicks the toolbar icon. Two tabs via bottom navigation:
 Scripts load in order defined by `popup.html`: shared utils → `popup.js`.
 
 Popup talks to:
-- **Content script** — `GET_STATS`, `GET_PRODUCT`, `RESCAN`, `SET_MODE`, etc. (routed to **active tab only** for tab-specific actions).
-- **Service worker** — `RMF_VALIDATE`, `RMF_ENGINE_HEALTH`, `RMF_DETECT_DATA` (context-menu image check).
+- **Content script** — `GET_STATS`, `RESCAN`, `SET_MODE`, `SCAN_PAGE`, etc. (routed to **active tab only** for tab-specific actions).
+- **Service worker** — `RMF_VALIDATE`, `RMF_ENGINE_HEALTH`, `RMF_ONDEVICE_*` (on-device model control).
 
 ### Content script (`content/`)
 
 Injected on four marketplaces at `document_idle`. Load order in `manifest.json`:
 
 1. `libs/exifr.min.js`
-2. Shared utils (`defaults`, `marketplace-url`, `strings`, `logger`, `throttle`, `cache`)
+2. Shared utils (`defaults`, `strings`, `logger`, `throttle`, `cache`)
 3. Detection modules (`exif-check`, `tfjs-detector`, `remote`, `pipeline`)
 4. Site configs (`content/sites/*.js`) — each sets `window.RMF_SITE` if hostname matches
 5. `content/content.js` — exits immediately if `RMF_SITE` is unset
@@ -105,17 +106,18 @@ When a marketplace changes its DOM, update the matching file under `content/site
 
 ### Service worker (`background/service-worker.js`)
 
-Long-lived (with MV3 sleep/wake). Uses `importScripts()` for shared utils (`defaults`, `trust-storage`, etc.).
+Long-lived (with MV3 sleep/wake). Uses `importScripts()` for shared utils
+(`defaults`) and the opt-in on-device engine (`ondevice-config`, `model-store`,
+`download-manager`, `engine`).
 
 Responsibilities:
 - Install/update defaults in `chrome.storage.sync`
 - `RMF_FETCH_IMAGE` — fetch image bytes with SSRF guard
-- `RMF_REMOTE_DETECT` / `RMF_DETECT_DATA` — Hugging Face inference (payload size capped)
+- `RMF_REMOTE_DETECT` / `RMF_DETECT_DATA` — Hugging Face **or** on-device inference (payload size capped)
 - `RMF_VALIDATE` — live HF token check via `whoami`
+- `RMF_ONDEVICE_*` — on-device model download/status/delete (see [ONDEVICE.md](ONDEVICE.md))
 - Toolbar badge, activity history, opt-in notifications
 - Context menu → inject `check-image.js` on any page
-
-> **Note:** The `compare/` subsystem remains in the repo for optional dev/live tests (`RUN_LIVE_COMPARE=1`) but is **not** wired into the shipped service worker or popup.
 
 ### Options page (`options/`)
 
@@ -130,7 +132,6 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 | Type | Purpose |
 |------|---------|
 | `GET_STATS` | Session scan counts for active tab |
-| `GET_PRODUCT` | Extract title, price, brand, image from product page |
 | `GET_PAGE_REPORT` | Exportable scan report for current page |
 | `RESCAN` | Clear badges and re-run detection (uses cache) |
 | `SCAN_PAGE` | Scan the whole page — scrolls to load lazy images and force-scans off-screen cards past the viewport gate |
@@ -151,7 +152,7 @@ Full-page settings UI opened from popup or `chrome://extensions`. Shares the sam
 | `RMF_BADGE` | Update toolbar badge count |
 | `RMF_HISTORY_ADD` | Append flagged item to local history |
 | `RMF_NOTIFY` | Trigger opt-in OS notification |
-| `RMF_GET_SELLERS` / `RMF_GET_CORRECTIONS` | Trust/correction data |
+| `RMF_ONDEVICE_STATUS` / `RMF_ONDEVICE_START` / `RMF_ONDEVICE_CANCEL` / `RMF_ONDEVICE_DELETE` | On-device model control |
 | `RMF_TOGGLE_ENABLED` | Keyboard shortcut handler |
 
 All worker handlers reject messages where `sender.id !== chrome.runtime.id`.
@@ -163,6 +164,14 @@ Prefix `RMF_` is historical (RealModel Filter). New code should keep the prefix 
 ## Detection pipeline
 
 File: `detection/pipeline.js` — entry point `window.RMF_Detect(imageUrl)`.
+
+> The "remote" step is provider-aware: with `provider: 'huggingface'` it calls
+> Hugging Face; with `provider: 'ondevice'` the service worker fetches the image
+> bytes and delegates to the local ONNX engine (`detection/ondevice/*` +
+> `offscreen/detector.js`). If the on-device model/runtime isn't available it
+> returns `noProvider`, so the pipeline falls through to EXIF/heuristic exactly
+> as below. See [ONDEVICE.md](ONDEVICE.md). Marketplace selectors:
+> [SELECTORS.md](SELECTORS.md).
 
 ```
 imageUrl
@@ -194,57 +203,12 @@ Preview/heuristic results include `preview: true` in the result object.
 
 ---
 
-## Compare module
+## On-device engine (opt-in)
 
-Cross-marketplace price compare runs **entirely client-side** in the service worker. There is no backend server. Popup `compare-panel.js` sends `RMF_COMPARE_SEARCH`; the worker returns scored matches per site.
-
-### Flow
-
-```
-content.js GET_PRODUCT          popup compare-panel.js
-        │                              │
-        │  title, brand, price,        │  RMF_COMPARE_SEARCH
-        │  image, fingerprint          ▼
-        └──────────────────────▶ service-worker.js
-                                      │
-                               compare/search.js searchAll()
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-              SerpApi (opt)     fetch + parsers    hidden tab scrape
-              serp-search.js   parsers.js         tab-search.js
-                                                    tab-parser.js
-                    └─────────────────┬─────────────────┘
-                                      ▼
-                         compare/similarity.js rankCrossPlatform()
-                         (+ optional CLIP via clip-bridge.js)
-                                      │
-                                      ▼
-                         { ranked, matches, results, failed, empty }
-```
-
-### Steps
-
-1. **Product identity** — `content/content.js` extracts title, brand, price, image from the active product page. `utils/product-fingerprint.js` builds a stable ID from URL (`pid` on Flipkart, `/p/123` on Nykaa, etc.) or title+image hash. `startProductWatcher()` detects SPA navigation and emits `RMF_PRODUCT_CHANGED`.
-
-2. **Query extraction** — `utils/product-query.js` `cleanQueryFromProduct()` strips marketplace filler (“pack of 2”, “best seller”) and builds a short search string. When `brand` is missing from the page, `inferBrandFromTitle()` takes leading title tokens before gender/category words.
-
-3. **Per-site candidate fetch** — `compare/search.js` searches each enabled marketplace except the source site, up to 3 sites in parallel (`COMPARE_CONCURRENCY`).
-
-   | Method | When | Module |
-   |--------|------|--------|
-   | Optional SerpApi | User set `serpApiKey` in Settings | `compare/serp-search.js` |
-   | Service worker `fetch` | Default for Amazon, Flipkart, Myntra, Meesho | `compare/parsers.js` on HTML |
-   | Hidden inactive tab | **Always** for Nykaa (Akamai 403 on fetch); optional for all sites when `compareUseTabs: true` | `compare/tab-search.js` injects `compare/tab-parser.js` |
-
-4. **Scoring** — `compare/search.js` merges candidates from all sites, ranks with `compare/similarity.js` (TF-IDF text + optional CLIP image cosine via `compare/clip-bridge.js` → `offscreen/offscreen.js`), deduplicates near-duplicates, and returns a flat **`ranked`** top-10 (`TOP_RANKED`, `MIN_FINAL_SCORE`). Per-site `matches[].best` is derived from ranked for backward compatibility. Legacy `utils/product-matcher.js` `pickBest` still runs per-site for status lines.
-
-5. **UI** — `popup/compare-panel.js` renders the flat **`ranked`** list (image, platform badge, price, title, match score, link), per-site status line, filters, sort, manual search fallback. **No compare storage cache** — every search is live. Refresh button and fingerprint checks prevent stale results after navigation.
-
-### Config (`chrome.storage.sync`)
-
-- `compareSites` — which marketplaces to search (default: all five)
-- `compareUseTabs` — use hidden tabs for every site (default `false`; Nykaa always uses tabs)
+When `provider: 'ondevice'`, the service worker fetches the image bytes and
+delegates classification to a local ONNX model running in an offscreen document.
+Weights are downloaded once (resumable) and cached in IndexedDB; the ONNX Runtime
+WASM is bundled. Full design, activation, and validation: **[ONDEVICE.md](ONDEVICE.md)**.
 
 ---
 
@@ -252,12 +216,11 @@ content.js GET_PRODUCT          popup compare-panel.js
 
 | Store | Keys | Contents |
 |-------|------|----------|
-| `chrome.storage.sync` | Settings from `SYNC_DEFAULTS` | HF token, thresholds, site toggles, compare sites |
+| `chrome.storage.sync` | Settings from `SYNC_DEFAULTS` | HF token, thresholds, site toggles, on-device model URL |
 | `chrome.storage.local` | `rmf_cache_*` | Detection verdict cache (7-day TTL) |
 | `chrome.storage.local` | `rmf_history` | Activity history |
 | `chrome.storage.local` | `rmf_corrections` | User "not AI" corrections |
-
-On extension install/update, any legacy `rmf_compare_*` keys are purged (`clearCompareCache` in the service worker).
+| IndexedDB `rmf_ondevice` | `models` / `partials` | On-device model weights + resumable download state |
 
 Defaults and key names: `utils/defaults.js`.
 

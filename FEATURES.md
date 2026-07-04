@@ -1,6 +1,11 @@
 # TrueKart — current features
 
-Chrome extension for Indian marketplaces (Myntra, Flipkart, Meesho, Nykaa; Amazon limited).
+Chrome extension that flags AI-generated / fake product photos on AliExpress,
+Temu, Shein, Amazon (global), Myntra, Flipkart, Meesho, and Nykaa.
+
+**Engines:** Hugging Face (accurate, free token) · on-device Preview heuristic
+(fast, low-accuracy, default) · optional fully-local ONNX model (opt-in, no
+token — see [docs/ONDEVICE.md](docs/ONDEVICE.md)).
 
 ## Popup (2 tabs)
 
@@ -25,27 +30,19 @@ every open (all tabs/states). The target is provider-agnostic — set
    that scrolls the page (loading lazy images) and force-scans every card, then
    restores your scroll position.
 
-> **Similar products / compare** (cross-marketplace search + CLIP image scoring)
-> is parked, not shipped in the current popup. The `compare/`, `offscreen/`, and
-> `popup/compare-panel.js` modules and their tests remain for a future release;
-> a unit test asserts `compare/search.js` is not imported by the service worker.
+The "Why flagged?" popover on each badge shows the confidence and engine, plus
+one-tap **reverse image search** (Google Lens / Bing) and **search elsewhere**
+links — pure URL handoffs, no backend.
 
-## Similar products
-
-**Input:** product title, brand, price, color (DOM + title parse), image URL from the active PDP.
-
-**Search:** SerpApi Google Shopping (if key set) or direct marketplace search pages → up to 25 candidates per site.
-
-**Text score (local, no API):** title parsed into brand, color, pattern, fit, gender, etc. Weights: brand 25%, title 20%, attributes 20%, color 15%, pattern 10%. Brand mismatch caps score at 45%; color/pattern/fit mismatches apply penalties.
-
-**Image score:** CLIP (offscreen, local ONNX WASM) on top 15 text candidates only. Images fetched via service worker to avoid CORS.
-
-**Output:** top 10 ranked results with % match, ✔/✖/— breakdown, price band. Manual search links if nothing close.
+> A cross-marketplace "Similar products / price compare" experiment was removed
+> in 1.8.0 (unreliable, unshipped, and heavy). The extension is now
+> single-purpose: AI/fake product-photo detection.
 
 ## Key files
 
-- `content/content.js` — scan + product extraction
-- `compare/search.js` — orchestration
-- `compare/similarity.js` — scoring
-- `compare/attribute-parser.js` — title → attributes
-- `popup/compare-panel.js` — Similar products UI
+- `content/content.js` — scan orchestration, badges, "why flagged?" popover
+- `content/sites/*.js` — per-marketplace selectors ([docs/SELECTORS.md](docs/SELECTORS.md))
+- `background/service-worker.js` — HF/on-device detection, image fetch, badge, history
+- `detection/pipeline.js` — remote → EXIF → heuristic priority
+- `detection/ondevice/*` + `offscreen/detector.js` — opt-in local ONNX engine ([docs/ONDEVICE.md](docs/ONDEVICE.md))
+- `popup/`, `options/` — UI

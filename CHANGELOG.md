@@ -4,6 +4,29 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] — 2026-07-04
+
+### Removed
+- **Cross-marketplace "Similar products / Compare" feature** — unshipped, unreliable, and heavy. Deleted `compare/`, the CLIP `offscreen/offscreen.*`, `popup/compare-panel.js`, compare-only utils (`price`, `product-query`, `product-matcher`, `product-fingerprint`, `trust-storage`, `storage-local`), their tests/fixtures, and all compare settings/strings. The extension is now single-purpose: AI/fake product-photo detection. Content script no longer extracts product metadata or records seller/price stats nothing consumed.
+
+### Added
+- **Global marketplaces** — AliExpress, Temu, Shein, and Amazon (10 regional TLDs) now scanned, alongside the existing Myntra/Flipkart/Meesho/Nykaa. New selector modules in `content/sites/`.
+- **On-device AI detector (opt-in)** — complete local ONNX inference engine: lazy + resumable model download, versioned IndexedDB cache with invalidation, offscreen ONNX Runtime session, preprocessing/postprocessing matching the research parity pipeline, progress UI, retry/timeout, memory cleanup, and graceful fallback. Ships inert by default; see [docs/ONDEVICE.md](docs/ONDEVICE.md).
+- **SPA navigation handling** — content script re-scans on `pushState`/`replaceState`/`popstate` path changes (AliExpress/Temu/Amazon are single-page apps).
+- **On-device model management UI** — Options page card (URL, download/cancel/delete, live progress).
+- **Docs** — [docs/ONDEVICE.md](docs/ONDEVICE.md), [docs/SELECTORS.md](docs/SELECTORS.md), [docs/STORE-ASSETS.md](docs/STORE-ASSETS.md); unit test `test/unit/ondevice.test.cjs`.
+
+### Changed
+- **Repositioned** from "Indian fashion" to spotting AI-generated & fake product photos on scam-prone global marketplaces. New name, description, and taglines.
+- **Store package trimmed ~11 MB → ~120 KB** — parked Compare feature assets (ONNX WASM, transformers.js, `compare/`, `offscreen/`, `popup/compare-panel.js`) excluded from the zip; large vendored binaries removed from the repo (re-fetch via `npm run refresh-*`).
+- **Permissions deduped** — removed redundant `www.`/`*.` host pairs; narrower, cleaner host list.
+
+### Security
+- **On-device model URL** must be https (defense-in-depth against pointing the worker fetch at http/loopback/internal hosts).
+
+### Fixed
+- Stale ARIA test now targets `.bottom-nav-tabs` (the tablist), matching the a11y-correct markup.
+
 ## [Unreleased]
 
 ### Added

@@ -1,10 +1,10 @@
 # TrueKart — Chrome Extension
 
-> **Real photos. Shop smarter in India.**
+> **Spot AI & fake product photos before you buy.**
 
-TrueKart is a **Chrome extension** for Indian e-commerce (Myntra, Flipkart, Meesho, Nykaa). Spot AI-generated product photos while you browse.
+TrueKart is a **Chrome extension** that flags AI-generated and fake-looking product photos while you shop — on **AliExpress, Temu, Shein, Amazon** (global), plus **Myntra, Flipkart, Meesho, Nykaa**. It's most useful on scam-prone, dropshipping-heavy marketplaces where "hero" photos are often synthetic or stolen. TrueKart is a *signal*, not a verdict — use it alongside reviews and ratings.
 
-Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · _formerly RealModel Filter_.
+Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · _formerly ShopShield / RealModel Filter_.
 
 ---
 
@@ -41,8 +41,9 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 ### AI detection highlights
 
 - **Inline badges** on product grids: ≥90% AI Generated · 70–94% Likely AI · `·preview` for heuristic mode
-- **Two engines** — Hugging Face (accurate, free token) + on-device Preview heuristic
+- **Three engines** — Hugging Face (accurate, free token) · on-device Preview heuristic (fast, low-accuracy) · optional fully local ONNX model ([docs/ONDEVICE.md](docs/ONDEVICE.md), no token, nothing leaves your device)
 - **Private by design** — no backend, no accounts, no tracking
+- **Supported sites** — AliExpress, Temu, Shein, Amazon (global), Myntra, Flipkart, Meesho, Nykaa ([docs/SELECTORS.md](docs/SELECTORS.md))
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -52,7 +53,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 1. Install from the Chrome Web Store _(when published)_ **or** load unpacked (developers — see below).
 2. Pin the extension in the toolbar.
-3. Visit a category or product page on [myntra.com](https://www.myntra.com), [flipkart.com](https://www.flipkart.com), [meesho.com](https://www.meesho.com), or [nykaa.com](https://www.nykaa.com).
+3. Visit a category or product page on a supported store — [aliexpress.com](https://www.aliexpress.com), [temu.com](https://www.temu.com), [shein.com](https://www.shein.com), [amazon.com](https://www.amazon.com) (and other Amazon regions), [myntra.com](https://www.myntra.com), [flipkart.com](https://www.flipkart.com), [meesho.com](https://www.meesho.com), or [nykaa.com](https://www.nykaa.com).
 4. Open the popup — use **Scan** or **Settings** as needed.
 
 **Connect Hugging Face (recommended for accurate detection):** Settings tab → paste a free Read token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Connect.
@@ -94,7 +95,7 @@ npx playwright install --with-deps chromium
 1. Open Chrome → `chrome://extensions`
 2. Enable **Developer mode** (top-right)
 3. Click **Load unpacked** → select the **repository root folder** (the one containing `manifest.json`)
-4. Confirm TrueKart appears with version **1.7.0**
+4. Confirm TrueKart appears with version **1.8.0**
 
 **Alternative — auto-reload during development:**
 
@@ -114,7 +115,6 @@ This runs `web-ext run --target chromium`, which opens Chrome with the extension
 npm run validate      # manifest, file refs, JS syntax, version sync
 npm run test:unit     # Node unit tests
 npm test              # Playwright E2E tests (offline mocks)
-npm run test:compare-real  # Live marketplace scrape suite (network required)
 ```
 
 4. Smoke-test on a real marketplace page with the unpacked extension.
@@ -144,16 +144,17 @@ Debug logging is gated in `utils/logger.js` — production users see no `info`/`
 
 ```
 manifest.json                 MV3 manifest (permissions, content scripts, CSP)
-background/service-worker.js  HF detection, compare, badge, history, image fetch
+background/service-worker.js  HF/on-device detection, badge, history, image fetch
 content/
   content.js                  Scan orchestration, badges, popup messaging
   sites/*.js                  Per-marketplace DOM selectors
   check-image.js              Context-menu image check
 detection/                    Pipeline: remote → EXIF → heuristic
-compare/                      Cross-marketplace search (loaded in service worker)
-popup/                        Three-tab UI (Scan / Similar products / Settings)
+detection/ondevice/           Opt-in local ONNX engine (download, cache, engine)
+offscreen/detector.*          Offscreen ONNX Runtime session (opt-in)
+popup/                        Two-tab UI (Scan / Settings)
 options/                      Full settings page
-utils/                        Shared modules (defaults, cache, strings, price, …)
+utils/                        Shared modules (defaults, cache, strings, …)
 libs/exifr.min.js             Vendored EXIF parser
 icons/                        16 / 48 / 128 px icons
 scripts/validate.js           Manifest + syntax validation
@@ -167,10 +168,10 @@ web-ext-config.mjs            Files excluded from store zip
 ## Architecture
 
 ```
-popup (3 tabs) ──messages──▶ service worker ──fetch──▶ Hugging Face
-   │ GET_PRODUCT / GET_STATS     │  (CORS bypass, SSRF guard)
+popup (2 tabs) ──messages──▶ service worker ──fetch──▶ Hugging Face / on-device ONNX
+   │ GET_STATS / RESCAN          │  (CORS bypass, SSRF guard)
    ▼                               ▼
-content script ──scan grid, badges, product extraction
+content script ──scan grid, badges, "why flagged?"
    ▼
 detection/pipeline.js  →  remote → EXIF → heuristic (preview)
 utils: cache · throttle · strings · report
@@ -180,9 +181,9 @@ utils: cache · throttle · strings · report
 
 | Priority | Engine | When |
 |----------|--------|------|
-| 1 | Hugging Face | User connected a token — authoritative |
+| 1 | Hugging Face **or** on-device ONNX | User's selected `provider` — authoritative ([docs/ONDEVICE.md](docs/ONDEVICE.md)) |
 | 2 | EXIF metadata | Decisive "real" when camera EXIF present |
-| 3 | Canvas heuristic | Preview mode when no HF token; tagged `preview: true` |
+| 3 | Canvas heuristic | Preview mode when no engine configured; tagged `preview: true` |
 
 **Badge tiers:** ≥90% AI Generated (red) · 70–94% Likely AI (amber) · below user floor: no badge.
 
@@ -199,10 +200,9 @@ Design rationale: **[docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md)**
 ```bash
 npm run validate        # manifest + file refs + JS syntax + version + no debugger
 npm run lint            # alias for validate
-npm run test:unit       # Node unit tests (compare, matcher, SSRF, strings, …)
+npm run test:unit       # Node unit tests (defaults, cache, marketplace-url, ondevice, SSRF, HF parsing, …)
 npm test                # Playwright E2E tests (offline mocks)
 npm run test:e2e        # same as npm test
-npm run test:compare-real  # live compare scrape against real marketplaces (network)
 npm run test:headed     # E2E with visible browser (HEADLESS=0)
 npm run test:report     # open HTML report after a failed run
 ```
@@ -211,21 +211,12 @@ npm run test:report     # open HTML report after a failed run
 
 | Suite | Scope |
 |-------|-------|
-| **Unit** (`test:unit`) | Compare search orchestration, tab parsers, product fingerprint, matcher, SSRF guard, HF parsing |
-| **E2E** (`npm test`) | Extension load, popup, options, scanning, compare (mocked SerpApi), regression, a11y — **offline** |
-| **Compare real** (`test:compare-real`) | Tier A/B live scraper + end-to-end runs on Amazon, Myntra, Flipkart — **requires network** |
+| **Unit** (`test:unit`) | Defaults, cache, marketplace-url guards, on-device config + sha-256, service-worker SSRF guard + HF parsing, strings |
+| **E2E** (`npm test`) | Extension load, popup, options, scanning, badges, "why flagged?", export, history, SPA re-scan, permissions, storage, a11y — **offline** |
 
 Default E2E tests load the **real unpacked extension** in Chromium. Marketplace pages and Hugging Face are **mocked offline** — no API keys required.
 
-Test architecture details: **[test/e2e/README.md](test/e2e/README.md)** · Live compare results: **[TODO_price_compare.md](TODO_price_compare.md)**
-
-### Compare troubleshooting
-
-| Symptom | Cause |
-|---------|--------|
-| Wrong product in Compare | SPA navigation — use **Refresh** or reopen Compare; fingerprint should auto-rescan |
-| Nykaa always empty | Nykaa blocks fetch; extension uses a hidden tab — reload extension if broken |
-| No matches but sites show ○ | Candidates found but below matcher score floor (40) — common when `brand` is missing on source |
+Test architecture details: **[test/e2e/README.md](test/e2e/README.md)**.
 
 ### CI
 
@@ -245,7 +236,7 @@ npm ci → validate → test:unit → playwright install → test:e2e
 npm run build
 ```
 
-Output: `dist/truekart_ai_photo_check_price_compare-1.7.0.zip` (~11 MB). The size is dominated by the bundled ONNX Runtime WASM used for CLIP image-similarity scoring in Similar products; see [docs/ROADMAP.md](docs/ROADMAP.md) for the planned lazy-load that trims this before public launch.
+Output: `dist/truekart_ai_fake_photo_check-1.8.0.zip` (~120 KB). The optional on-device engine's ONNX Runtime (`libs/onnx/`, `offscreen/`) is excluded from the default lean build via `web-ext-config.mjs`; enabling on-device detection includes it — see [docs/ONDEVICE.md](docs/ONDEVICE.md).
 
 `web-ext-config.mjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
 
@@ -269,11 +260,11 @@ Upload the zip to the [Chrome Web Store Developer Dashboard](https://chrome.goog
 
 ## Security and privacy
 
-- **No backend, no telemetry.** Outbound calls: Hugging Face (if connected), marketplace CDNs, optional SerpApi.
+- **No backend, no telemetry.** Outbound calls: Hugging Face (only if connected), marketplace image CDNs, and — only if on-device is enabled — the model-weights download URL you configure.
 - **Permissions:** `activeTab`, `storage`, `scripting`, `tabs`, `notifications`, `contextMenus` — scoped host permissions per marketplace.
 - **HF token** stored in `chrome.storage.sync` (Chrome profile only); never exported.
-- **SSRF guard** on image fetches in the service worker.
-- **CSP** on extension pages: `script-src 'self'`.
+- **SSRF guard** on image fetches in the service worker; the on-device model URL must be https.
+- **CSP** on extension pages: `script-src 'self' 'wasm-unsafe-eval'`.
 
 Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 
@@ -283,8 +274,7 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 
 | Symptom | Fix |
 |---------|-----|
-| No badges on a site | Site DOM changed — update `content/sites/<site>.js` |
-| Similar products empty | Open a **product page**, not a category listing |
+| No badges on a site | Site DOM changed — update `content/sites/<site>.js` (see [docs/SELECTORS.md](docs/SELECTORS.md)) |
 | Popup shows "unsupported" | Switch to a supported marketplace tab first |
 | HF "warming up" | Wait ~20s and rescan (model cold start) |
 | Token rejected | Create a new **Read** token at huggingface.co/settings/tokens |
@@ -301,8 +291,10 @@ Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
 | Document | Description |
 |----------|-------------|
 | [FEATURES.md](FEATURES.md) | Short reference for current popup tabs and logic |
-| [NEXT_PLAN.md](NEXT_PLAN.md) | Status, priorities, backlog, and sprint plan |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, message protocol, detection pipeline, storage |
+| [docs/ONDEVICE.md](docs/ONDEVICE.md) | On-device ONNX engine: architecture, activation, validation |
+| [docs/SELECTORS.md](docs/SELECTORS.md) | Per-marketplace selector contract + live verification protocol |
+| [docs/STORE-ASSETS.md](docs/STORE-ASSETS.md) | Chrome Web Store listing copy + asset specs |
 | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) | Why vanilla JS, HF in worker, preview fallback, etc. |
 | [docs/EDGE-CASES.md](docs/EDGE-CASES.md) | Invalid inputs, network failures, extension reloads |
 | [docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md) | Release readiness checklist |
