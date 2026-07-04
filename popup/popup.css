@@ -72,7 +72,7 @@ body {
 /* header */
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg); border-bottom: 1px solid var(--line); flex: none; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--ink); flex: none; overflow: hidden; }
+.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #34D399 0%, #10B981 55%, #047857 100%); flex: none; overflow: hidden; }
 .brand-name { font-size: 15px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; text-wrap: balance; }
 .brand-accent { color: #047857; }
 .brand-sub { font-size: 10.5px; color: var(--muted-2); margin-top: 3px; }
@@ -580,7 +580,7 @@ button.ghost:hover { color: var(--text); border-color: var(--accent); }
     --coffee-ink: #f2ddc2;
     --coffee-sub: #c19a6d;
   }
-  .brand-mark { background: var(--ink); }
+  .brand-mark { background: linear-gradient(135deg, #34D399 0%, #10B981 55%, #047857 100%); }
   .onboarding-card, .action-btn, .field input, .advanced input, .sort-select, button.ghost { background: var(--panel); color: var(--text); }
   .bd-high { background: var(--red-soft); border-color: #5c2b2b; }
   .bd-med { background: var(--amber-soft); border-color: #5c4520; }

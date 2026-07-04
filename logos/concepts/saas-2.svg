@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TrueKart">
+  <defs>
+    <linearGradient id="s2bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0C1222"/>
+      <stop offset="0.55" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+    <radialGradient id="s2hl" cx="0.28" cy="0.22" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#s2bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#s2hl)"/>
+  <path d="M298 298 L406 406" fill="none" stroke="#ffffff" stroke-width="60" stroke-linecap="round"/>
+  <circle cx="212" cy="212" r="130" fill="#ffffff"/>
+  <path d="M154 216 L198 260 L282 158" fill="none" stroke="#047857" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3" y="3" width="506" height="506" rx="110" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="4"/>
+</svg>

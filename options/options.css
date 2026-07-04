@@ -54,7 +54,7 @@ body {
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark {
   display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px;
-  background: #0f172a; flex: none; overflow: hidden;
+  background: linear-gradient(135deg, #34D399 0%, #10B981 55%, #047857 100%); flex: none; overflow: hidden;
 }
 .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
 .brand-accent { color: #059669; }
@@ -202,7 +202,7 @@ kbd { background: var(--bg-2); border: 1px solid var(--line-2); border-bottom-wi
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
   }
   body { background: radial-gradient(70% 45% at 100% 0%, rgba(13, 148, 136, 0.10), transparent 55%), var(--bg); }
-  .brand-mark { background: #0f172a; }
+  .brand-mark { background: linear-gradient(135deg, #34D399 0%, #10B981 55%, #047857 100%); }
   .check, button.ghost { background: var(--panel); color: var(--text); }
   .hist-item { background: var(--panel-2); }
   .empty-state, .empty-state-ico { background: #12151c; }
