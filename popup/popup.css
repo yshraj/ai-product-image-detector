@@ -23,7 +23,23 @@
   --shadow: 0 4px 16px rgba(17, 24, 39, 0.08);
   --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.06);
   --ring: 0 0 0 3px rgba(13, 148, 136, 0.30);
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── Motion system ─────────────────────────────────────────────────────
+     One vocabulary shared across popup, options and content surfaces so every
+     interaction feels part of the same product. Custom curves (stronger than
+     the built-in CSS easings) give motion intent; springs add life to press
+     and success feedback. Durations stay <300ms per the product-motion rule. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);          /* entrances / user-initiated */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);       /* on-screen movement */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);      /* press-release / success pop */
+  --ease: var(--ease-out);                             /* back-compat alias */
+  --dur-1: 120ms;   /* micro-interactions (press, hover tint) */
+  --dur-2: 180ms;   /* standard (hover lift, focus, dropdowns) */
+  --dur-3: 260ms;   /* entrances (panels, toasts) */
+  /* Layered elevation + brand glow for depth on hover/active states. */
+  --elev-1: 0 1px 2px rgba(17, 24, 39, 0.06), 0 2px 8px rgba(17, 24, 39, 0.06);
+  --elev-2: 0 2px 6px rgba(17, 24, 39, 0.08), 0 10px 26px rgba(17, 24, 39, 0.12);
+  --glow-accent: 0 4px 14px rgba(13, 148, 136, 0.30);
+  --glow-accent-strong: 0 6px 22px rgba(13, 148, 136, 0.42);
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
   /* "Buy me a coffee" footer — a warm palette kept distinct from the green
      primary CTAs and the amber "Likely AI" tier so it reads as its own thing. */
@@ -68,6 +84,15 @@ body {
 .skip-link { position: absolute; left: 8px; top: -40px; z-index: 100; background: var(--accent); color: #fff; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none; }
 .skip-link:focus { top: 8px; }
 :focus-visible { outline: none; box-shadow: var(--ring); border-radius: 8px; }
+
+/* Popup open: a short, staggered reveal of the shell chrome so the surface
+   "arrives" as one composed unit. The content panel uses its own `panel-in`
+   (also covering tab switches), so main is intentionally excluded here to avoid
+   double-animating. transform+opacity only → stays on the compositor. */
+@keyframes shell-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.topbar { animation: shell-in var(--dur-3) var(--ease-out) both; }
+.support-footer { animation: shell-in var(--dur-3) var(--ease-out) 70ms both; }
+.bottom-nav { animation: shell-in var(--dur-3) var(--ease-out) 100ms both; }
 
 /* header */
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg); border-bottom: 1px solid var(--line); flex: none; }
@@ -122,8 +147,11 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .scan-title { font-size: 13px; font-weight: 800; }
 .scan-count { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
 .breakdown { display: flex; gap: 8px; }
-.bd { flex: 1; text-align: center; border-radius: 10px; padding: 10px 4px; border: 1px solid var(--line); background: var(--bg-2); cursor: pointer; font: inherit; color: inherit; transition: 0.15s; }
-.bd:hover { border-color: var(--accent); transform: translateY(-1px); }
+.bd { flex: 1; text-align: center; border-radius: 10px; padding: 10px 4px; border: 1px solid var(--line); background: var(--bg-2); cursor: pointer; font: inherit; color: inherit; box-shadow: var(--elev-1); transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), border-color var(--dur-1) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .bd:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--elev-2); }
+}
+.bd:active { transform: translateY(0) scale(0.98); transition-duration: var(--dur-1); }
 .bd.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .scan-progress {
   margin: 0 0 12px;
@@ -319,15 +347,22 @@ main::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 .hint a:hover { color: var(--accent); }
 .hint code { background: var(--bg-2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 .field { display: flex; gap: 6px; margin-bottom: 8px; }
-.field input, .advanced input { flex: 1; width: 100%; padding: 9px 10px; border: 1px solid var(--line-2); background: #fff; color: var(--text); border-radius: var(--radius-sm); font-size: 12px; transition: 0.15s; }
-.field input::placeholder, .advanced input::placeholder { color: var(--muted-2); }
+.field input, .advanced input { flex: 1; width: 100%; padding: 9px 10px; border: 1px solid var(--line-2); background: #fff; color: var(--text); border-radius: var(--radius-sm); font-size: 12px; transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out); }
+.field input::placeholder, .advanced input::placeholder { color: var(--muted-2); transition: color var(--dur-2) var(--ease-out); }
+/* Focus "bloom": the ring grows from a tighter shadow so the field feels like
+   it comes alive under focus rather than snapping to a static outline. */
 .field input:focus, .advanced input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.field input:focus::placeholder, .advanced input:focus::placeholder { color: transparent; }
 .field input[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 3px rgba(220,38,38,0.16); }
+@keyframes focus-bloom { from { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.30); } }
+.field input:focus:not([aria-invalid="true"]) { animation: focus-bloom var(--dur-2) var(--ease-out); }
 .icon-btn { padding: 0 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
 
-button.primary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 12px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--accent-ink); background: linear-gradient(135deg, var(--accent), var(--accent-2)); transition: 0.15s; box-shadow: 0 3px 12px rgba(13,148,136,0.28); }
-button.primary:hover { filter: brightness(1.05); }
-button.primary:active { transform: translateY(1px); }
+button.primary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 12px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--accent-ink); background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: var(--glow-accent); transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease-out), filter var(--dur-1) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  button.primary:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: var(--glow-accent-strong); }
+}
+button.primary:active { transform: translateY(0) scale(0.98); box-shadow: var(--glow-accent); transition-duration: var(--dur-1); }
 button.primary[aria-busy="true"] { color: transparent; pointer-events: none; }
 .spinner { position: absolute; width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.45); border-top-color: #fff; display: none; animation: spin 0.6s linear infinite; }
 button.primary[aria-busy="true"] .spinner { display: block; }
@@ -450,8 +485,6 @@ button.ghost:hover { color: var(--text); border-color: var(--accent); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(6px) scale(0.96); } }
 
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
-
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #111318;
@@ -468,6 +501,10 @@ button.ghost:hover { color: var(--text); border-color: var(--accent); }
     --green-soft: #1a3324;
     --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --elev-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 10px 26px rgba(0, 0, 0, 0.5);
+    --glow-accent: 0 4px 14px rgba(16, 185, 129, 0.28);
+    --glow-accent-strong: 0 6px 22px rgba(16, 185, 129, 0.4);
     --coffee-bg: #201811;
     --coffee-bg-hover: #291f15;
     --coffee-border: #38291a;
