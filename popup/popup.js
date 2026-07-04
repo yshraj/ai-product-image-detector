@@ -181,9 +181,9 @@ async function maybeShowOnboarding() {
   if (done) return;
 
   const steps = [
-    { title: 'Toggle scanning', body: 'Use the switch in the header to turn AI detection on or off for this browser.' },
-    { title: 'Scan products', body: 'Open <b>Scan</b> to see how many product images on the page look AI-generated.' },
-    { title: 'Read the badges', body: 'Red badges = AI generated (90%+). Amber = likely AI. Tap any badge for a breakdown.' },
+    { title: 'Scan products', body: 'Open a shopping page (AliExpress, Temu, Shein, Amazon…) and TrueKart flags product images that look AI-generated.' },
+    { title: 'Read the badges', body: 'Red badges = AI generated (90%+). Amber = likely AI. Tap any badge for a breakdown and a reverse image search.' },
+    { title: 'Turn on accurate detection', body: 'The default preview is fast but rough. Connect a <b>free</b> Hugging Face model (no payment) for reliable results — about a minute to set up.', cta: 'connect' },
   ];
   let step = 0;
 
@@ -212,18 +212,33 @@ async function maybeShowOnboarding() {
     overlay.remove();
   };
 
+  // On the final "connect a model" step, send the user straight to
+  // Settings → Hugging Face and focus the token field — the fastest path from
+  // install to accurate detection.
+  const goConnectModel = async () => {
+    await finish();
+    document.getElementById('nav-settings')?.click();
+    document.getElementById('tab-huggingface')?.click();
+    document.getElementById('hf-token')?.focus();
+  };
+
   const renderStep = () => {
     const s = steps[step];
+    const last = step === steps.length - 1;
     overlay.querySelector('#onboard-title').textContent = s.title;
     overlay.querySelector('#onboard-body').innerHTML = s.body;
-    overlay.querySelector('#onboard-next').textContent = step === steps.length - 1 ? 'Got it' : 'Next';
+    overlay.querySelector('#onboard-next').textContent = last
+      ? (s.cta === 'connect' ? 'Connect a free model' : 'Got it')
+      : 'Next';
     dots.querySelectorAll('.onboarding-dot').forEach((d, i) => d.classList.toggle('active', i === step));
   };
 
   overlay.querySelector('.onboarding-skip').addEventListener('click', finish);
   overlay.querySelector('#onboard-next').addEventListener('click', () => {
-    if (step >= steps.length - 1) finish();
-    else { step++; renderStep(); }
+    if (step >= steps.length - 1) {
+      if (steps[step].cta === 'connect') goConnectModel();
+      else finish();
+    } else { step++; renderStep(); }
   });
   overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish(); });
   renderStep();
