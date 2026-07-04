@@ -3,8 +3,6 @@
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { getContentStats, scanWholePage } = require('./helpers/chrome-messaging.cjs');
 
-const MYNTRA = 'https://www.myntra.com/*';
-
 test.describe('Scan whole page', () => {
   test('scans off-screen products the viewport gate skipped', async ({ contentPage, extensionContext }) => {
     // A short viewport leaves most of the 8-card first batch off-screen and the

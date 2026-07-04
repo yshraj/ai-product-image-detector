@@ -56,7 +56,6 @@
 
   // Live session counters surfaced to the popup (with verdict breakdown).
   const session = { scanned: 0, ai: 0, aiHigh: 0, aiLikely: 0, total: 0, pending: 0 };
-  let highlightFilter = null;
   let highlightTimer = null;
 
   // Report counts to the service worker so it can paint the toolbar badge.
@@ -434,8 +433,7 @@
   function highlightCards(filter) {
     document.querySelectorAll('.rmf-highlight').forEach((c) => c.classList.remove('rmf-highlight'));
     if (highlightTimer) { clearTimeout(highlightTimer); highlightTimer = null; }
-    if (!filter || filter === 'all') { highlightFilter = null; return; }
-    highlightFilter = filter;
+    if (!filter || filter === 'all') return;
     const cards = document.querySelectorAll(`${SITE.cardSelector}[data-rmf-scanned="true"]`);
     let first = null;
     cards.forEach((card) => {
@@ -454,7 +452,6 @@
     if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     highlightTimer = setTimeout(() => {
       document.querySelectorAll('.rmf-highlight').forEach((c) => c.classList.remove('rmf-highlight'));
-      highlightFilter = null;
     }, 4000);
   }
 

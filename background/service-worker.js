@@ -303,7 +303,6 @@ function updateBadge(tabId, info) {
   if (tabId == null) return;
   const ai = Number(info?.ai) || 0;
   const aiHigh = Number(info?.aiHigh) || 0;
-  const aiLikely = Number(info?.aiLikely) || 0;
   const scanned = Number(info?.scanned) || 0;
   const active = info?.active !== false;
   const text = active && ai > 0 ? String(ai) : '';

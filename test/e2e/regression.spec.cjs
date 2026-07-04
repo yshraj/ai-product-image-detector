@@ -3,14 +3,13 @@ const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { PopupPage } = require('./pages/PopupPage.cjs');
 const { OptionsPage } = require('./pages/OptionsPage.cjs');
 const {
-  sendRuntimeMessage,
   getContentStats,
   toggleDetection,
 } = require('./helpers/chrome-messaging.cjs');
-const { setSyncStorage, getSyncStorage } = require('./helpers/chrome-storage.cjs');
+const { getSyncStorage } = require('./helpers/chrome-storage.cjs');
 const { getActionBadge, getManifestVersion } = require('./helpers/chrome-api.cjs');
 const { activateMarketplaceTab, closeMarketplaceTabs } = require('./helpers/tab-utils.cjs');
-const { MYNTRA_LISTING_URL, MYNTRA_PRODUCT_URL, MANIFEST } = require('./helpers/constants.cjs');
+const { MYNTRA_PRODUCT_URL, MANIFEST } = require('./helpers/constants.cjs');
 
 test.describe('Regression — extension surfaces', () => {
   test('scan and settings tabs render without page errors', async ({ extensionContext, popupUrl }) => {

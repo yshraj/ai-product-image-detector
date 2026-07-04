@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint (ESLint)
+        run: npm run eslint
+
       - name: Validate (manifest + file refs + JS syntax)
         run: npm run validate
 

@@ -15,13 +15,14 @@
   },
   "scripts": {
     "validate": "node scripts/validate.js",
+    "eslint": "eslint .",
     "test": "playwright test",
     "test:unit": "node --test test/unit/*.test.cjs",
     "test:e2e": "playwright test",
     "test:e2e:headed": "HEADLESS=0 playwright test --headed",
     "test:headed": "HEADLESS=0 playwright test --headed",
     "test:report": "playwright show-report playwright-report",
-    "lint": "node scripts/validate.js",
+    "lint": "eslint . && node scripts/validate.js",
     "lint:firefox": "web-ext lint --source-dir .",
     "start": "web-ext run --target chromium --source-dir .",
     "build": "web-ext build --source-dir . --artifacts-dir dist --overwrite-dest",
@@ -32,6 +33,8 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
+    "eslint": "^9.39.4",
+    "globals": "^17.7.0",
     "web-ext": "^8.3.0"
   }
 }

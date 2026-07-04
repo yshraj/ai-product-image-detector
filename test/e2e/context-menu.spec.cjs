@@ -2,7 +2,7 @@
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
 const { runImageCheck } = require('./helpers/chrome-messaging.cjs');
-const { getExtensionId, extensionUrl, inServiceWorker } = require('./helpers/chrome-api.cjs');
+const { inServiceWorker } = require('./helpers/chrome-api.cjs');
 const { registerHfInferenceMock } = require('./helpers/mock-routes.cjs');
 
 const TEST_PAGE = 'https://www.myntra.com/truekart-context-test';

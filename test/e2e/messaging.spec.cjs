@@ -12,7 +12,6 @@ const {
   getEngineHealth,
 } = require('./helpers/chrome-messaging.cjs');
 const { setSyncStorage } = require('./helpers/chrome-storage.cjs');
-const { MYNTRA_LISTING_URL, MYNTRA_PRODUCT_URL } = require('./helpers/constants.cjs');
 const { registerHfInferenceMock } = require('./helpers/mock-routes.cjs');
 
 test.describe('Message passing', () => {
