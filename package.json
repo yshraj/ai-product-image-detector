@@ -1,7 +1,7 @@
 {
   "name": "truekart",
-  "version": "1.7.0",
-  "description": "Spot AI-generated product photos on Myntra, Flipkart, Meesho & Nykaa.",
+  "version": "1.8.0",
+  "description": "Spot AI-generated & fake product photos on AliExpress, Temu, Shein, Amazon & more.",
   "private": true,
   "license": "UNLICENSED",
   "author": "TrueKart",
@@ -18,8 +18,6 @@
     "test": "playwright test",
     "test:unit": "node --test test/unit/*.test.cjs",
     "test:e2e": "playwright test",
-    "test:compare-real": "RUN_LIVE_COMPARE=1 playwright test test/e2e/compare-real-products.spec.cjs --workers=1",
-    "test:compare-regression": "RUN_LIVE_COMPARE=1 playwright test test/e2e/compare-regression.spec.cjs --workers=1",
     "test:e2e:headed": "HEADLESS=0 playwright test --headed",
     "test:headed": "HEADLESS=0 playwright test --headed",
     "test:report": "playwright show-report playwright-report",
@@ -29,8 +27,7 @@
     "start": "web-ext run --target chromium --source-dir .",
     "build": "web-ext build --source-dir . --artifacts-dir dist --overwrite-dest",
     "refresh-exifr": "curl -sL -o libs/exifr.min.js https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js",
-    "refresh-transformers": "curl -fsSL -o libs/transformers.min.js https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js",
-    "refresh-onnx-wasm": "mkdir -p libs/onnx && cd libs/onnx && for f in ort-wasm.wasm ort-wasm-simd.wasm ort-wasm-threaded.wasm ort-wasm-simd-threaded.wasm; do curl -fsSL -o \"$f\" \"https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/$f\"; done",
+    "refresh-onnx-runtime": "mkdir -p libs/onnx && curl -fsSL -o libs/onnx/ort.min.js https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js && cd libs/onnx && for f in ort-wasm-simd-threaded.wasm ort-wasm-simd-threaded.jsep.wasm; do curl -fsSL -o \"$f\" \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/$f\"; done",
     "refresh-icons": "python3 scripts/generate-icons.py"
   },
   "devDependencies": {

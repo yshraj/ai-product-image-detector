@@ -27,6 +27,12 @@ export default {
     'FEATURES.md',
     'TODO_price_compare.md',
     'skills-lock.json',
+    // On-device engine assets: the ONNX Runtime + offscreen detector are only
+    // needed for the opt-in on-device model (see docs/ONDEVICE.md). Excluded
+    // from the default lean build (~120 KB); a full/on-device build includes
+    // them. The engine degrades gracefully when they're absent.
+    'offscreen',
+    'libs/onnx',
   ],
   build: {
     overwriteDest: true,
