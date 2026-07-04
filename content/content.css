@@ -20,7 +20,12 @@
   pointer-events: auto;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.24), 0 6px 16px rgba(16, 24, 40, 0.24);
   animation: rmf-badge-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
+@media (hover: hover) and (pointer: fine) {
+  .rmf-badge:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 2px 4px rgba(16, 24, 40, 0.28), 0 10px 22px rgba(16, 24, 40, 0.3); }
+}
+.rmf-badge:active { transform: translateY(0) scale(0.98); }
 
 /* Confirmed AI reads as a firm warning; "likely" is a softer amber. Both use
    AA-contrast solid fills so the same white text works on either. */
@@ -82,7 +87,14 @@
   line-height: 1.45;
   text-align: left;
   pointer-events: auto;
-  animation: rmf-badge-in 0.16s ease;
+  /* Origin-aware: the popover is anchored to the badge/image top-left, so it
+     should scale out from that corner rather than from its own centre. */
+  transform-origin: top left;
+  animation: rmf-pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes rmf-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .rmf-pop-h { font-weight: 700; font-size: 12.5px; margin-bottom: 6px; }
 .rmf-pop-row { color: #eef1f5; }
@@ -110,5 +122,6 @@
 .rmf-ctx-badge { animation: rmf-badge-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 
 @media (prefers-reduced-motion: reduce) {
-  .rmf-badge, .rmf-pop { animation: none; }
+  .rmf-badge, .rmf-pop { animation: none; transition: none; }
+  .rmf-badge:hover, .rmf-badge:active { transform: none; }
 }
