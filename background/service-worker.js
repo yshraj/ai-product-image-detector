@@ -563,9 +563,22 @@ async function toggleEnabled() {
   return next;
 }
 
+// Force a full-page scan of the active tab (keyboard shortcut). Mirrors the
+// popup's "Scan whole page" button: fire-and-forget SCAN_PAGE to the content
+// script, which walks the page and scans off-screen cards too. No-ops safely on
+// unsupported tabs (no content script → sendMessage rejects, caught).
+async function scanActivePage() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) await chrome.tabs.sendMessage(tab.id, { type: 'SCAN_PAGE' }).catch(() => {});
+  } catch { /* no addressable tab */ }
+}
+if (typeof self !== 'undefined') self.scanActivePage = scanActivePage;
+
 if (typeof chrome !== 'undefined' && chrome.commands?.onCommand) {
   chrome.commands.onCommand.addListener((command) => {
     if (command === 'toggle-detection') toggleEnabled();
+    else if (command === 'scan-page') scanActivePage();
   });
 }
 

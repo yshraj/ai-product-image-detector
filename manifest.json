@@ -117,6 +117,10 @@
     "toggle-detection": {
       "suggested_key": { "default": "Alt+Shift+R" },
       "description": "Toggle AI image scanning on/off"
+    },
+    "scan-page": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Scan all products on the current page"
     }
   },
   "content_security_policy": {
