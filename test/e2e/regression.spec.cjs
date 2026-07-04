@@ -4,7 +4,6 @@ const { PopupPage } = require('./pages/PopupPage.cjs');
 const { OptionsPage } = require('./pages/OptionsPage.cjs');
 const {
   sendRuntimeMessage,
-  getProduct,
   getContentStats,
   toggleDetection,
 } = require('./helpers/chrome-messaging.cjs');
@@ -70,28 +69,6 @@ test.describe('Regression — messaging & storage', () => {
       { timeout: 5000 },
     ).toBe(80);
   });
-
-  test('GET_PRODUCT on listing page reports isProductPage false', async ({ extensionContext, contentPage }) => {
-    await contentPage.gotoListing();
-    await expect.poll(
-      () => getProduct(extensionContext, 'https://www.myntra.com/*', MYNTRA_LISTING_URL),
-      { timeout: 10_000 },
-    ).toMatchObject({ isProductPage: false });
-  });
-
-  test('GET_PRODUCT on product page includes color when present in title', async ({
-    extensionContext, contentPage,
-  }) => {
-    await contentPage.gotoProduct(MYNTRA_PRODUCT_URL);
-    await expect.poll(
-      () => getProduct(extensionContext, 'https://www.myntra.com/*', MYNTRA_PRODUCT_URL),
-      { timeout: 10_000 },
-    ).toMatchObject({
-      isProductPage: true,
-      title: expect.stringMatching(/Test Brand/i),
-      color: 'blue',
-    });
-  });
 });
 
 test.describe('Regression — user workflows', () => {
@@ -145,17 +122,6 @@ test.describe('Regression — user workflows', () => {
 
     await popup.close();
     await productTab.close();
-  });
-
-  test('compare query includes color token for blue product titles', async () => {
-    const { buildSearchQuery } = require('../../utils/product-query.js');
-    const product = {
-      title: 'Test Brand Men Blue Cotton Casual Shirt',
-      brand: 'Test Brand',
-      color: 'blue',
-    };
-    const q = buildSearchQuery(product);
-    expect(q.toLowerCase()).toMatch(/blue/);
   });
 });
 

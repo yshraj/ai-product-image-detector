@@ -4,39 +4,12 @@
 // readiness, messaging, and SPA route detection without a full page reload.
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const { PopupPage } = require('./pages/PopupPage.cjs');
-const { getProduct } = require('./helpers/chrome-messaging.cjs');
+const { getContentStats } = require('./helpers/chrome-messaging.cjs');
 const { closeMarketplaceTabs, activateMarketplaceTab } = require('./helpers/tab-utils.cjs');
 const {
   MYNTRA_PRODUCT_URL,
   MYNTRA_PRODUCT_URL_2,
 } = require('./helpers/constants.cjs');
-
-const MYNTRA = 'https://www.myntra.com/*';
-
-// Simulate an SPA product-to-product navigation the way a real PDP does it:
-// change the URL via pushState AND mutate the title/og/JSON-LD nodes in place.
-async function spaNavigateToProductB(page) {
-  await page.evaluate((url) => {
-    history.pushState({}, '', url);
-    const setMeta = (sel, val) => { const m = document.querySelector(sel); if (m) m.setAttribute('content', val); };
-    document.title = 'Other Brand Men Red Linen Casual Shirt - Buy Online';
-    setMeta('meta[property="og:title"]', 'Other Brand Men Red Linen Casual Shirt');
-    setMeta('meta[property="og:image"]', 'https://assets.myntassets.com/real3.png?product=2');
-    setMeta('meta[property="product:brand"]', 'Other Brand');
-    setMeta('meta[property="product:price:amount"]', '899');
-    const h1 = document.querySelector('h1');
-    if (h1) h1.textContent = 'Other Brand Men Red Linen Casual Shirt';
-    const ld = document.querySelector('script[type="application/ld+json"]');
-    if (ld) {
-      ld.textContent = JSON.stringify({
-        '@type': 'Product',
-        name: 'Other Brand Men Red Linen Casual Shirt',
-        brand: { name: 'Other Brand' },
-        offers: { price: '899', seller: { name: 'Other Seller Ltd' } },
-      });
-    }
-  }, MYNTRA_PRODUCT_URL_2);
-}
 
 function attachErrorCollector(page, sink) {
   page.on('pageerror', (err) => sink.push(`pageerror: ${err.message}`));
@@ -59,11 +32,6 @@ test.describe('Stability & lifecycle', () => {
     const productTab = await extensionContext.newPage();
     await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
 
-    await expect.poll(async () => {
-      const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL);
-      return p?.title || '';
-    }, { timeout: 10_000 }).toMatch(/Test Brand/i);
-
     const popupTab = await extensionContext.newPage();
     const popup = new PopupPage(popupTab);
     await popup.goto(popupUrl);
@@ -78,31 +46,26 @@ test.describe('Stability & lifecycle', () => {
     await productTab.close();
   });
 
-  test('SPA product→product change keeps content script product in sync', async ({
-    extensionContext, popupUrl,
+  test('SPA pushState navigation re-runs scanning without a reload', async ({
+    extensionContext, contentPage,
   }) => {
-    const productTab = await extensionContext.newPage();
-    await productTab.goto(MYNTRA_PRODUCT_URL, { waitUntil: 'domcontentloaded' });
+    await contentPage.setViewportAllVisible();
+    await contentPage.gotoListing();
+    await contentPage.waitForScan(1);
 
-    await expect.poll(async () => {
-      const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL);
-      return p?.title || '';
-    }, { timeout: 10_000 }).toMatch(/Test Brand/i);
+    const errors = [];
+    attachErrorCollector(contentPage.page, errors);
 
-    const popupTab = await extensionContext.newPage();
-    const popup = new PopupPage(popupTab);
-    await popup.goto(popupUrl);
-    await expect(popup.scanPanel).toBeVisible();
+    // Real SPA route change: the content script patches pushState and re-scans
+    // on a genuine pathname change (not query-only). Scanning must recover
+    // without a full reload.
+    await contentPage.page.evaluate(() => history.pushState({}, '', '/men-tshirts'));
 
-    await spaNavigateToProductB(productTab);
-
-    await expect.poll(async () => {
-      const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL_2);
-      return p?.title || '';
-    }, { timeout: 12_000 }).toMatch(/Other Brand/i);
-
-    await popupTab.close();
-    await productTab.close();
+    await expect.poll(
+      async () => (await getContentStats(extensionContext))?.scanned ?? 0,
+      { timeout: 12_000 },
+    ).toBeGreaterThan(0);
+    expect(errors, errors.join('\n')).toEqual([]);
   });
 
   test('popup reflects the active tab scan stats, not a stale one', async ({
@@ -115,10 +78,6 @@ test.describe('Stability & lifecycle', () => {
 
     const tabB = await extensionContext.newPage();
     await tabB.goto(MYNTRA_PRODUCT_URL_2, { waitUntil: 'domcontentloaded' });
-    await expect.poll(async () => {
-      const p = await getProduct(extensionContext, MYNTRA, MYNTRA_PRODUCT_URL_2);
-      return p?.title || '';
-    }, { timeout: 10_000 }).toMatch(/Other Brand/i);
 
     await activateMarketplaceTab(extensionContext, 'men-shirts');
     let popupTab = await extensionContext.newPage();

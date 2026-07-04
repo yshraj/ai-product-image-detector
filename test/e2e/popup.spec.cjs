@@ -88,6 +88,8 @@ test('engine tabs and mode radios expose correct ARIA roles', async ({ extension
   await page.locator('#nav-settings').click();
   await expect(page.locator('#provider-seg')).toHaveAttribute('role', 'tablist');
   await expect(page.locator('#mode-seg')).toHaveAttribute('role', 'radiogroup');
-  await expect(page.locator('.bottom-nav')).toHaveAttribute('role', 'tablist');
+  // The tablist role sits on the direct parent of the tab buttons; the outer
+  // <nav class="bottom-nav"> keeps its navigation landmark (a11y-correct).
+  await expect(page.locator('.bottom-nav-tabs')).toHaveAttribute('role', 'tablist');
   await page.close();
 });

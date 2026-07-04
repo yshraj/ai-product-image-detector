@@ -22,10 +22,6 @@ async function getContentStats(context, tabUrl = 'https://www.myntra.com/*') {
   return sendTabMessage(context, tabUrl, { type: 'GET_STATS' });
 }
 
-async function getProduct(context, tabUrl = 'https://www.myntra.com/*', exactUrl) {
-  return sendTabMessage(context, tabUrl, { type: 'GET_PRODUCT' }, exactUrl);
-}
-
 async function getPageReport(context, tabUrl = 'https://www.myntra.com/*') {
   return sendTabMessage(context, tabUrl, { type: 'GET_PAGE_REPORT' });
 }
@@ -81,7 +77,6 @@ async function runImageCheck(context, tabUrlPattern, imageUrl, exactUrl) {
 module.exports = {
   sendRuntimeMessage,
   getContentStats,
-  getProduct,
   getPageReport,
   rescanTab,
   scanWholePage,

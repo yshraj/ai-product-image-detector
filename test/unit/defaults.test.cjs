@@ -3,12 +3,17 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const defaults = require('../../utils/defaults.js');
 
-test('SYNC_DEFAULTS includes compare and notification keys', () => {
-  assert.equal(defaults.SYNC_DEFAULTS.enabled, true);
-  assert.equal(defaults.SYNC_DEFAULTS.minConfidence, 70);
-  assert.deepEqual(defaults.SYNC_DEFAULTS.compareSites, defaults.ALL_COMPARE_SITES);
-  assert.equal(defaults.SYNC_DEFAULTS.notifyOnAI, false);
-  assert.equal(defaults.SYNC_DEFAULTS.compareUseTabs, false);
+test('SYNC_DEFAULTS has the expected detection + notification keys', () => {
+  const d = defaults.SYNC_DEFAULTS;
+  assert.equal(d.enabled, true);
+  assert.equal(d.minConfidence, 70);
+  assert.equal(d.notifyOnAI, false);
+  assert.equal(d.provider, 'heuristic');
+  assert.equal(d.ondeviceModelUrl, '');
+  assert.equal(d.hfEnsemble, true);
+  // Parked Compare settings must not linger in shipped defaults.
+  assert.equal('compareSites' in d, false);
+  assert.equal('serpApiKey' in d, false);
 });
 
 test('CONTENT_PREF_DEFAULTS is a subset of sync settings', () => {

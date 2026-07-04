@@ -1,7 +1,7 @@
 // test/unit/marketplace-url.test.cjs — listing vs product URL guards.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { isMarketplaceProductUrl, isSafeCompareUrl, isSupportedMarketplaceUrl } = require('../../utils/marketplace-url.js');
+const { isMarketplaceProductUrl, isSupportedMarketplaceUrl } = require('../../utils/marketplace-url.js');
 
 test('isMarketplaceProductUrl rejects category/listing pages', () => {
   assert.equal(isMarketplaceProductUrl('https://www.myntra.com/men-shirts'), false);
@@ -14,25 +14,21 @@ test('isMarketplaceProductUrl accepts product pages', () => {
   assert.equal(isMarketplaceProductUrl('https://www.nykaa.com/p/12345'), true);
 });
 
-test('isSafeCompareUrl allows marketplace product links', () => {
-  assert.equal(isSafeCompareUrl('https://www.flipkart.com/p/x'), true);
-  assert.equal(isSafeCompareUrl('https://www.amazon.in/dp/B123'), true);
-});
-
-test('isSafeCompareUrl blocks javascript and non-marketplace hosts', () => {
-  assert.equal(isSafeCompareUrl('javascript:alert(1)'), false);
-  assert.equal(isSafeCompareUrl('http://www.flipkart.com/p/x'), false);
-  assert.equal(isSafeCompareUrl('https://evil.example/p/x'), false);
-});
-
-test('isSafeCompareUrl allows CDN image hosts when images=true', () => {
-  assert.equal(isSafeCompareUrl('https://assets.myntassets.com/h.jpg', { images: true }), true);
-  assert.equal(isSafeCompareUrl('https://assets.myntassets.com/h.jpg'), false);
-});
-
 test('isSupportedMarketplaceUrl accepts supported hosts', () => {
   assert.equal(isSupportedMarketplaceUrl('https://www.myntra.com/men-shirts'), true);
   assert.equal(isSupportedMarketplaceUrl('https://www.flipkart.com/search?q=x'), true);
-  assert.equal(isSupportedMarketplaceUrl('https://www.amazon.in/dp/B123'), false);
+  assert.equal(isSupportedMarketplaceUrl('https://www.aliexpress.com/wholesale?SearchText=x'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.temu.com/search_result.html'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.shein.com/pdsearch/dress'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.amazon.in/dp/B123'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.amazon.com/dp/B123'), true);
+  assert.equal(isSupportedMarketplaceUrl('https://www.amazon.co.uk/s?k=x'), true);
   assert.equal(isSupportedMarketplaceUrl('https://example.com/'), false);
+});
+
+test('isMarketplaceProductUrl accepts global product pages', () => {
+  assert.equal(isMarketplaceProductUrl('https://www.amazon.com/dp/B0123'), true);
+  assert.equal(isMarketplaceProductUrl('https://www.amazon.co.uk/gp/product/B0123'), true);
+  assert.equal(isMarketplaceProductUrl('https://www.aliexpress.com/item/100500.html'), true);
+  assert.equal(isMarketplaceProductUrl('https://www.amazon.com/s?k=shirt'), false);
 });

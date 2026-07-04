@@ -2,7 +2,6 @@
 const { test, expect } = require('./fixtures/extension.fixture.cjs');
 const {
   getContentStats,
-  getProduct,
   getPageReport,
   rescanTab,
   setContentEnabled,
@@ -28,14 +27,6 @@ test.describe('Message passing', () => {
     expect(typeof stats.ai).toBe('number');
     expect(typeof stats.aiHigh).toBe('number');
     expect(typeof stats.aiLikely).toBe('number');
-  });
-
-  test('content script responds to GET_PRODUCT on a product page', async ({ extensionContext, contentPage }) => {
-    await contentPage.gotoProduct(MYNTRA_PRODUCT_URL);
-    await expect.poll(
-      () => getProduct(extensionContext, 'https://www.myntra.com/*', MYNTRA_PRODUCT_URL),
-      { timeout: 10_000 },
-    ).toMatchObject({ site: 'myntra', title: expect.stringContaining('Test Brand') });
   });
 
   test('GET_PAGE_REPORT returns structured export data', async ({ extensionContext, contentPage }) => {
