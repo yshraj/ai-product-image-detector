@@ -59,7 +59,7 @@
       heading: 'Why flagged?',
       engineHuggingFace: 'Hugging Face',
       enginePreview: 'On-device preview',
-      previewNote: 'Preview heuristic — low accuracy. Connect Hugging Face for a real verdict.',
+      previewNote: 'On-device estimate — connect Hugging Face in Settings for a more confident verdict.',
       modelNote: (model) => `Model: ${model}`,
       confidence: (c) => `${c}% confidence it is AI-generated`,
       layerExif: (c) => `EXIF check: ${c}% real`,

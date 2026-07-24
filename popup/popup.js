@@ -795,7 +795,7 @@ function renderStatus() {
   } else {
     stateName = 'warn';
     title = 'Preview mode';
-    sub = 'Low accuracy — connect a model in Settings';
+    sub = 'Scanning locally on this device — connect Hugging Face for higher accuracy';
     chip = 'Preview';
   }
 

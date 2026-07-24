@@ -2,9 +2,10 @@
 
 Ready-to-paste copy and asset specs for the listing. All text is written to match
 the **actual shipped behavior** (see `manifest.json`, `FEATURES.md`) — no claims
-the extension can't back up. The default engine is a low-accuracy preview until
-the user connects a free Hugging Face model (or a full build enables on-device),
-and the copy says so.
+the extension can't back up. Scanning works immediately with the built-in
+on-device Preview engine; connecting a free Hugging Face model (or a full
+build with on-device ONNX) increases accuracy, and the copy says so honestly
+without undermining the free default.
 
 > The permission justifications and privacy disclosure live in
 > [CHROMEWEBSTORE.md](../CHROMEWEBSTORE.md); this file covers marketing assets.
@@ -39,7 +40,7 @@ WHERE IT WORKS
 AliExpress, Temu, Shein, Amazon (global), Myntra, Flipkart, Meesho, and Nykaa.
 
 HONEST ABOUT ACCURACY
-TrueKart is a signal, not a verdict. Use it alongside reviews, ratings, and seller history. The built-in "Preview" engine is fast but low-accuracy; for reliable detection, connect a free Hugging Face model in one step (no payment). Even the best free detectors miss some AI images, so treat a flag as "look closer," not "proof."
+TrueKart is a signal, not a verdict. Use it alongside reviews, ratings, and seller history. Scanning works out of the box with the built-in on-device Preview engine; connect a free Hugging Face model in one step (no payment) for higher accuracy. Even the best free detectors miss some AI images, so treat a flag as "look closer," not "proof."
 
 PRIVATE BY DESIGN
 • No account. No servers of ours. No analytics, ads, or tracking.
@@ -115,7 +116,7 @@ Disclosure to include verbatim: "TrueKart is a detection aid, not a guarantee."
 
 **Does it work automatically?** Yes — open a supported store's product or search page and images are scanned as they come into view. Use "Scan whole page" for off-screen items.
 
-**Why do I need a Hugging Face token?** The built-in Preview engine runs locally but is low-accuracy. A free Hugging Face model gives reliable detection. Creating a read token is free and takes a minute; images go directly from your browser to Hugging Face, never to us. (A full/on-device build can skip this — see docs/ONDEVICE.md.)
+**Do I need a Hugging Face token?** No — the built-in Preview engine scans locally with zero setup. A free Hugging Face model gives higher accuracy if you want it. Creating a read token is free and takes a minute; images go directly from your browser to Hugging Face, never to us. (A full/on-device build can get the same accuracy boost with no token at all — see docs/ONDEVICE.md.)
 
 **Is it 100% accurate?** No. Even the best free detectors miss some AI images and can occasionally misjudge a real photo. Treat a flag as "look closer," and use reviews/ratings too. You can lower/raise the flag threshold, and mark a flag "Not AI" to dismiss it.
 

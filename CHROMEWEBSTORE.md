@@ -18,7 +18,7 @@ As you browse AliExpress, Temu, Shein, Amazon, Myntra, Flipkart, Meesho and Nyka
 Why it matters: scam and dropshipping listings increasingly use AI-generated or stolen "hero" images that don't match what actually ships. A photo that looks synthetic is a useful signal to slow down, read reviews, and reverse-image-search before you buy. TrueKart is a signal, not a verdict — use it alongside reviews and ratings.
 
 How to use it:
-1. Click the TrueKart icon and connect a free Hugging Face detection model (or try the on-device Preview engine).
+1. TrueKart scans automatically with the built-in on-device Preview engine — no setup required. For higher accuracy, click the TrueKart icon and connect a free Hugging Face detection model (takes about a minute, no payment).
 2. Open any product or search page on a supported store — images are scanned automatically.
 3. Use "Scan whole page" to check off-screen products, and adjust the flag threshold to your taste.
 4. Tap a flagged badge → "Find identical" to reverse-image-search the photo on Google Lens or Bing.
@@ -121,7 +121,7 @@ https://github.com/yshraj/ai-product-image-detector/blob/main/docs/PRIVACY.md
 ## Review Notes
 
 ### Known Issues / Limitations
-- The on-device "Preview" engine is explicitly low-accuracy; the accurate path requires the user to connect a free Hugging Face model. This is disclosed in the UI. (On-device model shipping is planned — see docs/ROADMAP.md.)
+- The built-in on-device "Preview" engine works with zero setup but is a heuristic, not a trained model — it's less accurate than the Hugging Face path. This is disclosed in the UI. A fully-local, higher-accuracy ONNX engine is built but gated out of the default build (see docs/ONDEVICE.md).
 - AliExpress, Temu and Shein use volatile, hashed DOM class names — selectors in `content/sites/` are best-effort and need periodic re-validation on live pages.
 
 ### Pre-Submit Checklist

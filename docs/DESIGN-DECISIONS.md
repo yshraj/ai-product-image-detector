@@ -51,6 +51,24 @@ Content script calls `RMF_RemoteDetect` → message → worker → `router.huggi
 
 ---
 
+## Lean default build; on-device ONNX engine ships inert
+
+**Decision:** The default store package does not bundle the ONNX Runtime WASM
+or request the `offscreen` permission, even though the full on-device engine
+(`detection/ondevice/`, `offscreen/`) is implemented and unit-checked.
+
+**Why:** Bundling ONNX Runtime Web adds ~10 MB and an extra permission for a
+feature most users won't need (Hugging Face is the accurate default path).
+`RMF_ONDEVICE_STATUS` reports `available: false` in this build — the
+`chrome.offscreen` API is undefined without the permission — so the options
+UI self-hides the on-device card instead of showing a broken control. This
+is a deliberate "lean build, full build" split, not an unfinished feature:
+see [ONDEVICE.md](ONDEVICE.md) for the full activation checklist (bundle the
+runtime, add the permission, host and point at model weights) required to
+ship the no-token, fully-local detection path.
+
+---
+
 ## EXIF as a decisive "real" signal only
 
 **Decision:** EXIF can prove a photo is **real** (camera metadata present) but does not alone flag AI.
