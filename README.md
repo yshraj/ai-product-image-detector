@@ -135,7 +135,7 @@ npx playwright install --with-deps chromium
 1. Open Chrome → `chrome://extensions`
 2. Enable **Developer mode** (top-right)
 3. Click **Load unpacked** → select the **repository root folder** (the one containing `manifest.json`)
-4. Confirm TrueKart appears with version **1.8.0**
+4. Confirm TrueKart appears with version **1.9.0**
 
 **Alternative — auto-reload during development:**
 
@@ -286,7 +286,7 @@ npm ci → eslint → validate → test:unit → playwright install → test:e2e
 npm run build
 ```
 
-Output: `dist/truekart_ai_fake_photo_check-1.8.0.zip` (~120 KB). The optional on-device engine's ONNX Runtime (`libs/onnx/`, `offscreen/`) is excluded from the default lean build via `web-ext-config.mjs`; enabling on-device detection includes it — see [docs/ONDEVICE.md](docs/ONDEVICE.md).
+Output: `dist/truekart_ai_fake_photo_check-1.9.0.zip` (~120 KB). The optional on-device engine's ONNX Runtime (`libs/onnx/`, `offscreen/`) is excluded from the default lean build via `web-ext-config.mjs`; enabling on-device detection includes it — see [docs/ONDEVICE.md](docs/ONDEVICE.md).
 
 `web-ext-config.mjs` excludes dev files (`test/`, `docs/`, `node_modules/`, etc.) from the package.
 

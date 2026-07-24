@@ -155,6 +155,15 @@ Response time: best-effort, this is an indie project.
 ## 13. Release notes (store "What's new")
 
 ```
+1.9.0
+• Now MIT-licensed, fully open source.
+• Real, published accuracy numbers — see the "Accuracy" link in the listing.
+• More reliable badges on Flipkart after a site redesign; hardened against future ones on Myntra and Nykaa too.
+• Clearer, more honest messaging about the free on-device scan mode.
+• Accessibility: Windows High Contrast support, light-theme "Why flagged?" popover.
+```
+
+```
 1.8.0
 • Now works on AliExpress, Temu, Shein and Amazon (global) — not just Indian stores.
 • Repositioned around spotting AI-generated & fake product photos on scam-prone marketplaces.

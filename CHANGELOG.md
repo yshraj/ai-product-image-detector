@@ -4,6 +4,68 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] — 2026-07-25
+
+### Changed
+- **Relicensed from proprietary to MIT.** The project can now actually
+  function as open source — `LICENSE`, `package.json`.
+- Reframed preview-mode copy across the popup, strings module, and store
+  listing docs — the free, zero-setup detection path now leads with what it
+  does well (local, private, free) before the accuracy tradeoff, instead of
+  leading with "not accurate."
+- `docs/TERMS.md` no longer describes the product as a "shopping assistant"
+  (pre-1.8.0 positioning, dropped when Compare/Tools were removed).
+
+### Added
+- `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, GitHub issue
+  templates (bug / false-positive / new-marketplace-request), and a PR
+  template — the standard open-source trust surface, previously entirely
+  missing.
+- A persistent "❤️ Support us" link in the popup and options page, pointing
+  at a Razorpay payment page (repointed the existing config-driven support
+  footer rather than adding a second one).
+- `forced-colors` (Windows High Contrast) support and a light-theme variant
+  for the injected "Why flagged?" popover, which was previously dark-only.
+- `docs/ACCURACY.md` — real, independently-reproducible detection accuracy
+  numbers (precision/recall/F1 for preview, Hugging Face default model, and
+  on-device ONNX) from the existing `research/accuracy-test/` benchmark,
+  instead of no accuracy page at all.
+- README badges, a real screenshots section, and `scripts/capture-screenshots.cjs`.
+- Chrome Web Store promotional assets generated from the real extension UI
+  and brand tokens: small promo tile, marquee/feature graphic, and 2 of 3
+  required listing screenshots (`scripts/generate-promo-assets.cjs`,
+  `scripts/generate-store-screenshot.cjs`).
+
+### Fixed
+- **Flipkart selectors** — live-verified against a real search page; every
+  previously hardcoded hashed class had gone dead. Replaced with a
+  class-agnostic CDN-image primary selector, the same pattern already
+  working for AliExpress/Meesho/Temu/Shein. Myntra and Nykaa hardened the
+  same way defensively.
+- Removed `gridSelector`/`observeSelector` from all 8 marketplace site
+  configs — confirmed via repo-wide search they were never read anywhere;
+  the content script's `MutationObserver` always watches `document.body`.
+- A stale "connect Hugging Face for real detection" line in `options.js`
+  that undersold preview mode, missed in an earlier copy pass.
+- `research/accuracy-test/README.md`'s heuristic-detector precision claim
+  (was "—", actually 0% — one false-positive flag on a real photo at the
+  extension's real default threshold, independently re-verified).
+
+### Security
+- Hardened the SSRF guard (`isAllowedHttpUrl`) to also block private/
+  link-local/multicast **IPv6** hosts (previously only `::1` was checked),
+  including `fc00::/7` unique-local and IPv4-mapped `::ffff:a.b.c.d`.
+- Briefly narrowed, then **restored**, the `tabs` permission — removing it
+  broke `chrome.tabs.query({url: ...})` calls the popup genuinely needs for
+  multi-tab routing. Caught by a full E2E run before shipping; see the git
+  history for the full root-cause writeup.
+
+### Removed
+- Archived `docs/PRODUCTION-AUDIT.md`, `docs/PRODUCTION-AUDIT-2026.md`,
+  `docs/EDGE-CASES.md`, `docs/EXTENSION-PLAYBOOK.md`, `docs/SAAS-PLAYBOOK.md`,
+  and `docs/skills-run/` to `docs/archive/` — all pre-1.8.0 or internal
+  AI-tooling artifacts that were confusing to read as current guidance.
+
 ## [1.8.0] — 2026-07-04
 
 ### Removed
@@ -27,7 +89,11 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 ### Fixed
 - Stale ARIA test now targets `.bottom-nav-tabs` (the tablist), matching the a11y-correct markup.
 
-## [Unreleased]
+## [Unreleased-1.4–1.7] — historical, never split into dated versions
+
+> This section predates 1.8.0 and describes the Compare/Tools-tab era, all of
+> which was removed in 1.8.0 (see above). Kept for history; if you're looking
+> for what's true today, start at [1.9.0](#190--2026-07-25) or newer.
 
 ### Added
 - **Cross-platform ranked compare** — `compare/search.js` merges site candidates, scores with TF-IDF + optional CLIP, returns flat top-10 `ranked` list; Compare tab renders unified cards.

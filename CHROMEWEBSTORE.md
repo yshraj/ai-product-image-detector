@@ -133,13 +133,15 @@ https://github.com/yshraj/ai-product-image-detector/blob/main/docs/PRIVACY.md
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 1.9.0 | 2026-07-25 | Relicensed to MIT; added the standard OSS trust surface (SECURITY.md, CONTRIBUTING.md, CoC, templates); published real accuracy numbers (docs/ACCURACY.md); Flipkart selectors live-fixed, Myntra/Nykaa hardened; SSRF guard IPv6 hardening; a11y (forced-colors, light-theme popover); store promo assets generated. See CHANGELOG.md for the full list. | Draft |
 | 1.8.0 | 2026-07-04 | Expanded to global marketplaces (AliExpress, Temu, Shein, Amazon global + full Amazon.in scan); repositioned around AI/fake photo detection; optional on-device ONNX engine; removed the unshipped cross-marketplace "compare" experiment; trimmed store package from ~11 MB to ~120 KB. | Draft |
 
 ## Review Notes
 
 ### Known Issues / Limitations
-- The built-in on-device "Preview" engine works with zero setup but is a heuristic, not a trained model — it's less accurate than the Hugging Face path. This is disclosed in the UI. A fully-local, higher-accuracy ONNX engine is built but gated out of the default build (see docs/ONDEVICE.md).
-- AliExpress, Temu and Shein use volatile, hashed DOM class names — selectors in `content/sites/` are best-effort and need periodic re-validation on live pages.
+- The built-in on-device "Preview" engine works with zero setup but is a heuristic, not a trained model — it's less accurate than the Hugging Face path. This is disclosed in the UI, and quantified honestly in [docs/ACCURACY.md](docs/ACCURACY.md). A fully-local, higher-accuracy ONNX engine is built but gated out of the default build (see docs/ONDEVICE.md).
+- AliExpress, Temu, Shein, Amazon, and Meesho selectors are best-effort and haven't had a live re-check this pass (blocked from this automated environment — see docs/SELECTORS.md). Flipkart was live-validated and fixed 2026-07-25; Myntra and Nykaa were hardened defensively.
+- HF token lives in `chrome.storage.sync`, not `.local` — tracked in SECURITY.md, not a silent gap.
 
 ### Pre-Submit Checklist
 - [x] Manifest V3, no V2 APIs

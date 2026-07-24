@@ -10,7 +10,7 @@ easy to trust.
 
 ---
 
-## Current state (v1.8.0)
+## Current state (v1.9.0)
 
 | Area | Status | Notes |
 |---|---|---|
