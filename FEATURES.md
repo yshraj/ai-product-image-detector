@@ -14,10 +14,12 @@ token — see [docs/ONDEVICE.md](docs/ONDEVICE.md)).
 | **Scan** | Flags product images as AI-generated / likely AI / normal. Threshold slider, rescan, **Scan whole page**, export JSON/CSV. |
 | **Settings** | HF token, display mode, confidence, notifications. |
 
-A persistent **Buy me a coffee** support footer sits above the bottom nav on
-every open (all tabs/states). The target is provider-agnostic — set
-`SUPPORT.url` in `utils/defaults.js` (Buy Me a Coffee / GitHub Sponsors / Ko-fi
-/ Stripe / Lemon Squeezy / Polar / Patreon / custom); no popup change needed.
+A persistent **"❤️ Support us"** support footer sits above the bottom nav on
+every open (all tabs/states), and the same link appears in the options page's
+About & help section. The target is provider-agnostic — set `SUPPORT.url` in
+`utils/defaults.js` (currently a Razorpay payment page; Buy Me a Coffee /
+GitHub Sponsors / Ko-fi / Stripe / Lemon Squeezy / Polar / Patreon / custom
+all work too); no popup change needed.
 
 ## Scan
 
