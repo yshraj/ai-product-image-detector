@@ -47,8 +47,8 @@ PRIVATE BY DESIGN
 • Settings sync only across your own browser profile; results are cached locally.
 • With Hugging Face connected, only the product image and your own token go to Hugging Face to classify it — nothing is sent to us.
 
-FREE & OPEN
-No subscription, no paywall. If it saves you from a bad buy, there's an optional "buy me a coffee" link — never a nag.
+FREE & OPEN SOURCE
+No subscription, no paywall. MIT licensed, source on GitHub. If it saves you from a bad buy, there's an optional "Support us" link — never a nag.
 
 Questions or a wrong flag? https://github.com/yshraj/ai-product-image-detector/issues
 ```
@@ -138,7 +138,11 @@ Disclosure to include verbatim: "TrueKart is a detection aid, not a guarantee."
 
 **Badges stopped showing on a site.** The store likely changed its page layout. Please file an issue; selector fixes are quick. See docs/SELECTORS.md.
 
-**Is it free?** Yes, completely. There's an optional "buy me a coffee" link and nothing is gated.
+**Is it free?** Yes, completely. There's an optional "Support us" link (in the popup and Settings) and nothing is gated behind it.
+
+**Is this open source?** Yes — MIT licensed, source on GitHub. Contributions welcome, especially fixing a marketplace selector after a site redesign (the most common maintenance need). See CONTRIBUTING.md.
+
+**How accurate is it, really?** See docs/ACCURACY.md for real numbers from a reproducible benchmark — not a marketing claim. Short version: the free on-device mode is a convenience layer, not something to rely on alone; connecting Hugging Face (free, ~1 minute) gets you a detector with zero false alarms on our test set.
 
 ## 12. Support page content (host at the GitHub issues URL / a simple page)
 

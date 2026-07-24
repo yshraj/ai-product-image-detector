@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — TrueKart
 
-> Last Updated: 2026-07-04
+> Last Updated: 2026-07-25
 
 ## Store Listing
 
@@ -24,6 +24,8 @@ How to use it:
 4. Tap a flagged badge → "Find identical" to reverse-image-search the photo on Google Lens or Bing.
 
 Your privacy: TrueKart has no account and no servers of its own. Your settings sync only across your own browser profile, and detection results are cached locally on your device. When you connect Hugging Face, only the product image and your own access token are sent to Hugging Face to classify the image — nothing is sent to us.
+
+Open source: TrueKart is MIT licensed and the full source is on GitHub — read the code, verify the privacy claims yourself, or contribute a fix.
 
 Support & feedback: https://github.com/yshraj/ai-product-image-detector/issues
 
