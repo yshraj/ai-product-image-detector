@@ -6,11 +6,12 @@ By installing or using TrueKart ("the extension") you agree to these terms.
 
 ## 1. The service
 
-TrueKart is a **shopping assistant** for supported global e-commerce sites
-(AliExpress, Temu, Shein, Amazon, Myntra, Flipkart, Meesho, Nykaa). It scans
-product images and highlights those that may be AI-generated or fake, and can
-hand off to a reverse-image search. It is provided **free of charge** and
-**"as is"**, without warranty of any kind, express or implied.
+TrueKart flags AI-generated and fake-looking product photos on supported
+global e-commerce sites (AliExpress, Temu, Shein, Amazon, Myntra, Flipkart,
+Meesho, Nykaa). It scans product images and highlights those that may be
+AI-generated or fake, and can hand off to a reverse-image search. It is
+provided **free of charge** and **"as is"**, without warranty of any kind,
+express or implied.
 
 ## 2. Not a guarantee
 
