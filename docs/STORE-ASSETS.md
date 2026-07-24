@@ -73,17 +73,29 @@ Capture on **real** marketplace pages (never the `research/accuracy-test/` fixtu
 
 ## 6. Small promo tile — 440×280 PNG
 
+✅ **Done:** [`docs/promo/small-tile-440x280.png`](promo/small-tile-440x280.png)
+(`npm run generate-promo-assets`). Icon on the brand gradient, wordmark +
+tagline, no marketplace content — matches the spec below as originally written:
+
 - Left: TrueKart magnifier-check icon on the brand teal→green gradient.
 - Right: wordmark "TrueKart" + tagline "Spot AI & fake product photos."
 - No screenshots of real brands; keep it iconographic. High contrast, ≥ 4.5:1 text.
 
 ## 7. Marquee promo tile — 1400×560 PNG (optional but boosts featuring)
 
-- Centered device/browser frame showing scene #1 (badged grid), dimmed.
+✅ **Done:** [`docs/promo/marquee-1400x560.png`](promo/marquee-1400x560.png)
+(same script). Used a badge-tier callout row + headline instead of a dimmed
+device frame (no synthetic "fake grid" mockup that could itself read as a
+misleading screenshot) — same brand gradient, same message:
+
+- ~~Centered device/browser frame showing scene #1 (badged grid), dimmed.~~ (skipped — see above)
 - Foreground: "Is this product photo real?" → "TrueKart tells you before you buy."
 - Brand gradient background; logo bottom-left.
 
 ## 8. Feature graphic specification
+
+✅ Satisfied by the same marquee tile (item 7) — same 1400×560 asset, headline
+≤6 words, brand gradient, no competitor logos or guaranteed-detection claims.
 
 - **Aspect:** 1400×560, safe area centered (avoid 60px edges).
 - **Palette:** brand teal `#0FA36B`→green gradient, near-white text `#F8FAFC`.

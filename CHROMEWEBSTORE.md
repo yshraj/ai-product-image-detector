@@ -41,25 +41,35 @@ English
 | Asset | Dimensions | Status | Filename |
 |-------|-----------|--------|----------|
 | Store Icon [REQUIRED] | 128×128 PNG | ✅ Ready | `icons/icon-128.png` |
-| Screenshot 1 [REQUIRED] | 1280×800 or 640×400 | ⬜ Not created | — |
-| Screenshot 2 [RECOMMENDED] | 1280×800 or 640×400 | ⬜ Not created | — |
-| Screenshot 3 [RECOMMENDED] | 1280×800 or 640×400 | ⬜ Not created | — |
-| Small Promo Tile [RECOMMENDED] | 440×280 | ⬜ Not created | — |
-| Marquee Promo Tile | 1400×560 | ⬜ Not created | — |
+| Screenshot 1 [REQUIRED] | 1280×800 or 640×400 | ✅ Ready (popup Scan overview, no marketplace content needed) | `docs/promo/store-screenshot-popup-1280x800.png` |
+| Screenshot 2 [RECOMMENDED] | 1280×800 or 640×400 | ✅ Ready (popup Settings / Hugging Face connect, no marketplace content needed) | `docs/promo/store-screenshot-settings-1280x800.png` |
+| Screenshot 3 [RECOMMENDED] | 1280×800 or 640×400 | ⬜ **Not created — needs a real marketplace page, see below** | — |
+| Small Promo Tile [RECOMMENDED] | 440×280 | ✅ Ready | `docs/promo/small-tile-440x280.png` |
+| Marquee Promo Tile | 1400×560 | ✅ Ready | `docs/promo/marquee-1400x560.png` |
+
+The promo tiles and Screenshots 1–2 are generated from the real extension UI
+and brand tokens (`npm run generate-promo-assets`, `npm run
+capture-screenshots` then `npm run generate-store-screenshot`) —
+iconographic/UI-only, no marketplace content needed, so no live-site access
+blocker applies to them. **Screenshot 3 — badges on a real product grid — is
+the one CWS asset that genuinely cannot be produced from this environment**;
+see the checklist at the bottom of this file.
 
 ### Screenshot Notes (use REAL listings, not test fixtures)
-1. An AliExpress or Temu search page with red "AI generated" / amber "Likely AI" badges on several product images — this is the money shot; pick a category with obvious synthetic hero images.
-2. The popup Scan panel showing the AI generated / Likely AI / Normal breakdown after a scan.
-3. The "Why flagged?" popover on a flagged image, including the "Find identical" reverse-image-search handoff.
-4. The Settings panel showing the Hugging Face connection + display modes.
+1. ⬜ An AliExpress or Temu search page with red "AI generated" / amber "Likely AI" badges on several product images — this is the money shot; pick a category with obvious synthetic hero images.
+2. ✅ **Done** — the popup Scan panel showing the flag threshold and cached results: `docs/promo/store-screenshot-popup-1280x800.png`.
+3. ⬜ The "Why flagged?" popover on a flagged image, including the "Find identical" reverse-image-search handoff — needs a real listing, same blocker as item 1.
+4. ✅ **Done** — the Settings panel showing the Hugging Face connection: `docs/promo/store-screenshot-settings-1280x800.png`.
+
+Regenerate 2 and 4 with `npm run capture-screenshots && npm run
+generate-store-screenshot` after a popup UI change.
 
 > Do not reuse the synthetic noise-square images in `research/accuracy-test/` — they read as fake. Capture real marketplace pages.
 >
-> Items 2 and 4 (popup/Settings, no marketplace content) can start from
-> `npm run capture-screenshots` (see [docs/screenshots/](docs/screenshots/)),
-> but items 1 and 3 (badges/popover on a real listing) must be re-shot on an
-> actual marketplace page — the script's fixture images are placeholder
-> shapes, not real product photos, and will look fake in the listing.
+> Items 1 and 3 (badges/popover on a real listing) are the only remaining
+> screenshot gaps, and both need a real marketplace page — they cannot be
+> automated from this environment (blocked/unreliable network access to live
+> marketplaces; see [docs/SELECTORS.md](docs/SELECTORS.md)).
 
 ## Permissions Justification
 
@@ -136,8 +146,11 @@ https://github.com/yshraj/ai-product-image-detector/blob/main/docs/PRIVACY.md
 - [x] Every permission + host_permission has a specific justification (above)
 - [x] All declared permissions are actually used in code (verified)
 - [x] 128×128 store icon exists (`icons/icon-128.png`)
-- [x] Store package trimmed (<1 MB; parked Compare feature excluded via `web-ext-config.mjs`)
-- [ ] Selectors validated on live AliExpress / Temu / Shein / Amazon pages
-- [ ] Privacy Policy URL is live (commit `docs/PRIVACY.md` to the public repo) and matches this disclosure
-- [ ] At least 1 screenshot at 1280×800 or 640×400 from a REAL marketplace page
-- [ ] Publisher name + contact email filled in
+- [x] Store package trimmed (128 KB — `npm run build`; verified 2026-07-25)
+- [x] Small promo tile (440×280) + marquee tile (1400×560) ready
+- [x] 2 of 3 screenshot slots ready (popup Scan + Settings, no marketplace content needed)
+- [x] Flipkart selectors live-validated 2026-07-25; Myntra/Nykaa hardened defensively — see [docs/SELECTORS.md](docs/SELECTORS.md)
+- [ ] AliExpress / Temu / Shein / Amazon / Meesho selectors still need a manual live check (blocked from this automated environment — anti-bot network restrictions, not a code issue)
+- [ ] Privacy Policy URL live at the GitHub blob URL below — resolves once this repo's changes are pushed to `main`
+- [ ] 1 more screenshot (badges on a REAL marketplace page — the one asset that must be captured manually)
+- [ ] Publisher name + contact email filled in (below — maintainer decision, not something a repo change can supply)

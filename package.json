@@ -28,7 +28,9 @@
     "refresh-exifr": "curl -sL -o libs/exifr.min.js https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js",
     "refresh-onnx-runtime": "mkdir -p libs/onnx && curl -fsSL -o libs/onnx/ort.min.js https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js && cd libs/onnx && for f in ort-wasm-simd-threaded.wasm ort-wasm-simd-threaded.jsep.wasm; do curl -fsSL -o \"$f\" \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/$f\"; done",
     "refresh-icons": "python3 scripts/generate-icons.py",
-    "capture-screenshots": "node scripts/capture-screenshots.cjs"
+    "capture-screenshots": "node scripts/capture-screenshots.cjs",
+    "generate-promo-assets": "node scripts/generate-promo-assets.cjs",
+    "generate-store-screenshot": "node scripts/generate-store-screenshot.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
