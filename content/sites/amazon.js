@@ -6,10 +6,8 @@
 if (/(^|\.)amazon\.(com|co\.uk|de|fr|it|es|ca|com\.au|com\.mx|com\.br|co\.jp|nl|se|pl|sg|ae|sa|in)$/.test(location.hostname)) {
   window.RMF_SITE = {
     name: 'amazon',
-    gridSelector: '.s-main-slot, #search',
     cardSelector: 'div[data-component-type="s-search-result"], #imgTagWrapperId, #main-image-container',
     imageSelector: 'img.s-image, #landingImage, #imgTagWrapperId img, img',
     overlayTargetSelector: '.s-product-image-container, #imgTagWrapperId, #main-image-container',
-    observeSelector: '.s-main-slot, #dp-container, body',
   };
 }

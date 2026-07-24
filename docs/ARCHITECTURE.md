@@ -94,13 +94,14 @@ Injected on four marketplaces at `document_idle`. Load order in `manifest.json`:
 ```javascript
 {
   name: 'myntra',              // used in stats, storage keys
-  gridSelector: '.results-base',     // container for product cards
   cardSelector: '.product-base',     // individual product card
   imageSelector: 'img',              // image(s) within a card
   overlayTargetSelector: '...',      // where badges attach
-  observeSelector: '.results-base',  // MutationObserver root
 }
 ```
+
+The content script's `MutationObserver` always watches `document.body` — there is
+no per-site grid/observe-root field; only the three selectors above are read.
 
 When a marketplace changes its DOM, update the matching file under `content/sites/`.
 

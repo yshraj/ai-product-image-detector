@@ -9,19 +9,15 @@ if (/(^|\.)sheinindia\.in$/.test(location.hostname)) {
   // first (any product link wrapping a Shein-CDN image), with generic fallbacks.
   window.RMF_SITE = {
     name: 'shein',
-    gridSelector: '[class*="product-list"], [class*="ProductList"], main, #app',
     cardSelector: 'a:has(img[src*="ltwebstatic"]), a[href*="/p/"], a[href*="-p-"], [class*="product-card"], [class*="productCard"]',
     imageSelector: 'img[src*="ltwebstatic"], img[class*="product"], img[class*="Product"], img',
     overlayTargetSelector: '[class*="product-card__img"], [class*="crop-image"], [class*="productCard"], a',
-    observeSelector: '#app, main, body',
   };
 } else if (/(^|\.)shein\.com$/.test(location.hostname) || /(^|\.)shein\.[a-z.]+$/.test(location.hostname)) {
   window.RMF_SITE = {
     name: 'shein',
-    gridSelector: '.product-list__items, .S-product-list, [class*="product-list"]',
     cardSelector: 'a:has(img[src*="ltwebstatic"]), section.product-card, .product-card, [class*="product-card"], .S-product-item',
     imageSelector: 'img[src*="ltwebstatic"], img.crop-image-container__img, .crop-image-container img, img[class*="product-card__img"], img',
     overlayTargetSelector: '.crop-image-container, [class*="product-card__img"], [class*="product-intro__main-img"]',
-    observeSelector: '#app, body',
   };
 }

@@ -9,10 +9,8 @@
 if (location.hostname.endsWith('meesho.com')) {
   window.RMF_SITE = {
     name: 'meesho',
-    gridSelector: '[class*="ProductList"], main',
     cardSelector: 'a:has(img[src*="images.meesho.com"]), [data-testid="product-card"], [class*="ProductList__GridCol"] > div',
     imageSelector: 'img[src*="images.meesho.com"], img[class*="ProductImage"], img[class*="ImageContainer"] img, img',
     overlayTargetSelector: '[class*="ProductImage"], [class*="ImageContainer"], a',
-    observeSelector: 'main',
   };
 }

@@ -8,10 +8,8 @@
 if (/(^|\.)temu\.com$/.test(location.hostname)) {
   window.RMF_SITE = {
     name: 'temu',
-    gridSelector: '[role="list"], #root',
     cardSelector: 'a:has(img[src*="kwcdn.com"]), a[href*="goods.html"], div[data-uniqid], [role="listitem"]',
     imageSelector: 'img[src*="kwcdn.com"], img[class*="goods"], img[src*="temu"], img',
     overlayTargetSelector: '[class*="imgContainer"], [class*="goods-img"], a',
-    observeSelector: '#root, body',
   };
 }
