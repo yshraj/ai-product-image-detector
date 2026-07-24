@@ -110,7 +110,7 @@ Everything below is what you need to clone the repo, run the extension locally, 
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| **Node.js** | 20+ | Matches CI (`.github/workflows/ci.yml`) |
+| **Node.js** | 22+ | Matches CI (`.github/workflows/ci.yml`) |
 | **npm** | 9+ | Ships with Node |
 | **Google Chrome** | Recent stable | For loading unpacked extension and E2E tests |
 
