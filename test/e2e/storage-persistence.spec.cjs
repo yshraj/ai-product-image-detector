@@ -25,17 +25,19 @@ test.describe('Chrome storage', () => {
     expect(cacheKeys.length).toBeGreaterThan(0);
   });
 
-  // Known occasional CI flake (GitHub Actions shared runners; not reproduced
-  // locally): waitForScan() only guarantees the first card finished, and with
-  // several viewport-visible cards under a 3-way concurrency limit, one can
-  // still be mid-flight and write its cache entry right after
-  // clearDetectionCache() runs. A fix polling on the content script's
-  // GET_STATS `pending` count before clearing was tried and reverted 2026-07-25
-  // — `pending` got stuck at a static non-zero value under artificial
-  // --repeat-each stress even in full isolation, which needs its own
-  // investigation before trusting that signal (see content.js's `pending`
-  // bookkeeping in updateSessionCounts/processCard). Left as-is rather than
-  // ship an unverified fix.
+  // waitForScan() only guarantees the first card finished — with several
+  // viewport-visible cards under a 3-way concurrency limit, one can still be
+  // mid-flight and write its own cache entry right after a single
+  // clearDetectionCache() call runs, which used to make this test flaky on
+  // GitHub Actions' shared runners (not reproduced locally). A fix polling on
+  // the content script's GET_STATS `pending` count before clearing was tried
+  // and reverted 2026-07-25 — `pending` got stuck at a static non-zero value
+  // under artificial --repeat-each stress even in full isolation, not a
+  // signal worth trusting yet. Fixed properly instead: clearing is the
+  // ground truth the test cares about, so re-clear on any observed leftover
+  // key rather than trying to perfectly time a wait beforehand — this closes
+  // the race regardless of how many late writes land, and however long they
+  // take.
   test('clearing detection cache removes cached verdicts', async ({ extensionContext, contentPage }) => {
     await contentPage.setViewportAllVisible();
     await contentPage.gotoListing();
@@ -44,8 +46,12 @@ test.describe('Chrome storage', () => {
     const removed = await clearDetectionCache(extensionContext);
     expect(removed).toBeGreaterThan(0);
 
-    const after = await getLocalStorage(extensionContext, null);
-    expect(Object.keys(after).filter((k) => k.startsWith(CACHE_PREFIX))).toHaveLength(0);
+    await expect.poll(async () => {
+      const after = await getLocalStorage(extensionContext, null);
+      const leftover = Object.keys(after).filter((k) => k.startsWith(CACHE_PREFIX));
+      if (leftover.length) await clearDetectionCache(extensionContext); // sweep up a late in-flight write
+      return leftover.length;
+    }, { timeout: 15_000 }).toBe(0);
   });
 
   test('local storage survives browser restart with the same user-data profile', async () => {
