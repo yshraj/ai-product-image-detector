@@ -556,6 +556,13 @@
       }
     }
 
+    // Same as the isActive() re-check below the detect call — scanning may
+    // have been disabled during the image-load wait above.
+    if (!isActive()) {
+      card.removeAttribute('data-rmf-scanned');
+      return;
+    }
+
     const imgUrl = imgEl.currentSrc || imgEl.src;
     if (corrections.has(imgUrl)) {
       card.setAttribute('data-rmf-scanned', 'true');
@@ -569,6 +576,16 @@
 
     try {
       const result = await limit(() => window.RMF_Detect(imgUrl));
+      // Scanning may have been turned off while this detection was in
+      // flight — teardownBadges() already ran and cleared everything it
+      // could see at that moment, but this card wasn't done yet, so it
+      // wasn't touched. Without this check the badge would be created
+      // anyway, right after the user disabled scanning. Bail without
+      // marking the card so a future re-enable + rescan can pick it up.
+      if (!isActive()) {
+        card.removeAttribute('data-rmf-scanned');
+        return;
+      }
       card.__rmfResult = result; // kept for the page-export report
       injectOverlay(card, result, imgEl);
       session.scanned++;

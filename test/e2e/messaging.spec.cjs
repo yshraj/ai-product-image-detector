@@ -57,8 +57,11 @@ test.describe('Message passing', () => {
     await contentPage.waitForBadges();
 
     await setContentEnabled(extensionContext, false);
-    await contentPage.page.waitForTimeout(500);
-    expect(await contentPage.badges.count()).toBe(0);
+    // A fixed sleep before asserting is flaky under load (CI runners in
+    // particular) — the disable message needs time to propagate and the
+    // content script needs time to remove badges. Poll instead of assuming
+    // 500ms is always enough.
+    await expect.poll(() => contentPage.badges.count(), { timeout: 10_000 }).toBe(0);
 
     await setContentEnabled(extensionContext, true);
     await contentPage.waitForBadges(1, 15_000);
