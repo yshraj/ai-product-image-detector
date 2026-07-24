@@ -11,7 +11,7 @@ test.describe('Support footer', () => {
 
     const link = page.locator('#support-link');
     await expect(link).toBeVisible();
-    await expect(link).toContainText(/coffee/i);
+    await expect(link).toContainText(/support/i);
 
     await popup.selectTab('settings');
     await expect(popup.settingsPanel).toBeVisible();

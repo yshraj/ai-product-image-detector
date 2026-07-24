@@ -26,7 +26,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderHistory();
   wireEvents();
   initOndevice();
+  setupSupportLink();
 });
+
+// Same provider-agnostic support target as the popup footer (RMF_Defaults.SUPPORT) —
+// a single source of truth for the URL so it only needs to change in one place.
+function setupSupportLink() {
+  const link = $('support-link');
+  if (!link) return;
+  const support = window.RMF_Defaults?.SUPPORT || {};
+  if (support.url) link.href = support.url;
+  const aria = window.RMF_STRINGS?.support?.aria;
+  if (aria) link.setAttribute('aria-label', aria);
+}
 
 // ---- engine status (read-only) -------------------------------------------
 function renderEngine() {
@@ -44,7 +56,7 @@ function renderEngine() {
     $('engine-sub').textContent = 'Hugging Face — reconnect in the popup to verify';
   } else {
     chip.textContent = 'Preview'; chip.dataset.state = 'warn';
-    $('engine-sub').textContent = 'On-device heuristic (low accuracy) — connect Hugging Face for real detection';
+    $('engine-sub').textContent = 'Scanning locally on this device — connect Hugging Face for higher accuracy';
   }
 }
 

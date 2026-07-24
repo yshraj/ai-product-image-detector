@@ -62,8 +62,8 @@
   // GitHub Sponsors / Ko-fi / Stripe / Lemon Squeezy / Polar / Patreon or a
   // custom endpoint is a one-line change here — the popup reads `url` only.
   const SUPPORT = {
-    provider: 'buymeacoffee', // buymeacoffee | github | kofi | stripe | lemonsqueezy | polar | patreon | custom
-    url: 'https://www.buymeacoffee.com/truekart',
+    provider: 'custom', // buymeacoffee | github | kofi | stripe | lemonsqueezy | polar | patreon | custom
+    url: 'https://rzp.io/rzp/QPASy1V',
   };
 
   return {
