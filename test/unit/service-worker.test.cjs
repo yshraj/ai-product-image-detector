@@ -39,6 +39,30 @@ test('isAllowedHttpUrl does not over-block adjacent public ranges', () => {
   assert.equal(isAllowedHttpUrl('http://11.0.0.1/x'), true);
 });
 
+test('isAllowedHttpUrl blocks private/link-local IPv6 hosts', () => {
+  assert.equal(isAllowedHttpUrl('http://[::]/x'), false);            // unspecified
+  assert.equal(isAllowedHttpUrl('http://[::1]/x'), false);            // loopback
+  assert.equal(isAllowedHttpUrl('http://[fe80::1]/x'), false);        // link-local
+  assert.equal(isAllowedHttpUrl('http://[fc00::1]/x'), false);        // unique local (ULA)
+  assert.equal(isAllowedHttpUrl('http://[fd12:3456:789a::1]/x'), false); // ULA
+  assert.equal(isAllowedHttpUrl('http://[ff02::1]/x'), false);        // multicast
+  assert.equal(isAllowedHttpUrl('http://[::ffff:127.0.0.1]/x'), false); // IPv4-mapped loopback
+  assert.equal(isAllowedHttpUrl('http://[::ffff:169.254.169.254]/x'), false); // IPv4-mapped metadata
+  assert.equal(isAllowedHttpUrl('http://[::192.168.1.1]/x'), false);  // deprecated IPv4-compatible, private
+});
+
+test('isAllowedHttpUrl allows public IPv6 hosts', () => {
+  assert.equal(isAllowedHttpUrl('http://[2001:4860:4860::8888]/x'), true); // public (Google DNS)
+  assert.equal(isAllowedHttpUrl('http://[::ffff:8.8.8.8]/x'), true);       // IPv4-mapped, public
+});
+
+test('isAllowedHttpUrl blocks alternate IPv4 encodings normalized by the URL parser', () => {
+  assert.equal(isAllowedHttpUrl('http://2130706433/x'), false);   // decimal for 127.0.0.1
+  assert.equal(isAllowedHttpUrl('http://0x7f000001/x'), false);   // hex for 127.0.0.1
+  assert.equal(isAllowedHttpUrl('http://0177.0.0.1/x'), false);   // octal for 127.0.0.1
+  assert.equal(isAllowedHttpUrl('http://127.1/x'), false);        // short-form for 127.0.0.1
+});
+
 test('parseHfResult reads AI label scores (flat array)', () => {
   const r = parseHfResult([
     { label: 'artificial', score: 0.97 },

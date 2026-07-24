@@ -172,25 +172,70 @@ async function clearDetectionCache() {
   } catch { return 0; }
 }
 
+function isPrivateIpv4Octets(a, b) {
+  if (a === 0 || a === 127 || a === 10) return true;                // this-host / loopback / private
+  if (a === 169 && b === 254) return true;                          // link-local (cloud metadata)
+  if (a === 192 && b === 168) return true;                          // private
+  if (a === 172 && b >= 16 && b <= 31) return true;                 // private
+  if (a >= 224) return true;                                        // multicast / reserved
+  return false;
+}
+
+// Expands a bracket-stripped IPv6 literal (as normalized by the WHATWG URL
+// parser, e.g. "fe80::1") into 8 hex groups, or null if it doesn't look like one.
+function expandIpv6Groups(inner) {
+  if (!inner.includes(':')) return null;
+  const [head, tail] = inner.includes('::') ? inner.split('::') : [inner, undefined];
+  const headParts = head ? head.split(':').filter(Boolean) : [];
+  const tailParts = tail !== undefined ? tail.split(':').filter(Boolean) : [];
+  if (tail === undefined) return headParts.length === 8 ? headParts : null;
+  const missing = 8 - headParts.length - tailParts.length;
+  if (missing < 0) return null;
+  return [...headParts, ...Array(missing).fill('0'), ...tailParts];
+}
+
+function isPrivateIpv6(hostnameNoBrackets) {
+  const groups = expandIpv6Groups(hostnameNoBrackets);
+  if (!groups) return false;
+  const nums = groups.map((g) => parseInt(g || '0', 16));
+  if (nums.every((n) => n === 0)) return true;                        // :: (unspecified)
+  if (nums.slice(0, 7).every((n) => n === 0) && nums[7] === 1) return true; // ::1 (loopback)
+  if ((nums[0] & 0xffc0) === 0xfe80) return true;                     // fe80::/10 link-local
+  if ((nums[0] & 0xfe00) === 0xfc00) return true;                     // fc00::/7 unique local
+  if ((nums[0] & 0xff00) === 0xff00) return true;                     // ff00::/8 multicast
+  // IPv4-mapped (::ffff:a.b.c.d) or deprecated IPv4-compatible (::a.b.c.d) —
+  // check the embedded IPv4 address against the same private ranges.
+  if (nums.slice(0, 5).every((n) => n === 0) && (nums[5] === 0 || nums[5] === 0xffff)) {
+    const a = (nums[6] >> 8) & 0xff;
+    const b = nums[6] & 0xff;
+    if (isPrivateIpv4Octets(a, b)) return true;
+  }
+  return false;
+}
+
 // Defence-in-depth: the worker has broad fetch ability (host_permissions bypass
 // page CORS), so only ever fetch public http(s) URLs. This blocks a compromised
 // page from coaxing the worker into hitting loopback/private-network addresses
 // or non-http schemes (an SSRF / CORS-bypass-proxy abuse surface).
+//
+// Known limitation: this is a hostname-string check, not a resolved-IP check.
+// A public hostname whose DNS record points at a private address (DNS
+// rebinding) is not caught here — the extension has no API to pin the
+// resolved IP before `fetch()` runs. Alternate IPv4 encodings (decimal,
+// octal, hex, short-form) don't need separate handling: the WHATWG URL
+// parser (`new URL()`) already canonicalizes them to dotted-quad in
+// `url.hostname` before this function ever sees them.
 function isAllowedHttpUrl(u) {
   let url;
   try { url = new URL(u); } catch { return false; }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
   const h = url.hostname.toLowerCase();
-  if (h === 'localhost' || h.endsWith('.localhost') || h === '[::1]' || h === '::1') return false;
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (m) {
-    const a = +m[1], b = +m[2];
-    if (a === 0 || a === 127 || a === 10) return false;             // this-host / loopback / private
-    if (a === 169 && b === 254) return false;                       // link-local (cloud metadata)
-    if (a === 192 && b === 168) return false;                       // private
-    if (a === 172 && b >= 16 && b <= 31) return false;              // private
-    if (a >= 224) return false;                                     // multicast / reserved
+  if (h === 'localhost' || h.endsWith('.localhost')) return false;
+  if (h.startsWith('[') && h.endsWith(']')) {
+    return !isPrivateIpv6(h.slice(1, -1));
   }
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m && isPrivateIpv4Octets(+m[1], +m[2])) return false;
   return true;
 }
 

@@ -304,17 +304,9 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 
 ## Contributing
 
-1. Fork and clone the repo.
-2. `npm ci && npx playwright install --with-deps chromium`
-3. Make changes in vanilla JS — match existing patterns (UMD modules, `RMF_` prefixes).
-4. `npm run lint && npm run test:unit && npm test` must pass.
-5. Load unpacked at `chrome://extensions` and smoke-test on a marketplace page.
-6. Open a pull request against `main`.
-
-**Code conventions:**
-- Shared settings and storage keys live in `utils/defaults.js`
-- User-facing strings live in `utils/strings.js`
-- Per-marketplace DOM selectors live in `content/sites/<name>.js`
-- No `console.log` in shipped code — use `RMF_Log` (gated) or remove before merge
+Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, code
+conventions, and how to add or fix a marketplace (the most common contribution). Please
+also read the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go to
+[SECURITY.md](SECURITY.md), not a public issue.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for planned work.

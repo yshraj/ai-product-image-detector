@@ -67,6 +67,8 @@ Content script calls `RMF_RemoteDetect` → message → worker → `router.huggi
 - Marketplace CDNs block direct canvas reads from content scripts (CORS/tainted canvas).
 - Worker must not fetch `localhost`, private IPs, or non-http schemes — prevents abuse if a malicious page triggers fetches.
 
+**Coverage:** blocks loopback/private/link-local/multicast IPv4 and IPv6 (including `fc00::/7` unique-local, `fe80::/10` link-local, and IPv4-mapped `::ffff:a.b.c.d`) and `localhost`. Alternate IPv4 encodings (decimal, octal, hex, short-form) don't need explicit handling — the WHATWG `URL` parser already canonicalizes them to dotted-quad before the guard sees them. **Known limitation:** this is a hostname-string check, not a resolved-IP check, so DNS rebinding (a public hostname whose record points at a private address) isn't caught — there's no extension API to pin the resolved IP before `fetch()`. See [SECURITY.md](../SECURITY.md).
+
 Unit tests: `test/unit/service-worker.test.cjs`.
 
 ---
