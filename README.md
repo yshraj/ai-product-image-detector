@@ -1,5 +1,10 @@
 # TrueKart — Chrome Extension
 
+[![CI](https://github.com/yshraj/ai-product-image-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/yshraj/ai-product-image-detector/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/github/package-json/v/yshraj/ai-product-image-detector)](CHANGELOG.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 > **Spot AI & fake product photos before you buy.**
 
 TrueKart is a **Chrome extension** that flags AI-generated and fake-looking product photos while you shop — on **AliExpress, Temu, Shein, Amazon** (global), plus **Myntra, Flipkart, Meesho, Nykaa**. It's most useful on scam-prone, dropshipping-heavy marketplaces where "hero" photos are often synthetic or stolen. TrueKart is a *signal*, not a verdict — use it alongside reviews and ratings.

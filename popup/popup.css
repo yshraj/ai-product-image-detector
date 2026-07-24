@@ -80,6 +80,16 @@ body {
   }
 }
 
+/* Windows High Contrast: the status dot is background-color only (no border),
+   so it can vanish under forced-colors — the status chip's text/border already
+   carries the same state redundantly, but the dot should stay visible too. */
+@media (forced-colors: active) {
+  .status-dot { border: 1px solid CanvasText; forced-color-adjust: none; }
+  .status-card[data-state="good"] .status-dot { background: LinkText; }
+  .status-card[data-state="warn"] .status-dot { background: FieldText; }
+  .status-card[data-state="error"] .status-dot { background: Mark; }
+}
+
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .skip-link { position: absolute; left: 8px; top: -40px; z-index: 100; background: var(--accent); color: #fff; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none; }
 .skip-link:focus { top: 8px; }

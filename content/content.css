@@ -129,3 +129,40 @@
   .rmf-badge, .rmf-pop { animation: none; transition: none; }
   .rmf-badge:hover, .rmf-badge:active { transform: none; }
 }
+
+/* Light-theme popover — the badge stays a solid-color pill either way (already
+   AA-safe with white text), but the "Why flagged?" popover was dark-only even
+   though it's injected onto arbitrary marketplace pages. */
+@media (prefers-color-scheme: light) {
+  .rmf-pop {
+    background: #ffffff;
+    color: #1a1d23;
+    border-color: #e2e5eb;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, 0.18);
+  }
+  .rmf-pop-row { color: #1a1d23; }
+  .rmf-pop-sub { color: #6b7280; }
+  .rmf-pop-note { color: #8a5a12; }
+  .rmf-pop-layers { color: #6b7280; }
+  .rmf-pop-actions { border-top-color: #e2e5eb; }
+  .rmf-pop-alabel { color: #6b7280; }
+  .rmf-pop-link { color: #0f766e; }
+  .rmf-pop-copy.is-copied { color: #059669; }
+  .rmf-pop-close { background: #f3f4f6; color: #6b7280; border-color: #e2e5eb; }
+  .rmf-pop-close:hover { color: #111827; border-color: #0f766e; }
+  .rmf-pop-wrong { color: #6b7280; }
+  .rmf-pop-wrong:hover { color: #111827; }
+}
+
+/* Windows High Contrast / forced-colors: box-shadow (used for the badge's
+   elevation and the flagged-image ring) doesn't reliably paint in this mode,
+   so both need an explicit system-colored border/outline to stay visible
+   against the underlying product photo. Backgrounds/text are intentionally
+   left to the browser's forced palette rather than overridden — the verdict
+   is also conveyed by the label text, not color alone. */
+@media (forced-colors: active) {
+  .rmf-badge { border: 1px solid ButtonText; }
+  .rmf-pop { border: 2px solid CanvasText; }
+  .rmf-flagged-img { outline: 2px solid Highlight; outline-offset: -2px; }
+  .rmf-highlight { outline-color: Highlight; }
+}
