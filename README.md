@@ -253,17 +253,15 @@ npm run build
 
 Before bumping version, update **both** `package.json` and `manifest.json` — `npm run validate` fails if they diverge.
 
-Full release audit: **[docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md)**
-
-Upload the zip to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+Upload the zip to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). Permission justifications and store listing copy: [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md).
 
 ---
 
 ## Security and privacy
 
 - **No backend, no telemetry.** Outbound calls: Hugging Face (only if connected), marketplace image CDNs, and — only if on-device is enabled — the model-weights download URL you configure.
-- **Permissions:** `activeTab`, `storage`, `scripting`, `tabs`, `notifications`, `contextMenus` — scoped host permissions per marketplace.
-- **HF token** stored in `chrome.storage.sync` (Chrome profile only); never exported.
+- **Permissions:** `activeTab`, `storage`, `scripting`, `notifications`, `contextMenus` — scoped host permissions per marketplace. See [SECURITY.md](SECURITY.md) for the full threat model.
+- **HF token** stored in `chrome.storage.sync` (your Chrome account only, never sent to TrueKart); always excluded from settings export.
 - **SSRF guard** on image fetches in the service worker; the on-device model URL must be https.
 - **CSP** on extension pages: `script-src 'self' 'wasm-unsafe-eval'`.
 
@@ -283,8 +281,6 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 | E2E tests fail locally | Run `npx playwright install --with-deps chromium` |
 | `validate` version error | Sync `version` in `package.json` and `manifest.json` |
 
-Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
-
 ---
 
 ## Documentation
@@ -297,11 +293,12 @@ Failure modes and recovery: **[docs/EDGE-CASES.md](docs/EDGE-CASES.md)**
 | [docs/SELECTORS.md](docs/SELECTORS.md) | Per-marketplace selector contract + live verification protocol |
 | [docs/STORE-ASSETS.md](docs/STORE-ASSETS.md) | Chrome Web Store listing copy + asset specs |
 | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) | Why vanilla JS, HF in worker, preview fallback, etc. |
-| [docs/EDGE-CASES.md](docs/EDGE-CASES.md) | Invalid inputs, network failures, extension reloads |
-| [docs/PRODUCTION-AUDIT.md](docs/PRODUCTION-AUDIT.md) | Release readiness checklist |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Current state and near-term plans |
+| [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |
 | [test/e2e/README.md](test/e2e/README.md) | Playwright test architecture |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [docs/PRIVACY.md](docs/PRIVACY.md) / [docs/TERMS.md](docs/TERMS.md) | In-app legal text |
+| [docs/archive/](docs/archive/) | Historical audits from earlier versions (not current) |
 
 ---
 

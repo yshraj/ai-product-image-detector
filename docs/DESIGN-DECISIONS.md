@@ -17,11 +17,11 @@ This document records **why** the extension is built the way it is. For structur
 
 ---
 
-## Shopping assistant first, AI detection as one feature
+## Focused two-tab popup: Scan and Settings
 
-**Decision:** Popup has four tabs (Scan, Compare, Tools, Settings), not a single AI-focused panel.
+**Decision:** The popup has two tabs (Scan, Settings), not a broader "shopping assistant" panel.
 
-**Why:** Users on Indian marketplaces benefit from compare and copy utilities even without connecting Hugging Face. Positioning as a "shopping assistant" keeps the extension useful on day one with heuristic preview mode.
+**Why:** Earlier builds explored a four-tab layout (Scan / Compare / Tools / Settings). Compare (cross-marketplace search handoffs) and Tools (copy/share utilities) added surface area without strengthening the core pitch — a trustworthy AI/fake-photo signal — so they were removed in v1.8.0. A narrower product is easier to explain, easier to review for the Chrome Web Store, and easier for contributors to reason about.
 
 ---
 
@@ -71,18 +71,6 @@ Unit tests: `test/unit/service-worker.test.cjs`.
 
 ---
 
-## Compare search in the service worker
-
-**Decision:** Cross-marketplace compare runs in the worker via `importScripts('compare/…')`.
-
-**Why:**
-- Compare needs `fetch()` to marketplace search URLs — blocked from extension pages and unreliable from content scripts.
-- Sequential per-site search avoids bursting rate limits; SerpApi optional for reliability.
-
-Popup only renders results; it never scrapes HTML directly.
-
----
-
 ## Active-tab-only popup messaging
 
 **Decision:** Tab-specific actions (`GET_STATS`, `RESCAN`, `GET_PRODUCT`, …) target the **currently active tab** only.
@@ -95,7 +83,7 @@ Popup only renders results; it never scrapes HTML directly.
 
 **Decision:** Shared utils export both `window.RMF_*` and `module.exports`.
 
-**Why:** Same source runs in the browser and in Node unit tests without a test bundler. Compare and defaults modules use this pattern consistently.
+**Why:** Same source runs in the browser and in Node unit tests without a test bundler. `defaults.js`, `report.js`, `model-store.js`, and other shared/worker-facing modules use this pattern consistently.
 
 ---
 
@@ -117,7 +105,6 @@ Popup only renders results; it never scrapes HTML directly.
 | Cache TTL | 7 days | Same product image URL rarely changes |
 | Viewport gating | IntersectionObserver | Don't scan off-screen infinite-scroll cards |
 | Badge debounce | 300 ms | Batch toolbar updates during grid scan |
-| Compare timeout | 120 s (popup) | User feedback if search hangs |
 | Image load timeout | 12 s (content) | Free detection slots on broken images |
 
 ---
@@ -140,13 +127,12 @@ Popup only renders results; it never scrapes HTML directly.
 
 | Destination | When | Required? |
 |-------------|------|-----------|
-| Marketplace pages/CDNs | Scan, compare scrape | Yes (core feature) |
-| Hugging Face | AI detect (BYOK token) or one-time CLIP model download | No — preview heuristic works offline |
-| SerpApi | Compare via Google Shopping | No — direct scrape fallback |
+| Marketplace pages/CDNs | Image fetch for scanning | Yes (core feature) |
+| Hugging Face | AI detect (BYOK token) or on-device model download | No — preview heuristic works offline |
 
-**BYOK:** `hfToken` and `serpApiKey` are optional user-provided credentials stored in the extension (not sent to TrueKart). Prefer `chrome.storage.local` for secrets over sync.
+**BYOK:** `hfToken` is an optional user-provided credential stored in the extension (not sent to TrueKart).
 
-**Explicitly out of scope:** hosted inference proxy, accounts, Clerk/Stripe, entitlement API, telemetry pipeline.
+**Explicitly out of scope:** hosted inference proxy, accounts, billing, entitlement API, telemetry pipeline.
 
 ---
 
@@ -166,11 +152,11 @@ Popup only renders results; it never scrapes HTML directly.
 
 ---
 
-## Validation instead of ESLint
+## ESLint plus a custom validator
 
-**Decision:** `npm run lint` runs `scripts/validate.js`, not ESLint.
+**Decision:** `npm run lint` runs both ESLint (`eslint.config.mjs`) and a project-specific `scripts/validate.js`.
 
-**Why:** Vanilla JS without a bundler; ESLint setup cost outweighs benefit for this repo size. Validate checks manifest integrity, file references, syntax, version sync, and `debugger` statements in shipped code.
+**Why:** ESLint catches general JS correctness/style issues; `validate.js` checks things ESLint doesn't know about — manifest integrity, file references, `package.json`/`manifest.json` version sync, and `debugger` statements in shipped code. No bundler is involved in either step.
 
 ---
 

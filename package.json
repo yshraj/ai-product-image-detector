@@ -2,8 +2,7 @@
   "name": "truekart",
   "version": "1.8.0",
   "description": "Spot AI-generated & fake product photos on AliExpress, Temu, Shein, Amazon & more.",
-  "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": "TrueKart",
   "homepage": "https://github.com/yshraj/ai-product-image-detector#readme",
   "repository": {

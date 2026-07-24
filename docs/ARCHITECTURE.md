@@ -265,13 +265,13 @@ E2E tests load the unpacked extension via `--load-extension`. Marketplace pages 
 
 ## Build output
 
-`npm run build` runs `web-ext build`, producing a zip in `dist/`. Dev-only paths are excluded via `web-ext-config.cjs` (tests, docs, `node_modules`, etc.).
+`npm run build` runs `web-ext build`, producing a zip in `dist/`. Dev-only paths are excluded via `web-ext-config.mjs` (tests, docs, `node_modules`, etc.).
 
 ---
 
 ## Related docs
 
 - [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) — why things are built this way
-- [EDGE-CASES.md](EDGE-CASES.md) — failure modes and recovery
-- [PRODUCTION-AUDIT.md](PRODUCTION-AUDIT.md) — release checklist
+- [ROADMAP.md](ROADMAP.md) — current state and near-term plans
 - [PRIVACY.md](PRIVACY.md) / [TERMS.md](TERMS.md) — legal copy shown in-app
+- [archive/](archive/) — historical audits from earlier versions (not current)

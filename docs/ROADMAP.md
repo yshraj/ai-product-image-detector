@@ -1,65 +1,66 @@
 # TrueKart — Roadmap
 
-_Last updated: 2026-06-30_
+_Last updated: 2026-07-24_
 
-TrueKart is a **shopping assistant** for Indian e-commerce. AI detection is one tool;
-compare, utilities, and trust signals are the long-term wedge.
+TrueKart flags AI-generated and fake-looking product photos on shopping sites. The
+product is deliberately narrow: a trustworthy detection signal, not a general shopping
+assistant. Earlier builds explored broader "shopping assistant" features (cross-marketplace
+compare, copy/share tools); those were removed in v1.8.0 to keep the product focused and
+easy to trust.
 
 ---
 
-## Current state (v1.3+)
+## Current state (v1.8.0)
 
 | Area | Status | Notes |
 |---|---|---|
-| Four-tab popup (Scan / Compare / Tools / Settings) | ✅ Shipped | Bottom nav, shopping-first positioning |
-| Compare — marketplace search handoffs | ✅ Shipped | Amazon, Flipkart, Myntra, Meesho, Nykaa |
-| Tools — copy, share, reverse image search | ✅ Shipped | Product extraction via OG + JSON-LD |
-| AI badges + "Why flagged?" popover | ✅ Shipped | HF + Preview engines |
-| Export JSON/CSV, history, notifications | ✅ Shipped | |
-| Settings page + popup quick settings | ✅ Shipped | |
+| Two-tab popup (Scan / Settings) | ✅ Shipped | Bottom nav, detection-first |
+| AI badges + "Why flagged?" popover | ✅ Shipped | HF + on-device preview engines, per-layer breakdown |
+| Export JSON/CSV, history, notifications | ✅ Shipped | Local-only |
+| Options page (display mode, threshold, marketplaces, data & privacy) | ✅ Shipped | |
 | Hugging Face via router endpoint | ✅ Shipped | Live token validation |
-| Playwright E2E (69 tests) | ✅ Shipped | Fixtures, helpers, CI |
-| Site selectors | ⚠️ Fragile | Hashed CSS classes drift — re-check before store launch |
+| False-positive correction loop ("Mark wrong") | ✅ Shipped | |
+| Playwright E2E + Node unit tests, axe-core a11y checks, CI | ✅ Shipped | |
+| MIT license, public repo, OSS contribution files | ✅ Shipped | |
+| Site selectors | ⚠️ Fragile | Hashed CSS classes drift — re-check periodically |
+| On-device ONNX engine | ⚠️ Gated | UI/download pipeline built; disabled pending shipped runtime + hosted weights (see [ONDEVICE.md](ONDEVICE.md)) |
+| Chrome Web Store listing | ⬜ Not submitted | See [CHROMEWEBSTORE.md](../CHROMEWEBSTORE.md) |
 
 ---
 
 ## Near term
 
-- [ ] **Trust score** — composite signal (seller, reviews, return policy, AI image, discount)
-  so the product feels like a shopping assistant, not only a detector.
-- [x] **Live price comparison** — auto-search other marketplaces, score title/brand/price similarity, show best matches (v1.4).
-- [ ] **Amazon.in** content-script support (Compare already links to Amazon search).
-- [ ] Re-validate site selectors on live Myntra / Flipkart / Meesho / Nykaa pages.
-- [ ] Chrome Web Store listing (screenshots, demo GIF, privacy review).
+- [ ] Chrome Web Store submission (screenshots, demo GIF, privacy review, permission justifications).
+- [ ] Publish a public accuracy/methodology page from `research/accuracy-test/`.
+- [ ] Re-validate site selectors on live AliExpress / Temu / Shein / Amazon / Myntra / Flipkart / Meesho / Nykaa pages.
+- [ ] Finish and ship the on-device ONNX engine as a no-token, fully local detection path.
 
 ---
 
 ## Later
 
-- [ ] Confidence heatmap on flagged images (à la Illuminarty).
-- [ ] "Which generator?" labelling (needs Hive-class engine).
-- [ ] More marketplaces (Ajio, Tata Cliq).
-- [ ] Review summary, price history, wishlist export (Tools tab).
+- [ ] `forced-colors` (Windows High Contrast) support for badges.
+- [ ] Light-theme variant for the injected "Why flagged?" popover.
+- [ ] i18n — the string module (`utils/strings.js`) is translation-ready; no locales shipped yet.
+- [ ] More marketplaces, community-contributed via `content/sites/`.
+- [ ] Firefox port (the `web-ext` tooling already supports this).
 
-**Not planned:** TrueKart-hosted backend, accounts, or inference proxy. Optional features stay BYOK (user's HF / SerpApi keys) or on-device.
+**Not planned:** TrueKart-hosted backend, accounts, or an inference proxy. Detection stays BYOK (user's own Hugging Face token) or fully on-device.
 
 ---
 
 ## Positioning
 
-**Wedge:** "Shop smarter on the Indian marketplaces you already use."
-
-- Hive/TruthScan = paste-an-image checkers; we work **in-context** on the product grid.
-- SynthID = Google-watermarked images only.
-- Coupon extensions = price focus; we combine **trust + compare + utilities**.
+**Wedge:** the only privacy-first, shopping-native, open-source AI-photo detector — most
+competitors (Hive, Is It AI?, BitMind) are cloud-upload, general-purpose, on-demand tools
+with no marketplace awareness.
 
 ---
 
 ## Open decisions
 
-1. **Store launch:** soft launch (unpacked) vs Chrome Web Store submission.
-2. **Default HF model:** keep `haywoodsloan/ai-image-detector-deploy` or A/B alternatives.
-3. **BYOK only:** Hugging Face and SerpApi keys are user-provided; no TrueKart-hosted proxy. *(Resolved 2026-07-02.)*
+1. **Default HF model:** keep the current two-model ensemble or evaluate alternatives once accuracy is benchmarked and published.
+2. **On-device engine:** finish and ship (flagship no-token privacy path) vs. keep gated indefinitely — see [ONDEVICE.md](ONDEVICE.md).
 
 ---
 

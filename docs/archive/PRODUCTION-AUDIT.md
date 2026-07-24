@@ -1,3 +1,8 @@
+> **Archived — historical snapshot from v1.7.0.** Describes the "compare"/"Tools" tabs and
+> SerpApi integration, which were removed in v1.8.0. Kept for historical context; do not use
+> as a description of the current product. See [../ARCHITECTURE.md](../ARCHITECTURE.md) and
+> [../ROADMAP.md](../ROADMAP.md) for current state.
+
 # Production Audit — TrueKart v1.7.0
 
 Final release-readiness audit completed **2026-06-30**.
