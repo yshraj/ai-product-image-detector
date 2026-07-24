@@ -118,7 +118,7 @@ Disclosure to include verbatim: "TrueKart is a detection aid, not a guarantee."
 
 **Do I need a Hugging Face token?** No — the built-in Preview engine scans locally with zero setup. A free Hugging Face model gives higher accuracy if you want it. Creating a read token is free and takes a minute; images go directly from your browser to Hugging Face, never to us. (A full/on-device build can get the same accuracy boost with no token at all — see docs/ONDEVICE.md.)
 
-**Is it 100% accurate?** No. Even the best free detectors miss some AI images and can occasionally misjudge a real photo. Treat a flag as "look closer," and use reviews/ratings too. You can lower/raise the flag threshold, and mark a flag "Not AI" to dismiss it.
+**Is it 100% accurate?** No. Even the best free detectors miss some AI images and can occasionally misjudge a real photo. Treat a flag as "look closer," and use reviews/ratings too. You can lower/raise the flag threshold, and mark a flag "Not AI" to dismiss it. Real, reproducible accuracy numbers (not marketing copy): docs/ACCURACY.md.
 
 **Do you collect my data?** No. No account, no servers of ours, no analytics or tracking. Settings sync only in your own browser profile; results cache locally.
 

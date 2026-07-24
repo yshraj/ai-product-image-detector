@@ -31,8 +31,8 @@ easy to trust.
 ## Near term
 
 - [ ] Chrome Web Store submission (screenshots, demo GIF, privacy review, permission justifications).
-- [ ] Publish a public accuracy/methodology page from `research/accuracy-test/`.
-- [ ] Re-validate site selectors on live AliExpress / Temu / Shein / Amazon / Myntra / Flipkart / Meesho / Nykaa pages.
+- [x] Publish a public accuracy/methodology page from `research/accuracy-test/` — see [ACCURACY.md](ACCURACY.md).
+- [x] Re-validate site selectors — Flipkart live-verified and fixed 2026-07-25; Myntra/Nykaa hardened defensively; AliExpress/Temu/Shein/Amazon/Meesho still need a manual live check (blocked from automated environments — see [SELECTORS.md](SELECTORS.md)).
 - [ ] Finish and ship the on-device ONNX engine as a no-token, fully local detection path.
 
 ---

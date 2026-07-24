@@ -33,12 +33,25 @@ are also written to `*-scores.json`.
 
 | Detector | Recall | Precision | F1 | Verdict |
 |----------|--------|-----------|----|---------|
-| On-device heuristic | 0% | — | 0.00 | Unshippable |
+| On-device heuristic | 0% | 0% (1 false-positive flag on a real photo) | 0.00 | Unshippable |
 | Nahrawy/AIorNot | 33% | ~70% | 0.33 | Bad both ways |
 | Organika/sdxl-detector | 100% | 38% | 0.57 | Flags everything |
 | umm-maybe/AI-image-detector | 50% | 100% | 0.67 | Good; catches different imgs |
 | **haywoodsloan (SwinV2)** | 50% | 100% | 0.67 | **Best single** |
 | max-ensemble (haywood + umm) | 67% | 100% | 0.80 | Best; 0 false alarms |
+
+> Re-verified 2026-07-25 against the committed `set2/*-scores.json` at the
+> extension's actual default threshold (70): heuristic and haywoodsloan/HF
+> numbers above are confirmed exact. The heuristic's precision was corrected
+> from "—" to 0% — at threshold 70 it produces exactly one false-positive
+> flag (image `17`, a real photo scored 79). The other three rows
+> (Nahrawy/AIorNot, Organika/sdxl-detector, umm-maybe, max-ensemble) are from
+> an earlier research pass whose raw per-model score files aren't in this
+> commit, so they weren't independently re-checked this pass — treat them as
+> historical R&D notes rather than reproducible-today numbers. See
+> [docs/ACCURACY.md](../../docs/ACCURACY.md) for the public-facing,
+> fully-reproducible version of this page (heuristic / HF-default / on-device
+> ONNX only).
 
 Precision is the metric that matters (a false "this real product is AI" flag
 erodes trust); haywoodsloan never false-flags. Ceiling of free off-the-shelf

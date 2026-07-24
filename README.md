@@ -343,6 +343,7 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 | [docs/STORE-ASSETS.md](docs/STORE-ASSETS.md) | Chrome Web Store listing copy + asset specs |
 | [docs/DESIGN-DECISIONS.md](docs/DESIGN-DECISIONS.md) | Why vanilla JS, HF in worker, preview fallback, etc. |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Current state and near-term plans |
+| [docs/ACCURACY.md](docs/ACCURACY.md) | Real, reproducible detection accuracy numbers and methodology |
 | [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |
 | [test/e2e/README.md](test/e2e/README.md) | Playwright test architecture |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
