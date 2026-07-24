@@ -54,6 +54,12 @@ English
 4. The Settings panel showing the Hugging Face connection + display modes.
 
 > Do not reuse the synthetic noise-square images in `research/accuracy-test/` — they read as fake. Capture real marketplace pages.
+>
+> Items 2 and 4 (popup/Settings, no marketplace content) can start from
+> `npm run capture-screenshots` (see [docs/screenshots/](docs/screenshots/)),
+> but items 1 and 3 (badges/popover on a real listing) must be re-shot on an
+> actual marketplace page — the script's fixture images are placeholder
+> shapes, not real product photos, and will look fake in the listing.
 
 ## Permissions Justification
 

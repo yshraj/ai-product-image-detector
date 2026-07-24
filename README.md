@@ -15,6 +15,7 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 
 ## Table of contents
 
+- [Screenshots](#screenshots)
 - [What it does](#what-it-does)
 - [Quick start (users)](#quick-start-users)
 - [Developer guide](#developer-guide)
@@ -31,6 +32,40 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 - [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+
+---
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Popup — Scan tab, zero setup**<br/>
+Works immediately with the built-in on-device Preview engine.
+
+<img src="docs/screenshots/03-popup-scan-preview.png" width="320" alt="TrueKart popup Scan tab in preview mode, showing the flag threshold slider and cached results" />
+
+</td>
+<td width="50%">
+
+**"Why flagged?" — full transparency**<br/>
+Confidence %, engine used, and a per-layer breakdown on every flagged image.
+
+<img src="docs/screenshots/02-why-flagged-popover.png" width="320" alt="Why flagged popover showing 92% AI confidence, engine breakdown, and reverse image search actions" />
+
+</td>
+</tr>
+</table>
+
+**Options — full settings, all local**
+
+<img src="docs/screenshots/05-options-page.png" width="640" alt="TrueKart options page showing detection engine status, preferences, active marketplaces, and data & privacy controls" />
+
+> Screenshots are captured from the real extension against the same offline
+> test fixtures the E2E suite uses (`npm run capture-screenshots` to
+> regenerate after a UI change) — see [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md)
+> for the live-marketplace screenshots used in the actual store listing.
 
 ---
 
@@ -133,6 +168,15 @@ Edit the matching file under `content/sites/` (e.g. `myntra.js`) — see [docs/A
 ```bash
 npm run refresh-exifr
 ```
+
+**Regenerating README/docs screenshots** (after a popup/options/badge UI change):
+
+```bash
+npm run capture-screenshots      # → docs/screenshots/*.png
+```
+
+Runs against the same offline E2E fixtures as the test suite — no live network,
+no real marketplace needed. See [scripts/capture-screenshots.cjs](scripts/capture-screenshots.cjs).
 
 ### Debugging
 
