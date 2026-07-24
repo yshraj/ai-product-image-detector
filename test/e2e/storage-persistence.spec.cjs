@@ -25,6 +25,17 @@ test.describe('Chrome storage', () => {
     expect(cacheKeys.length).toBeGreaterThan(0);
   });
 
+  // Known occasional CI flake (GitHub Actions shared runners; not reproduced
+  // locally): waitForScan() only guarantees the first card finished, and with
+  // several viewport-visible cards under a 3-way concurrency limit, one can
+  // still be mid-flight and write its cache entry right after
+  // clearDetectionCache() runs. A fix polling on the content script's
+  // GET_STATS `pending` count before clearing was tried and reverted 2026-07-25
+  // — `pending` got stuck at a static non-zero value under artificial
+  // --repeat-each stress even in full isolation, which needs its own
+  // investigation before trusting that signal (see content.js's `pending`
+  // bookkeeping in updateSessionCounts/processCard). Left as-is rather than
+  // ship an unverified fix.
   test('clearing detection cache removes cached verdicts', async ({ extensionContext, contentPage }) => {
     await contentPage.setViewportAllVisible();
     await contentPage.gotoListing();
