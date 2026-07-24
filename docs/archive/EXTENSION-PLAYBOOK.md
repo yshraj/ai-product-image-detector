@@ -1,3 +1,12 @@
+> **Archived — historical planning doc from before v1.8.0.** References
+> SerpApi, CLIP ONNX, and the "Compare" feature, all removed in v1.8.0, plus
+> slash-command tooling not used by this project. Kept for historical
+> context; do not use as current guidance. See
+> [../DESIGN-DECISIONS.md](../DESIGN-DECISIONS.md) and
+> [../ROADMAP.md](../ROADMAP.md) for current state. One item from this doc's
+> security checklist is still genuinely open — see the "HF token still in
+> chrome.storage.sync" note in [../../SECURITY.md](../../SECURITY.md).
+
 # TrueKart Extension-First Playbook
 
 _Last updated: 2026-07-02_
@@ -121,9 +130,9 @@ Do **not** add: Clerk, Stripe webhooks, entitlement API, hosted HF proxy.
 
 ---
 
-## Related docs
+## Related docs (current)
 
-- [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) — No telemetry or backend
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Module map
-- [PRIVACY.md](PRIVACY.md) — User-facing privacy copy
-- [ROADMAP.md](ROADMAP.md) — Feature roadmap (no hosted proxy)
+- [../DESIGN-DECISIONS.md](../DESIGN-DECISIONS.md) — No telemetry or backend
+- [../ARCHITECTURE.md](../ARCHITECTURE.md) — Module map
+- [../PRIVACY.md](../PRIVACY.md) — User-facing privacy copy
+- [../ROADMAP.md](../ROADMAP.md) — Feature roadmap (no hosted proxy)

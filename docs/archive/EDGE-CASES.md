@@ -1,8 +1,8 @@
 > **Archived — historical snapshot from v1.7.0.** Several sections (Compare tab, Tools tab,
 > SerpApi) describe features removed in v1.8.0, and `compare-hardening.spec.cjs` no longer
 > exists. Kept for historical context on edge-case analysis methodology; do not use as a
-> description of current behavior. See [../EXTENSION-PLAYBOOK.md](../EXTENSION-PLAYBOOK.md)
-> and [../ARCHITECTURE.md](../ARCHITECTURE.md) for current state.
+> description of current behavior. See [../ARCHITECTURE.md](../ARCHITECTURE.md) and
+> [../ROADMAP.md](../ROADMAP.md) for current state.
 
 # Edge Cases & Failure Scenarios — TrueKart v1.7
 

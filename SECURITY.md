@@ -76,6 +76,24 @@ We deliberately avoid `innerHTML`/`eval`/`new Function`/`document.write` in
 first-party code — all DOM construction uses `createElement`/`textContent`.
 If you find an exception to that, it's a bug; please report it.
 
+## Known limitations (tracked, not silent)
+
+- **Hugging Face token in `chrome.storage.sync`, not `.local`.** It's scoped
+  to your own signed-in Chrome profile (never sent to TrueKart, always
+  excluded from settings export), so this is a defense-in-depth gap rather
+  than an active vulnerability — but a token confined to `.local` (this
+  device only, no Google Sync roaming) would be tighter. Moving it requires
+  touching config-loading in the popup, options page, and service worker
+  together (see [docs/archive/EXTENSION-PLAYBOOK.md](docs/archive/EXTENSION-PLAYBOOK.md)
+  for where this was first flagged); tracked as a deliberate follow-up, not
+  forgotten.
+- **SSRF guard is hostname-based, not resolved-IP-based** — see the DNS
+  rebinding note above. No extension API exists to pin a resolved IP before
+  `fetch()` runs.
+- **No automated security scanning of devDependencies.** `npm audit` reports
+  pre-existing vulnerabilities in devDependencies only (Playwright/ESLint
+  toolchain — nothing that ships in the extension); not yet wired into CI.
+
 ## Disclosure
 
 We'll credit reporters (with permission) in the CHANGELOG once a fix ships,
