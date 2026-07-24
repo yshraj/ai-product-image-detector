@@ -309,7 +309,7 @@ Upload the zip to the [Chrome Web Store Developer Dashboard](https://chrome.goog
 ## Security and privacy
 
 - **No backend, no telemetry.** Outbound calls: Hugging Face (only if connected), marketplace image CDNs, and — only if on-device is enabled — the model-weights download URL you configure.
-- **Permissions:** `activeTab`, `storage`, `scripting`, `notifications`, `contextMenus` — scoped host permissions per marketplace. See [SECURITY.md](SECURITY.md) for the full threat model.
+- **Permissions:** `activeTab`, `storage`, `scripting`, `tabs`, `notifications`, `contextMenus` — scoped host permissions per marketplace. See [SECURITY.md](SECURITY.md) for the full threat model and [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md) for the per-permission justification.
 - **HF token** stored in `chrome.storage.sync` (your Chrome account only, never sent to TrueKart); always excluded from settings export.
 - **SSRF guard** on image fetches in the service worker; the on-device model URL must be https.
 - **CSP** on extension pages: `script-src 'self' 'wasm-unsafe-eval'`.

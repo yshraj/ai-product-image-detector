@@ -68,6 +68,7 @@ English
 | `activeTab` | permissions | Reads the page you're actively viewing (when you click the icon or trigger a scan) to find and analyze product images on it. |
 | `storage` | permissions | Saves your settings (display mode, flag threshold, enabled sites) and caches detection results locally so pages aren't re-scanned. |
 | `scripting` | permissions | Injects the image-scanning logic into supported marketplace pages, and runs the right-click "Check this image" check. |
+| `tabs` | permissions | The popup looks up your currently-active marketplace tab by URL pattern (`chrome.tabs.query({url: ...})`) to show that tab's scan stats and route actions like Rescan / Scan whole page — this URL-pattern lookup needs the `tabs` permission even though the matched hosts are already covered by `host_permissions`. No browsing history is read; the extension only ever looks at tabs matching its own supported marketplace list. |
 | `notifications` | permissions | Shows a single optional OS notification when AI images are found on a page (off by default). |
 | `contextMenus` | permissions | Adds a right-click menu option to check a specific image on the page. |
 | Marketplace page hosts — `aliexpress.com`, `aliexpress.us`, `temu.com`, `shein.com`, `sheinindia.in`, `amazon.com`/`.co.uk`/`.de`/`.in`/`.ca`/`.com.au`/`.fr`/`.it`/`.es`/`.co.jp`, `myntra.com`, `flipkart.com`, `meesho.com`, `nykaa.com` | host_permissions | Scanning product images on these shopping sites is the extension's core function. |
