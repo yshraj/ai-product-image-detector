@@ -15,10 +15,16 @@ export default {
     'web-ext-config.mjs',
     'research',
     'CHANGELOG.md',
-    'LICENSE',
     'README.md',
     '.gitignore',
     '.github',
+    // Contributor-facing docs — useful in the repo, dead weight inside an
+    // installed extension. LICENSE and THIRD-PARTY-NOTICES.md are deliberately
+    // NOT excluded: the .zip is a distributed copy, and both MIT licenses
+    // (ours and exifr's) require their notices to travel with every copy.
+    'CONTRIBUTING.md',
+    'CODE_OF_CONDUCT.md',
+    'SECURITY.md',
     '.agents',
     'logos',
     'CHROMEWEBSTORE.md',

@@ -1,6 +1,6 @@
 # TrueKart — Roadmap
 
-_Last updated: 2026-07-24_
+_Last updated: 2026-07-29_
 
 TrueKart flags AI-generated and fake-looking product photos on shopping sites. The
 product is deliberately narrow: a trustworthy detection signal, not a general shopping
@@ -39,9 +39,9 @@ easy to trust.
 
 ## Later
 
-- [ ] `forced-colors` (Windows High Contrast) support for badges.
-- [ ] Light-theme variant for the injected "Why flagged?" popover.
-- [ ] i18n — the string module (`utils/strings.js`) is translation-ready; no locales shipped yet.
+- [x] `forced-colors` (Windows High Contrast) support for badges — shipped in v1.9.0 (`content/content.css`, `popup/popup.css`). Still missing on the options page.
+- [x] Light-theme variant for the injected "Why flagged?" popover — shipped in v1.9.0 (`content/content.css`).
+- [ ] i18n — the string module (`utils/strings.js`) is translation-ready; no `_locales/` and no `chrome.i18n` wiring yet.
 - [ ] More marketplaces, community-contributed via `content/sites/`.
 - [ ] Firefox port (the `web-ext` tooling already supports this).
 

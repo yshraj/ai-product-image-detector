@@ -32,6 +32,7 @@ Manifest V3 · vanilla JavaScript · no build step · runs fully client-side · 
 - [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -345,6 +346,7 @@ Legal copy: [docs/PRIVACY.md](docs/PRIVACY.md) · [docs/TERMS.md](docs/TERMS.md)
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Current state and near-term plans |
 | [docs/ACCURACY.md](docs/ACCURACY.md) | Real, reproducible detection accuracy numbers and methodology |
 | [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Licenses of redistributed third-party components |
 | [test/e2e/README.md](test/e2e/README.md) | Playwright test architecture |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [docs/PRIVACY.md](docs/PRIVACY.md) / [docs/TERMS.md](docs/TERMS.md) | In-app legal text |
@@ -359,4 +361,22 @@ conventions, and how to add or fix a marketplace (the most common contribution).
 also read the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go to
 [SECURITY.md](SECURITY.md), not a public issue.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for planned work.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned work. Issues labelled
+[`good first issue`](https://github.com/yshraj/ai-product-image-detector/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+are the easiest place to start — verifying and fixing a marketplace's selectors
+needs no machine-learning background, just a browser and a real shopping page.
+
+---
+
+## License
+
+TrueKart is released under the **[MIT License](LICENSE)** — free to use, modify,
+distribute and sell, including commercially, with attribution.
+
+By contributing you agree your contributions are licensed under the same terms
+(see [CONTRIBUTING.md](CONTRIBUTING.md#license)). There is no CLA and no
+copyright assignment: contributors keep copyright in their own work, and the
+project stays MIT.
+
+Third-party components redistributed with the extension are listed with their
+licenses in **[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**.

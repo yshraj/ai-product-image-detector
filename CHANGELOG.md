@@ -4,6 +4,35 @@ All notable changes to TrueKart (formerly ShopShield / RealModel Filter) are doc
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **MIT compliance for the vendored exifr build.** `libs/exifr.min.js` is the
+  only third-party code TrueKart redistributes, and the published minified
+  build has its copyright header stripped — so both the repo and the packaged
+  `.zip` were shipping it without the notice MIT requires to travel with every
+  copy. Added the banner, plus `THIRD-PARTY-NOTICES.md` reproducing the full
+  license.
+- `LICENSE` was excluded from the packaged `.zip` while `CONTRIBUTING.md`,
+  `CODE_OF_CONDUCT.md` and `SECURITY.md` were included — backwards on both
+  counts. The zip is a distributed copy and must carry the license; the other
+  three are contributor docs that are dead weight in an installed extension.
+  Swapped (`web-ext-config.mjs`).
+- `npm run refresh-exifr` fetched an **unpinned** CDN URL into a git-tracked
+  file (bundled bytes could change with no commit explaining it) and would
+  have silently wiped the new attribution. Replaced with
+  `scripts/refresh-exifr.sh`: version-pinned to 7.1.3, re-attaches the notice,
+  verified to reproduce the committed file byte-for-byte.
+- `docs/ROADMAP.md` still listed `forced-colors` support and the light-theme
+  popover as unstarted "Later" work; both shipped in 1.9.0. A contributor
+  picking them up would have found them already done. Ticked, with the one
+  genuine remaining gap noted (the options page has no `forced-colors` block).
+
+### Added
+- A **License** section in the README — previously only a badge, with no
+  statement of terms, no note that there is no CLA, and no pointer to
+  third-party notices.
+
 ## [1.9.0] — 2026-07-25
 
 ### Changed
